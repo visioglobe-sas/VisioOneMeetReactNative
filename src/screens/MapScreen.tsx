@@ -18,6 +18,11 @@ import { useVisioMap } from './useVisioMap';
 // This one points at a Visioglobe demo venue.
 const DEMO_MAP_HASH = 'kbae8e6c066cca4b02c2afac2bc963a643d87437a';
 
+// Stand-in for a real occupancy sensor feed: cycles a POI's surface through these
+// colors on a timer. See docs/features/occupancy-simulated.md.
+const OCCUPANCY_COLORS = ['#2ECC71', '#F1C40F', '#E74C3C']; // free, about to be occupied, occupied
+const OCCUPANCY_INTERVAL_MS = 2500;
+
 type Status = 'loading' | 'ready' | 'error';
 
 const MapScreen = () => {
@@ -26,8 +31,31 @@ const MapScreen = () => {
   const [placeId, setPlaceId] = React.useState('');
   const [origin, setOrigin] = React.useState('');
   const [destination, setDestination] = React.useState('');
+  const [simulateOccupancy, setSimulateOccupancy] = React.useState(false);
 
-  const { webRef, sendSetup, goToPlace, clearPlace, resetMap, startItinerary } = useVisioMap(DEMO_MAP_HASH);
+  const { webRef, sendSetup, goToPlace, clearPlace, resetMap, startItinerary, updateOccupancy } =
+    useVisioMap(DEMO_MAP_HASH);
+
+  React.useEffect(() => {
+    const targetPlaceId = placeId.trim();
+    if (!simulateOccupancy || !targetPlaceId) {
+      return;
+    }
+
+    let colorIndex = 0;
+    updateOccupancy([{ planId: targetPlaceId, color: OCCUPANCY_COLORS[colorIndex] }]);
+    const timer = setInterval(() => {
+      colorIndex = (colorIndex + 1) % OCCUPANCY_COLORS.length;
+      updateOccupancy([{ planId: targetPlaceId, color: OCCUPANCY_COLORS[colorIndex] }]);
+    }, OCCUPANCY_INTERVAL_MS);
+
+    return () => {
+      clearInterval(timer);
+      // Reset the surface rather than leaving it stuck on the last simulated color.
+      updateOccupancy([{ planId: targetPlaceId, color: undefined }]);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [simulateOccupancy, placeId]);
 
   const handleWebMessage = (event: WebViewMessageEvent) => {
     const raw = event.nativeEvent.data;
@@ -85,6 +113,17 @@ const MapScreen = () => {
           </TouchableOpacity>
           <TouchableOpacity style={styles.buttonSecondary} onPress={clearPlace}>
             <Text style={styles.buttonText}>Clear</Text>
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.row}>
+          <TouchableOpacity
+            style={simulateOccupancy ? styles.button : styles.buttonSecondary}
+            disabled={!placeId.trim()}
+            onPress={() => setSimulateOccupancy((prev) => !prev)}>
+            <Text style={styles.buttonText}>
+              {simulateOccupancy ? 'Stop occupancy simulation' : 'Simulate occupancy on Place ID'}
+            </Text>
           </TouchableOpacity>
         </View>
 

@@ -1,97 +1,63 @@
-This is a new [**React Native**](https://reactnative.dev) project, bootstrapped using [`@react-native-community/cli`](https://github.com/react-native-community/cli).
+# VisioOneMeetRN
 
-# Getting Started
+Exemple d'intégration du SDK [VisioOne](https://www.npmjs.com/package/@visioglobe/visioone) de Visioglobe dans une application React Native, via `react-native-webview`. Le SDK (moteur 3D pour cartes indoor/outdoor construites avec VisioMapEditor) tourne entièrement dans la WebView ; l'app React Native communique avec lui par `postMessage`.
 
-> **Note**: Make sure you have completed the [Set Up Your Environment](https://reactnative.dev/docs/set-up-your-environment) guide before proceeding.
+## Ce que montre cet exemple
 
-## Step 1: Start Metro
+- Charger le SDK VisioOne en ESM depuis le CDN Visioglobe dans une `WebView` React Native ([`src/assets/visioOne.html`](src/assets/visioOne.html)).
+- Un pont typé `postMessage` entre le JS natif et la page web ([`src/screens/useVisioMap.ts`](src/screens/useVisioMap.ts)) pour piloter le SDK : aller à un lieu, changer d'étage, lancer un itinéraire, mettre à jour l'occupation de zones, réinitialiser la vue.
+- Un écran minimal ([`src/screens/MapScreen.tsx`](src/screens/MapScreen.tsx)) illustrant ces commandes.
+- Un contournement à connaître si vous chargez du HTML local dans une `WebView` en React Native — voir [`docs/SDK_NOTES.md`](docs/SDK_NOTES.md).
 
-First, you will need to run **Metro**, the JavaScript build tool for React Native.
+## Configurer votre propre carte
 
-To start the Metro dev server, run the following command from the root of your React Native project:
+Récupérez le hash de votre carte sur [my.visioglobe.com](https://my.visioglobe.com) et remplacez `DEMO_MAP_HASH` dans [`src/screens/MapScreen.tsx`](src/screens/MapScreen.tsx) (actuellement une carte de démonstration Visioglobe).
+
+## Démarrage
+
+Prérequis : suivre le guide [Set Up Your Environment](https://reactnative.dev/docs/set-up-your-environment) de React Native.
+
+### 1. Démarrer Metro
 
 ```sh
-# Using npm
+npm install
 npm start
-
-# OR using Yarn
-yarn start
 ```
 
-## Step 2: Build and run your app
+### 2. Build & run
 
-With Metro running, open a new terminal window/pane from the root of your React Native project, and use one of the following commands to build and run your Android or iOS app:
-
-### Android
-
-```sh
-# Using npm
-npm run android
-
-# OR using Yarn
-yarn android
-```
-
-### iOS
-
-For iOS, remember to install CocoaPods dependencies (this only needs to be run on first clone or after updating native deps).
-
-The first time you create a new project, run the Ruby bundler to install CocoaPods itself:
+**iOS** — installer les dépendances CocoaPods (première fois, ou après mise à jour des dépendances natives) :
 
 ```sh
 bundle install
-```
-
-Then, and every time you update your native dependencies, run:
-
-```sh
 bundle exec pod install
+npm run ios
 ```
 
-For more information, please visit [CocoaPods Getting Started guide](https://guides.cocoapods.org/using/getting-started.html).
+**Android** :
 
 ```sh
-# Using npm
-npm run ios
-
-# OR using Yarn
-yarn ios
+npm run android
 ```
 
-If everything is set up correctly, you should see your new app running in the Android Emulator, iOS Simulator, or your connected device.
+## Structure
 
-This is one way to run your app — you can also build it directly from Android Studio or Xcode.
+```
+App.tsx                          # entrée de l'app, bascule vers un mode diagnostic optionnel
+src/
+├── screens/
+│   ├── MapScreen.tsx            # écran carte : WebView + commandes (place, itinéraire, reset)
+│   └── useVisioMap.ts           # pont postMessage natif → WebView
+└── assets/
+    ├── visioOne.html            # page hôte chargée dans la WebView (SDK en ESM depuis le CDN)
+    ├── visioOneHtml.ts          # même contenu que visioOne.html, exporté en template literal
+    ├── diagnostic.html          # page de debug bas niveau (isoler un souci WebView du SDK)
+    └── diagnosticInlineHtml.ts  # même contenu, en template literal
 
-## Step 3: Modify your app
+docs/
+└── SDK_NOTES.md                 # pourquoi le HTML est chargé "inline" plutôt que via require()
+```
 
-Now that you have successfully run the app, let's make changes!
+## Troubleshooting
 
-Open `App.tsx` in your text editor of choice and make some changes. When you save, your app will automatically update and reflect these changes — this is powered by [Fast Refresh](https://reactnative.dev/docs/fast-refresh).
-
-When you want to forcefully reload, for example to reset the state of your app, you can perform a full reload:
-
-- **Android**: Press the <kbd>R</kbd> key twice or select **"Reload"** from the **Dev Menu**, accessed via <kbd>Ctrl</kbd> + <kbd>M</kbd> (Windows/Linux) or <kbd>Cmd ⌘</kbd> + <kbd>M</kbd> (macOS).
-- **iOS**: Press <kbd>R</kbd> in iOS Simulator.
-
-## Congratulations! :tada:
-
-You've successfully run and modified your React Native App. :partying_face:
-
-### Now what?
-
-- If you want to add this new React Native code to an existing application, check out the [Integration guide](https://reactnative.dev/docs/integration-with-existing-apps).
-- If you're curious to learn more about React Native, check out the [docs](https://reactnative.dev/docs/getting-started).
-
-# Troubleshooting
-
-If you're having issues getting the above steps to work, see the [Troubleshooting](https://reactnative.dev/docs/troubleshooting) page.
-
-# Learn More
-
-To learn more about React Native, take a look at the following resources:
-
-- [React Native Website](https://reactnative.dev) - learn more about React Native.
-- [Getting Started](https://reactnative.dev/docs/environment-setup) - an **overview** of React Native and how setup your environment.
-- [Learn the Basics](https://reactnative.dev/docs/getting-started) - a **guided tour** of the React Native **basics**.
-- [Blog](https://reactnative.dev/blog) - read the latest official React Native **Blog** posts.
-- [`@facebook/react-native`](https://github.com/facebook/react-native) - the Open Source; GitHub **repository** for React Native.
+Voir la page [Troubleshooting](https://reactnative.dev/docs/troubleshooting) officielle de React Native pour les problèmes génériques de setup (Metro, CocoaPods, simulateur…). Pour tout ce qui touche au chargement de la carte VisioOne elle-même, voir [`docs/SDK_NOTES.md`](docs/SDK_NOTES.md).

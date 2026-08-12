@@ -1,16 +1,21 @@
 /**
- * Sample React Native App
- * https://github.com/facebook/react-native
+ * Minimal React Native harness embedding the VisioOne SDK in a WebView.
  *
  * @format
  */
 
-import { NewAppScreen } from '@react-native/new-app-screen';
-import { StatusBar, StyleSheet, useColorScheme, View } from 'react-native';
-import {
-  SafeAreaProvider,
-  useSafeAreaInsets,
-} from 'react-native-safe-area-context';
+import { StatusBar, useColorScheme } from 'react-native';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { WebView } from 'react-native-webview';
+
+import MapScreen from './src/screens/MapScreen';
+import { diagnosticInlineHtml } from './src/assets/diagnosticInlineHtml';
+
+// Set to true to check whether react-native-webview itself can load the VisioOne
+// SDK from the CDN, bypassing the app's setup()/postMessage choreography entirely.
+// Useful to isolate a WebView-layer issue from an application-layer one — see
+// docs/SDK_NOTES.md.
+const DIAGNOSTIC_MODE = false;
 
 function App() {
   const isDarkMode = useColorScheme() === 'dark';
@@ -18,28 +23,21 @@ function App() {
   return (
     <SafeAreaProvider>
       <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} />
-      <AppContent />
+      {DIAGNOSTIC_MODE ? (
+        <WebView
+          originWhitelist={['*']}
+          source={{ html: diagnosticInlineHtml, baseUrl: 'https://cdn.visioglobe.com/' }}
+          allowUniversalAccessFromFileURLs
+          mixedContentMode="compatibility"
+          javaScriptEnabled
+          domStorageEnabled
+          onMessage={(e) => console.log('[diag]', e.nativeEvent.data)}
+        />
+      ) : (
+        <MapScreen />
+      )}
     </SafeAreaProvider>
   );
 }
-
-function AppContent() {
-  const safeAreaInsets = useSafeAreaInsets();
-
-  return (
-    <View style={styles.container}>
-      <NewAppScreen
-        templateFileName="App.tsx"
-        safeAreaInsets={safeAreaInsets}
-      />
-    </View>
-  );
-}
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-});
 
 export default App;

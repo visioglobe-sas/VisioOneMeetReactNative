@@ -1,0 +1,247 @@
+// Same content as visioOne.html, exported as a template-literal string so it can be
+// passed via <WebView source={{ html, baseUrl }}> instead of source={require('./visioOne.html')}.
+// Why this matters: when the HTML is loaded via require(), Metro serves it through the dev
+// server in Debug builds and appends its own "?hash=..." cache-busting query param to the
+// page URL. VisioOne SDK >= 1.0.5 merges the page's own URL query parameters into loadVenue's
+// options, so that unrelated Metro-generated "hash" param silently overrides the real map
+// hash passed in code -- see docs/SDK_NOTES.md for the full writeup. Loading the HTML inline
+// with an explicit baseUrl avoids the Metro-served URL entirely.
+//
+// Keep this file in sync with visioOne.html by hand if you change the SDK integration logic.
+export const visioOneHtml = `<!DOCTYPE html>
+<html>
+  <head>
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+  </head>
+  <body>
+    <div id="content"></div>
+
+    <script type="module">
+      // Loading the SDK is async and can take a moment on a slow connection. Register
+      // the React Native message listener before it resolves, otherwise the initial
+      // "setup" message sent right after WebView load can be lost.
+      const visioOneReady = import('https://cdn.visioglobe.com/visioone/1.0.5/dist/visioone.js').then(
+        ({ createVisioOne }) => createVisioOne()
+      )
+      let view = null
+      let venue = null
+      let image = null
+      let poiInfo = null
+
+      const DEFAULT_OPTIONS = {
+        userTracking: true,
+        navigation: true,
+        poiDetails: false,
+        search: false,
+        floorSelector: true,
+      }
+
+      const setup = async (hash, options) => {
+        const venueHash = typeof hash === 'string' ? hash.trim() : ''
+        let visioOneLoadError = null
+        const originalConsoleWarn = console.warn
+
+        // The SDK surfaces the real loading failure via console.warn before
+        // replacing it with a generic "Cannot load the venue" error. Capture it
+        // so the native side gets an actionable message instead of the generic one.
+        console.warn = (...args) => {
+          if (args[0] === 'VisioOne error:') {
+            visioOneLoadError = args[1]
+          }
+          originalConsoleWarn.apply(console, args)
+        }
+
+        try {
+          sendToNative({
+            type: 'loading',
+            data: {
+              hash: venueHash,
+              descriptorURL: \`https://mapserver.visioglobe.com/\${venueHash}/descriptor.json\`,
+            },
+          })
+          const visioOne = await visioOneReady
+          const container = document.querySelector('#content')
+          venue = await visioOne.loadVenue({ hash: venueHash }, container)
+          await visioOne
+            .createView(container, venue, {
+              cameraProjection: 'perspective',
+            })
+            .then((v) => {
+              const opts = options || DEFAULT_OPTIONS
+              const hideKeys = Object.keys(opts).filter((key) => !opts[key])
+              // hide UI parts not requested by the host app
+              hideKeys.forEach((key) => v.setUIPartVisible(key, false))
+              v.addEventListener('poiclick', (event) => {
+                const poi = event.pois[0]
+                sendToNative({ type: 'place', data: poi.id })
+              })
+              view = v
+            })
+          sendToNative({
+            type: 'ready',
+          })
+        } catch (error) {
+          const cause = visioOneLoadError || error
+          console.error('Unable to initialize VisioOne', error)
+          sendToNative({
+            type: 'error',
+            data: cause instanceof Error ? \`\${cause.name}: \${cause.message}\` : String(cause),
+          })
+        } finally {
+          console.warn = originalConsoleWarn
+        }
+      }
+
+      const resetMap = () => {
+        if (view) {
+          view.goToGlobal()
+        }
+      }
+
+      const goToFloor = (buildingId, floorId) => {
+        if (view) {
+          const building = venue.venueLayout.buildings.find((b) => b.id === buildingId)
+          if (building) {
+            if (floorId) {
+              const floor = building.floors.find((f) => f.id === floorId)
+              if (floor) {
+                view.goToFloor(floor)
+              }
+            } else {
+              view.goToBuilding(building)
+            }
+          }
+        }
+      }
+
+      const goToPlace = (placeId) => {
+        if (venue && view) {
+          const poi = venue.pois.find((p) => p.id === placeId)
+          poiInfo = poi
+
+          if (poi) {
+            view.goToPOI(poi, {
+              orientation: { pitch: 20 },
+              padding: { top: 100, bottom: 100, right: 100, left: 100 },
+            })
+
+            poi.surfaces.forEach((surface) => {
+              venue.updateSurface(surface, { selectionColor: '#057DBC' })
+            })
+
+            const position = { latitude: 0, longitude: 0, altitude: poi.surfaces[0].extrusionHeight }
+            poi.surfaces[0].positions.forEach((p) => {
+              position.latitude += p.latitude
+              position.longitude += p.longitude
+            })
+            position.latitude /= poi.surfaces[0].positions.length
+            position.longitude /= poi.surfaces[0].positions.length
+
+            image = venue.createImage({
+              poi,
+              position,
+              width: 2,
+              height: 2,
+              orientationType: 'facing',
+              url: 'https://cdn-icons-png.flaticon.com/512/731/731582.png',
+            })
+          }
+        }
+      }
+
+      const clearPlace = () => {
+        if (venue && image && poiInfo) {
+          venue.removeImage(image)
+          poiInfo.surfaces.forEach((surface) => {
+            venue.updateSurface(surface, { selectionColor: undefined })
+          })
+          image = null
+          poiInfo = null
+        }
+      }
+
+      const updateOccupancy = (occupancy) => {
+        occupancy.forEach((entry) => {
+          const poi = venue.pois.find((p) => p.id === entry.planId)
+          if (!poi) {
+            return
+          }
+          poi.surfaces.forEach((surface) => {
+            venue.updateSurface(surface, { color: entry.color })
+          })
+        })
+      }
+
+      const startItinerary = (origin, destination, isAccessible) => {
+        const navigation = venue.computeNavigation({
+          origin,
+          destination,
+          isAccessible,
+          type: 'fastest',
+          firstNodeAsIntersection: false,
+          mergeFloorChangeInstructions: false,
+        })
+
+        const navigationTrace = venue.createNavigationTrace(navigation)
+        view.setCurrentNavigationTrace(navigationTrace)
+
+        sendToNative({
+          type: 'itinerary_instructions',
+          data: navigation.instructions,
+        })
+      }
+
+      const onMessage = (event) => {
+        try {
+          const evt = typeof event.data === 'string' ? JSON.parse(event.data) : event.data
+
+          if (!evt.type) {
+            console.error('Invalid message: missing type')
+            return
+          }
+
+          switch (evt.type) {
+            case 'setup':
+              setup(evt.data.hash)
+              break
+            case 'reset_map':
+              resetMap()
+              break
+            case 'select_place':
+              goToPlace(evt.data.placeId)
+              break
+            case 'clear_place':
+              clearPlace()
+              break
+            case 'select_floor':
+              goToFloor(evt.data.buildingId, evt.data.floorId)
+              break
+            case 'update_occupancy':
+              updateOccupancy(evt.data.occupancy)
+              break
+            case 'start_itinerary':
+              startItinerary(evt.data.origin, evt.data.destination, evt.data.isAccessible)
+              break
+            default:
+              console.error('Unknown message type:', evt.type)
+          }
+        } catch (e) {
+          console.error('Error parsing message from React Native', e)
+        }
+      }
+
+      const sendToNative = (event) => {
+        window.ReactNativeWebView?.postMessage(JSON.stringify(event))
+      }
+
+      window.addEventListener('message', onMessage)
+    </script>
+
+    <style>
+      #content {
+        height: 100vh;
+      }
+    </style>
+  </body>
+</html>
+`;

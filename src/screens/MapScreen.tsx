@@ -119,7 +119,7 @@ const MapScreen = () => {
         <View style={styles.row}>
           <TouchableOpacity
             style={simulateOccupancy ? styles.button : styles.buttonSecondary}
-            disabled={!placeId.trim()}
+            disabled={!simulateOccupancy && !placeId.trim()}
             onPress={() => setSimulateOccupancy((prev) => !prev)}>
             <Text style={styles.buttonText}>
               {simulateOccupancy ? 'Stop occupancy simulation' : 'Simulate occupancy on Place ID'}

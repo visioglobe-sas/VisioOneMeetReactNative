@@ -41,7 +41,7 @@ export const diagnosticInlineHtml = `<!DOCTYPE html>
       });
 
       const SDK_VERSION = '1.0.5';
-      const HASH = 'k5f59b8615f0379390e03e4cbe893ff813b9ac94a';
+      const HASH = 'kbae8e6c066cca4b02c2afac2bc963a643d87437a';
 
       log('INLINE HTML diagnostic starting (source={{ html }}, no require()).');
       log('location.href = ' + location.href);

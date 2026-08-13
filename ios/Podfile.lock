@@ -1914,6 +1914,75 @@ PODS:
     - React-utils (= 0.86.0)
     - ReactNativeDependencies
   - ReactNativeDependencies (0.86.0)
+  - RNLocalize (3.7.0):
+    - hermes-engine
+    - RCTRequired
+    - RCTTypeSafety
+    - React-Core
+    - React-Core-prebuilt
+    - React-debug
+    - React-Fabric
+    - React-featureflags
+    - React-graphics
+    - React-ImageManager
+    - React-jsi
+    - React-NativeModulesApple
+    - React-RCTFabric
+    - React-renderercss
+    - React-rendererdebug
+    - React-utils
+    - ReactCodegen
+    - ReactCommon/turbomodule/bridging
+    - ReactCommon/turbomodule/core
+    - ReactNativeDependencies
+    - Yoga
+  - RNScreens (4.27.0):
+    - hermes-engine
+    - RCTRequired
+    - RCTTypeSafety
+    - React-Core
+    - React-Core-prebuilt
+    - React-debug
+    - React-Fabric
+    - React-featureflags
+    - React-graphics
+    - React-ImageManager
+    - React-jsi
+    - React-NativeModulesApple
+    - React-RCTFabric
+    - React-RCTImage
+    - React-renderercss
+    - React-rendererdebug
+    - React-utils
+    - ReactCodegen
+    - ReactCommon/turbomodule/bridging
+    - ReactCommon/turbomodule/core
+    - ReactNativeDependencies
+    - RNScreens/common (= 4.27.0)
+    - Yoga
+  - RNScreens/common (4.27.0):
+    - hermes-engine
+    - RCTRequired
+    - RCTTypeSafety
+    - React-Core
+    - React-Core-prebuilt
+    - React-debug
+    - React-Fabric
+    - React-featureflags
+    - React-graphics
+    - React-ImageManager
+    - React-jsi
+    - React-NativeModulesApple
+    - React-RCTFabric
+    - React-RCTImage
+    - React-renderercss
+    - React-rendererdebug
+    - React-utils
+    - ReactCodegen
+    - ReactCommon/turbomodule/bridging
+    - ReactCommon/turbomodule/core
+    - ReactNativeDependencies
+    - Yoga
   - Yoga (0.0.0)
 
 DEPENDENCIES:
@@ -1994,6 +2063,8 @@ DEPENDENCIES:
   - ReactCodegen (from `build/generated/ios/ReactCodegen`)
   - ReactCommon/turbomodule/core (from `../node_modules/react-native/ReactCommon`)
   - ReactNativeDependencies (from `../node_modules/react-native/third-party-podspecs/ReactNativeDependencies.podspec`)
+  - RNLocalize (from `../node_modules/react-native-localize`)
+  - RNScreens (from `../node_modules/react-native-screens`)
   - Yoga (from `../node_modules/react-native/ReactCommon/yoga`)
 
 EXTERNAL SOURCES:
@@ -2150,6 +2221,10 @@ EXTERNAL SOURCES:
     :path: "../node_modules/react-native/ReactCommon"
   ReactNativeDependencies:
     :podspec: "../node_modules/react-native/third-party-podspecs/ReactNativeDependencies.podspec"
+  RNLocalize:
+    :path: "../node_modules/react-native-localize"
+  RNScreens:
+    :path: "../node_modules/react-native-screens"
   Yoga:
     :path: "../node_modules/react-native/ReactCommon/yoga"
 
@@ -2230,7 +2305,9 @@ SPEC CHECKSUMS:
   ReactCodegen: ee39bbc365b4791c9b5183b52c533ebf586e1d8d
   ReactCommon: 4d01bfb533b93a2103329dfefc74db6a9e272888
   ReactNativeDependencies: fa0a54b3f5319ae0e3b9aff32bfee7a424b88e66
-  Yoga: 94172d87dd5d83fc929bf1ee53121b5d4490b5f2
+  RNLocalize: a0dd99f2d709904a07fb826e0b748234f629af34
+  RNScreens: 39f914a099f9cbe0ec2c33d0dfd01ba56a8ca104
+  Yoga: fe50ab299e578f397fef753cf309c6703a4db29b
 
 PODFILE CHECKSUM: 0e8b3c82ee09e029f6dfbe6bff71bb693e2bb120
 

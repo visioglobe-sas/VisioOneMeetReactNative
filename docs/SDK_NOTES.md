@@ -58,7 +58,7 @@ Charger le HTML comme une chaîne (`source={{ html, baseUrl }}`) plutôt que via
 | `source={{ html }}` **sans** `baseUrl` | `null` (origine opaque) | ❌ plus de collision de hash, mais `SecurityError` sur `localStorage` |
 | `source={{ html, baseUrl: 'https://cdn.visioglobe.com/' }}` | `https://cdn.visioglobe.com` | ✅ fonctionne, y compris en Debug connecté à Metro |
 
-C'est ce dernier réglage qui est utilisé par défaut dans [`src/screens/MapScreen.tsx`](../src/screens/MapScreen.tsx).
+C'est ce dernier réglage qui est utilisé par défaut dans [`src/components/VisioMapView.tsx`](../src/components/VisioMapView.tsx).
 
 Ce contournement reste une solution côté application, pas structurelle — la solution durable serait un correctif du SDK (par ex. distinguer clairement les paramètres d'URL applicatifs de ceux propres à VisioOne). Si vous rencontrez ce comportement dans votre propre intégration, ce contournement s'applique indépendamment de la version du SDK.
 

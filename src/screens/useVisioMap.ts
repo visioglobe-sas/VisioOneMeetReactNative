@@ -17,6 +17,23 @@ export interface ClickedPoi {
   categories: string[];
 }
 
+// Mirrors the plain object shape sent from the WebView in the 'ready' message's
+// data.buildings -- see the buildings mapping in visioOneHtml.ts/visioOne.html, built from
+// venue.venueLayout.buildings and resolved through venue.translator so labels match
+// whatever the SDK's own default floor-selector widget displays.
+export interface VenueFloor {
+  id: string;
+  label: string;
+  levelIndex: number;
+}
+
+export interface VenueBuilding {
+  id: string;
+  label: string;
+  defaultFloorID: string;
+  floors: VenueFloor[];
+}
+
 export const useVisioMap = (hash: string) => {
   const webRef = useRef<WebView>(null);
 

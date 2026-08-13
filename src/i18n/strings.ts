@@ -10,6 +10,8 @@ export const strings = {
     'computeNavigation.description': 'Compute and display a route between two places.',
     'poiClick.title': 'Tap a place',
     'poiClick.description': "Show a tapped place's info in a panel.",
+    'floorSelector.title': 'Floor selector',
+    'floorSelector.description': 'Switch floor or building from a list driven by the app.',
   },
   fr: {
     'resetView.title': 'Réinitialiser la vue',
@@ -23,6 +25,8 @@ export const strings = {
     'computeNavigation.description': 'Calcule et affiche un itinéraire entre deux lieux.',
     'poiClick.title': 'Taper un lieu',
     'poiClick.description': "Affiche les infos d'un lieu tapé dans un panneau.",
+    'floorSelector.title': "Sélection d'étage",
+    'floorSelector.description': "Change d'étage ou de bâtiment depuis une liste pilotée par l'app.",
   },
 };
 

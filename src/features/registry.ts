@@ -1,6 +1,10 @@
 import { StringKey } from '../i18n/strings';
 
-export type FeatureSlug = 'reset-view' | 'occupancy-simulated';
+export type FeatureSlug =
+  | 'reset-view'
+  | 'occupancy-simulated'
+  | 'goto-poi'
+  | 'compute-navigation';
 
 export interface FeatureDefinition {
   slug: FeatureSlug;
@@ -18,5 +22,15 @@ export const featureRegistry: FeatureDefinition[] = [
     slug: 'occupancy-simulated',
     titleKey: 'occupancySimulated.title',
     descriptionKey: 'occupancySimulated.description',
+  },
+  {
+    slug: 'goto-poi',
+    titleKey: 'gotoPoi.title',
+    descriptionKey: 'gotoPoi.description',
+  },
+  {
+    slug: 'compute-navigation',
+    titleKey: 'computeNavigation.title',
+    descriptionKey: 'computeNavigation.description',
   },
 ];

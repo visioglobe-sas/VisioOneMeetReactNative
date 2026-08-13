@@ -4,7 +4,7 @@ import { Locale, StringKey, strings } from './strings';
 
 const SUPPORTED_LOCALES = Object.keys(strings) as Locale[];
 
-const resolveLocale = (): Locale => {
+export const resolveLocale = (): Locale => {
   const match = getLocales().find((locale) =>
     SUPPORTED_LOCALES.includes(locale.languageCode as Locale),
   );

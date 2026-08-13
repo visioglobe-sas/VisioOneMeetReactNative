@@ -4,6 +4,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { FeatureSlug, featureRegistry } from '../features/registry';
 import FeatureScreen from '../screens/FeatureScreen';
 import HomeScreen from '../screens/HomeScreen';
+import { resolveLocale } from '../i18n/useLocale';
 import { strings } from '../i18n/strings';
 
 export type RootStackParamList = {
@@ -21,9 +22,10 @@ const RootNavigator = () => (
       component={FeatureScreen}
       options={({ route }) => {
         const feature = featureRegistry.find((item) => item.slug === route.params.slug);
+        const locale = resolveLocale();
         return {
           headerBackVisible: true,
-          title: feature ? strings.en[feature.titleKey] : 'Feature',
+          title: feature ? strings[locale][feature.titleKey] : 'Feature',
         };
       }}
     />

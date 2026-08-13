@@ -1,5 +1,6 @@
 import * as React from 'react';
-import { KeyboardAvoidingView, Platform, SafeAreaView, StyleSheet, Text } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { WebView, WebViewMessageEvent } from 'react-native-webview';
 
 import { visioOneHtml } from '../assets/visioOneHtml';
@@ -42,7 +43,7 @@ const VisioMapView = ({ renderOverlay }: VisioMapViewProps) => {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
       <WebView
         ref={webRef}
         style={styles.webview}
@@ -58,16 +59,15 @@ const VisioMapView = ({ renderOverlay }: VisioMapViewProps) => {
         domStorageEnabled
       />
 
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        style={styles.panel}>
+      <View style={styles.statusBadge}>
         <Text style={styles.status}>
           {status === 'loading' && 'Loading venue…'}
           {status === 'ready' && 'Venue ready'}
           {status === 'error' && `Error: ${errorMessage}`}
         </Text>
-        {renderOverlay?.(bridge, status)}
-      </KeyboardAvoidingView>
+      </View>
+
+      {renderOverlay?.(bridge, status)}
     </SafeAreaView>
   );
 };
@@ -79,10 +79,15 @@ const styles = StyleSheet.create({
   webview: {
     flex: 1,
   },
-  panel: {
-    padding: 12,
-    gap: 8,
+  statusBadge: {
+    position: 'absolute',
+    top: 12,
+    left: 12,
+    right: 12,
     backgroundColor: '#111',
+    borderRadius: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
   },
   status: {
     color: '#fff',

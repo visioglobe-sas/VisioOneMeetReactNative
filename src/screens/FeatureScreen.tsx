@@ -1,7 +1,8 @@
 import * as React from 'react';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 
-import VisioMapView from '../components/VisioMapView';
+import BottomSheet from '../components/BottomSheet';
+import VisioMapView, { VisioMapBridge } from '../components/VisioMapView';
 import { featureRegistry } from '../features/registry';
 import ComputeNavigationOverlay from '../features/ComputeNavigationOverlay';
 import GoToPoiOverlay from '../features/GoToPoiOverlay';
@@ -23,22 +24,24 @@ const FeatureScreen = ({ route, navigation }: Props) => {
     }
   }, [feature, navigation, t]);
 
+  const renderFeatureContent = (bridge: VisioMapBridge) => {
+    switch (slug) {
+      case 'reset-view':
+        return <ResetViewOverlay resetMap={bridge.resetMap} />;
+      case 'occupancy-simulated':
+        return <OccupancySimulatedOverlay updateOccupancy={bridge.updateOccupancy} />;
+      case 'goto-poi':
+        return <GoToPoiOverlay goToPlace={bridge.goToPlace} clearPlace={bridge.clearPlace} />;
+      case 'compute-navigation':
+        return <ComputeNavigationOverlay startItinerary={bridge.startItinerary} />;
+      default:
+        return null;
+    }
+  };
+
   return (
     <VisioMapView
-      renderOverlay={(bridge) => {
-        switch (slug) {
-          case 'reset-view':
-            return <ResetViewOverlay resetMap={bridge.resetMap} />;
-          case 'occupancy-simulated':
-            return <OccupancySimulatedOverlay updateOccupancy={bridge.updateOccupancy} />;
-          case 'goto-poi':
-            return <GoToPoiOverlay goToPlace={bridge.goToPlace} clearPlace={bridge.clearPlace} />;
-          case 'compute-navigation':
-            return <ComputeNavigationOverlay startItinerary={bridge.startItinerary} />;
-          default:
-            return null;
-        }
-      }}
+      renderOverlay={(bridge) => <BottomSheet>{renderFeatureContent(bridge)}</BottomSheet>}
     />
   );
 };

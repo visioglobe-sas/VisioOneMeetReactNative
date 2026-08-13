@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { StyleSheet, Text, TouchableOpacity } from 'react-native';
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -9,9 +9,11 @@ import { featureRegistry } from '../features/registry';
 import ComputeNavigationOverlay from '../features/ComputeNavigationOverlay';
 import GoToPoiOverlay from '../features/GoToPoiOverlay';
 import OccupancySimulatedOverlay from '../features/OccupancySimulatedOverlay';
+import PoiClickOverlay from '../features/PoiClickOverlay';
 import ResetViewOverlay from '../features/ResetViewOverlay';
 import { useLocale } from '../i18n/useLocale';
 import { RootStackParamList } from '../navigation/RootNavigator';
+import { ClickedPoi } from './useVisioMap';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Feature'>;
 
@@ -28,7 +30,7 @@ const FeatureScreen = ({ route, navigation }: Props) => {
     }
   }, [feature, navigation, t]);
 
-  const renderFeatureContent = (bridge: VisioMapBridge) => {
+  const renderFeatureContent = (bridge: VisioMapBridge, clickedPois: ClickedPoi[]) => {
     switch (slug) {
       case 'reset-view':
         return <ResetViewOverlay resetMap={bridge.resetMap} />;
@@ -38,22 +40,43 @@ const FeatureScreen = ({ route, navigation }: Props) => {
         return <GoToPoiOverlay goToPlace={bridge.goToPlace} clearPlace={bridge.clearPlace} />;
       case 'compute-navigation':
         return <ComputeNavigationOverlay startItinerary={bridge.startItinerary} />;
+      case 'poi-click':
+        return <PoiClickOverlay pois={clickedPois} />;
       default:
         return null;
     }
   };
 
+  // Unlike the other features, poi-click has no FAB-driven controls to open: the map
+  // tap itself is the trigger. onPoiClick fires from the WebView's onMessage handler
+  // (a plain event, not a render pass), so opening the panel here is a normal setState
+  // call, not a cross-component render-phase update.
+  const handlePoiClick = () => {
+    if (slug === 'poi-click') {
+      setControlsVisible(true);
+    }
+  };
+
   return (
     <VisioMapView
-      renderOverlay={(bridge) => (
+      onPoiClick={handlePoiClick}
+      renderOverlay={(bridge, _status, clickedPois) => (
         <>
-          <TouchableOpacity
-            style={[styles.fab, { bottom: 24 + insets.bottom }]}
-            onPress={() => setControlsVisible(true)}>
-            <Text style={styles.fabIcon}>⚙</Text>
-          </TouchableOpacity>
+          {slug === 'poi-click' ? (
+            !controlsVisible && clickedPois.length === 0 ? (
+              <View style={[styles.hint, { bottom: 24 + insets.bottom }]}>
+                <Text style={styles.hintText}>Tap a place on the map to see its info.</Text>
+              </View>
+            ) : null
+          ) : (
+            <TouchableOpacity
+              style={[styles.fab, { bottom: 24 + insets.bottom }]}
+              onPress={() => setControlsVisible(true)}>
+              <Text style={styles.fabIcon}>⚙</Text>
+            </TouchableOpacity>
+          )}
           <BottomSheet visible={controlsVisible} onClose={() => setControlsVisible(false)}>
-            {renderFeatureContent(bridge)}
+            {renderFeatureContent(bridge, clickedPois)}
           </BottomSheet>
         </>
       )}
@@ -80,6 +103,21 @@ const styles = StyleSheet.create({
   fabIcon: {
     color: '#fff',
     fontSize: 24,
+  },
+  hint: {
+    position: 'absolute',
+    left: 20,
+    right: 20,
+    alignItems: 'center',
+  },
+  hintText: {
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    color: '#fff',
+    fontSize: 13,
+    textAlign: 'center',
+    borderRadius: 6,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
   },
 });
 

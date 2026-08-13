@@ -71,9 +71,18 @@ export const visioOneHtml = `<!DOCTYPE html>
               const hideKeys = Object.keys(opts).filter((key) => !opts[key])
               // hide UI parts not requested by the host app
               hideKeys.forEach((key) => v.setUIPartVisible(key, false))
+              // event.pois is an array because a single tap can hit several overlapping
+              // POIs (e.g. a marker sitting on top of a surface). Forward all of them --
+              // only plain serializable fields survive the WebView postMessage boundary,
+              // not the live SDK POI object.
               v.addEventListener('poiclick', (event) => {
-                const poi = event.pois[0]
-                sendToNative({ type: 'place', data: poi.id })
+                const pois = (event.pois || []).map((poi) => ({
+                  id: poi.id,
+                  name: poi.labels?.[0]?.text || poi.id,
+                  floorId: poi.floor?.id,
+                  categories: (poi.categories || []).map((category) => category.id),
+                }))
+                sendToNative({ type: 'poi_click', data: { pois } })
               })
               view = v
             })

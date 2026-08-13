@@ -4,7 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { WebView, WebViewMessageEvent } from 'react-native-webview';
 
 import { visioOneHtml } from '../assets/visioOneHtml';
-import { useVisioMap } from '../screens/useVisioMap';
+import { ClickedPoi, useVisioMap } from '../screens/useVisioMap';
 
 // Replace with a hash of your own venue from https://my.visioglobe.com
 // This one points at a Visioglobe demo venue.
@@ -15,12 +15,17 @@ type Status = 'loading' | 'ready' | 'error';
 export type VisioMapBridge = ReturnType<typeof useVisioMap>;
 
 interface VisioMapViewProps {
-  renderOverlay?: (bridge: VisioMapBridge, status: Status) => React.ReactNode;
+  renderOverlay?: (bridge: VisioMapBridge, status: Status, clickedPois: ClickedPoi[]) => React.ReactNode;
+  // Fired from the WebView's onMessage handler (an event, not during render) so the
+  // parent can safely react -- e.g. open its own controls -- without the "setState
+  // during a different component's render" pitfall a render-phase call would hit.
+  onPoiClick?: (pois: ClickedPoi[]) => void;
 }
 
-const VisioMapView = ({ renderOverlay }: VisioMapViewProps) => {
+const VisioMapView = ({ renderOverlay, onPoiClick }: VisioMapViewProps) => {
   const [status, setStatus] = React.useState<Status>('loading');
   const [errorMessage, setErrorMessage] = React.useState<string | null>(null);
+  const [clickedPois, setClickedPois] = React.useState<ClickedPoi[]>([]);
 
   const bridge = useVisioMap(DEMO_MAP_HASH);
   const { webRef, sendSetup } = bridge;
@@ -35,8 +40,9 @@ const VisioMapView = ({ renderOverlay }: VisioMapViewProps) => {
     } else if (evt.type === 'error') {
       setStatus('error');
       setErrorMessage(String(evt.data));
-    } else if (evt.type === 'place') {
-      console.log('[VisioMap] place selected:', evt.data);
+    } else if (evt.type === 'poi_click') {
+      setClickedPois(evt.data.pois);
+      onPoiClick?.(evt.data.pois);
     } else if (evt.type === 'itinerary_instructions') {
       console.log('[VisioMap] itinerary instructions:', evt.data);
     }
@@ -67,7 +73,7 @@ const VisioMapView = ({ renderOverlay }: VisioMapViewProps) => {
         </Text>
       </View>
 
-      {renderOverlay?.(bridge, status)}
+      {renderOverlay?.(bridge, status, clickedPois)}
     </SafeAreaView>
   );
 };

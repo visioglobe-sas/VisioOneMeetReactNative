@@ -7,6 +7,16 @@ export interface OccupancyUpdate {
   color?: string;
 }
 
+// Mirrors the plain object shape sent from the WebView on 'poi_click' -- see the
+// poiclick handler in visioOneHtml.ts/visioOne.html. Not the live SDK POI type:
+// only serializable fields survive the WebView postMessage boundary.
+export interface ClickedPoi {
+  id: string;
+  name: string;
+  floorId?: string;
+  categories: string[];
+}
+
 export const useVisioMap = (hash: string) => {
   const webRef = useRef<WebView>(null);
 

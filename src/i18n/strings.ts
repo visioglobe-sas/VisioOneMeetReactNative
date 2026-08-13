@@ -8,6 +8,8 @@ export const strings = {
     'gotoPoi.description': 'Center the camera on a place by its ID.',
     'computeNavigation.title': 'Itinerary',
     'computeNavigation.description': 'Compute and display a route between two places.',
+    'poiClick.title': 'Tap a place',
+    'poiClick.description': "Show a tapped place's info in a panel.",
   },
   fr: {
     'resetView.title': 'Réinitialiser la vue',
@@ -19,6 +21,8 @@ export const strings = {
     'gotoPoi.description': 'Centre la caméra sur un lieu à partir de son identifiant.',
     'computeNavigation.title': 'Itinéraire',
     'computeNavigation.description': 'Calcule et affiche un itinéraire entre deux lieux.',
+    'poiClick.title': 'Taper un lieu',
+    'poiClick.description': "Affiche les infos d'un lieu tapé dans un panneau.",
   },
 };
 

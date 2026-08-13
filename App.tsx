@@ -4,12 +4,13 @@
  * @format
  */
 
+import { NavigationContainer } from '@react-navigation/native';
 import { StatusBar, useColorScheme } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { WebView } from 'react-native-webview';
 
-import MapScreen from './src/screens/MapScreen';
 import { diagnosticInlineHtml } from './src/assets/diagnosticInlineHtml';
+import RootNavigator from './src/navigation/RootNavigator';
 
 // Set to true to check whether react-native-webview itself can load the VisioOne
 // SDK from the CDN, bypassing the app's setup()/postMessage choreography entirely.
@@ -34,7 +35,9 @@ function App() {
           onMessage={(e) => console.log('[diag]', e.nativeEvent.data)}
         />
       ) : (
-        <MapScreen />
+        <NavigationContainer>
+          <RootNavigator />
+        </NavigationContainer>
       )}
     </SafeAreaProvider>
   );

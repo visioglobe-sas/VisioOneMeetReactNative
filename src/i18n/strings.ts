@@ -19,6 +19,9 @@ export const strings = {
     'uiPartVisibility.poiDetails': 'POI details',
     'uiPartVisibility.search': 'Search',
     'uiPartVisibility.userTracking': 'User tracking',
+    'simulatedPosition.title': 'Simulated position',
+    'simulatedPosition.description':
+      'Animate a simulated position with an accuracy circle between two POIs.',
   },
   fr: {
     'resetView.title': 'Réinitialiser la vue',
@@ -42,6 +45,9 @@ export const strings = {
     'uiPartVisibility.poiDetails': 'Détails du lieu',
     'uiPartVisibility.search': 'Recherche',
     'uiPartVisibility.userTracking': 'Suivi utilisateur',
+    'simulatedPosition.title': 'Position simulée',
+    'simulatedPosition.description':
+      'Anime une position simulée avec un cercle de précision entre deux POI.',
   },
 };
 

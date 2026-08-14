@@ -222,6 +222,63 @@
         }
       }
 
+      // POIs have no direct lat/lng field -- it comes from whichever sub-object
+      // (marker, label or image) actually carries a Position. Returns null if the POI
+      // id isn't found or none of its sub-objects carry a position.
+      const resolvePoiPosition = (placeId) => {
+        const poi = venue.pois.find((p) => p.id === placeId)
+        if (!poi) {
+          return null
+        }
+        const position = poi.markers?.[0]?.position ?? poi.labels?.[0]?.position ?? poi.images?.[0]?.position
+        if (!position) {
+          return null
+        }
+        return { latitude: position.latitude, longitude: position.longitude, altitude: position.altitude }
+      }
+
+      // Resolves both place IDs for the simulated-position feature and reports the
+      // result back to native -- the ping-pong interpolation loop itself lives on the
+      // native side (same idiom as update_occupancy's native setInterval), this is
+      // just a one-shot lookup.
+      const resolvePositionSimulationPois = (originId, destinationId) => {
+        if (!venue) {
+          return
+        }
+        const origin = resolvePoiPosition(originId)
+        const destination = resolvePoiPosition(destinationId)
+        if (!origin) {
+          sendToNative({ type: 'position_simulation_error', data: { message: `POI not found: ${originId}` } })
+          return
+        }
+        if (!destination) {
+          sendToNative({ type: 'position_simulation_error', data: { message: `POI not found: ${destinationId}` } })
+          return
+        }
+        sendToNative({ type: 'poi_positions_resolved', data: { origin, destination } })
+      }
+
+      // Called on every tick of the native-side interpolation timer. injectTrackedPosition
+      // requires allowTracking to already be true, or it throws -- set it once here rather
+      // than requiring a separate message from native.
+      const injectTrackedPosition = (position, precisionCircleRadius) => {
+        if (!view) {
+          return
+        }
+        if (!view.allowTracking) {
+          view.allowTracking = true
+        }
+        view.injectTrackedPosition({ position, precisionCircleRadius })
+      }
+
+      // There's no dedicated "stop tracking" call on the SDK -- setting allowTracking
+      // back to false is what removes the marker and its accuracy circle from the map.
+      const stopPositionSimulation = () => {
+        if (view) {
+          view.allowTracking = false
+        }
+      }
+
       const onMessage = (event) => {
         try {
           const evt = typeof event.data === 'string' ? JSON.parse(event.data) : event.data
@@ -255,6 +312,15 @@
               break
             case 'set_ui_part_visible':
               setUIPartVisible(evt.data.uiPart, evt.data.isVisible)
+              break
+            case 'resolve_poi_positions':
+              resolvePositionSimulationPois(evt.data.originId, evt.data.destinationId)
+              break
+            case 'inject_tracked_position':
+              injectTrackedPosition(evt.data.position, evt.data.precisionCircleRadius)
+              break
+            case 'stop_position_simulation':
+              stopPositionSimulation()
               break
             default:
               console.error('Unknown message type:', evt.type)

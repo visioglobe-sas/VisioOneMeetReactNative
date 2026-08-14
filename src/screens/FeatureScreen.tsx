@@ -4,7 +4,11 @@ import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import BottomSheet from '../components/BottomSheet';
-import VisioMapView, { VenueLayoutInfo, VisioMapBridge } from '../components/VisioMapView';
+import VisioMapView, {
+  PositionSimulationResolution,
+  VenueLayoutInfo,
+  VisioMapBridge,
+} from '../components/VisioMapView';
 import { featureRegistry } from '../features/registry';
 import ComputeNavigationOverlay from '../features/ComputeNavigationOverlay';
 import FloorSelectorOverlay from '../features/FloorSelectorOverlay';
@@ -12,6 +16,7 @@ import GoToPoiOverlay from '../features/GoToPoiOverlay';
 import OccupancySimulatedOverlay from '../features/OccupancySimulatedOverlay';
 import PoiClickOverlay from '../features/PoiClickOverlay';
 import ResetViewOverlay from '../features/ResetViewOverlay';
+import SimulatedPositionOverlay from '../features/SimulatedPositionOverlay';
 import UIPartVisibilityOverlay from '../features/UIPartVisibilityOverlay';
 import { useLocale } from '../i18n/useLocale';
 import { RootStackParamList } from '../navigation/RootNavigator';
@@ -36,6 +41,7 @@ const FeatureScreen = ({ route, navigation }: Props) => {
     bridge: VisioMapBridge,
     clickedPois: ClickedPoi[],
     venueLayout: VenueLayoutInfo,
+    positionSimulation: { resolution: PositionSimulationResolution | null; error: string | null },
   ) => {
     switch (slug) {
       case 'reset-view':
@@ -58,6 +64,16 @@ const FeatureScreen = ({ route, navigation }: Props) => {
         );
       case 'ui-part-visibility':
         return <UIPartVisibilityOverlay setUIPartVisible={bridge.setUIPartVisible} />;
+      case 'simulated-position':
+        return (
+          <SimulatedPositionOverlay
+            resolvePois={bridge.resolvePositionSimulationPois}
+            injectTrackedPosition={bridge.injectTrackedPosition}
+            stopSimulation={bridge.stopPositionSimulation}
+            resolution={positionSimulation.resolution}
+            error={positionSimulation.error}
+          />
+        );
       default:
         return null;
     }
@@ -76,7 +92,7 @@ const FeatureScreen = ({ route, navigation }: Props) => {
   return (
     <VisioMapView
       onPoiClick={handlePoiClick}
-      renderOverlay={(bridge, _status, clickedPois, venueLayout) => (
+      renderOverlay={(bridge, _status, clickedPois, venueLayout, positionSimulation) => (
         <>
           {slug === 'poi-click' ? (
             !controlsVisible && clickedPois.length === 0 ? (
@@ -92,7 +108,7 @@ const FeatureScreen = ({ route, navigation }: Props) => {
             </TouchableOpacity>
           )}
           <BottomSheet visible={controlsVisible} onClose={() => setControlsVisible(false)}>
-            {renderFeatureContent(bridge, clickedPois, venueLayout)}
+            {renderFeatureContent(bridge, clickedPois, venueLayout, positionSimulation)}
           </BottomSheet>
         </>
       )}

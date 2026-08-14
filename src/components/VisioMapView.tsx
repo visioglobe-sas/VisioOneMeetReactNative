@@ -4,7 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { WebView, WebViewMessageEvent } from 'react-native-webview';
 
 import { visioOneHtml } from '../assets/visioOneHtml';
-import { ClickedPoi, useVisioMap, VenueBuilding } from '../screens/useVisioMap';
+import { ClickedPoi, Position, useVisioMap, VenueBuilding } from '../screens/useVisioMap';
 
 // Replace with a hash of your own venue from https://my.visioglobe.com
 // This one points at a Visioglobe demo venue.
@@ -22,12 +22,23 @@ export interface VenueLayoutInfo {
   currentFloorId?: string;
 }
 
+// Result of the WebView resolving both place IDs passed to the simulated-position
+// feature's 'resolve_poi_positions' message -- see VisioMapBridge.resolvePositionSimulationPois.
+export interface PositionSimulationResolution {
+  origin: Position;
+  destination: Position;
+}
+
 interface VisioMapViewProps {
   renderOverlay?: (
     bridge: VisioMapBridge,
     status: Status,
     clickedPois: ClickedPoi[],
     venueLayout: VenueLayoutInfo,
+    positionSimulation: {
+      resolution: PositionSimulationResolution | null;
+      error: string | null;
+    },
   ) => React.ReactNode;
   // Fired from the WebView's onMessage handler (an event, not during render) so the
   // parent can safely react -- e.g. open its own controls -- without the "setState
@@ -40,6 +51,11 @@ const VisioMapView = ({ renderOverlay, onPoiClick }: VisioMapViewProps) => {
   const [errorMessage, setErrorMessage] = React.useState<string | null>(null);
   const [clickedPois, setClickedPois] = React.useState<ClickedPoi[]>([]);
   const [venueLayout, setVenueLayout] = React.useState<VenueLayoutInfo>({ buildings: [] });
+  const [positionSimulationResolution, setPositionSimulationResolution] =
+    React.useState<PositionSimulationResolution | null>(null);
+  const [positionSimulationError, setPositionSimulationError] = React.useState<string | null>(
+    null,
+  );
 
   const bridge = useVisioMap(DEMO_MAP_HASH);
   const { webRef, sendSetup } = bridge;
@@ -73,6 +89,12 @@ const VisioMapView = ({ renderOverlay, onPoiClick }: VisioMapViewProps) => {
       }));
     } else if (evt.type === 'itinerary_instructions') {
       console.log('[VisioMap] itinerary instructions:', evt.data);
+    } else if (evt.type === 'poi_positions_resolved') {
+      setPositionSimulationError(null);
+      setPositionSimulationResolution(evt.data);
+    } else if (evt.type === 'position_simulation_error') {
+      setPositionSimulationResolution(null);
+      setPositionSimulationError(String(evt.data?.message ?? evt.data));
     }
   };
 
@@ -101,7 +123,10 @@ const VisioMapView = ({ renderOverlay, onPoiClick }: VisioMapViewProps) => {
         </Text>
       </View>
 
-      {renderOverlay?.(bridge, status, clickedPois, venueLayout)}
+      {renderOverlay?.(bridge, status, clickedPois, venueLayout, {
+        resolution: positionSimulationResolution,
+        error: positionSimulationError,
+      })}
     </SafeAreaView>
   );
 };

@@ -7,6 +7,14 @@ export interface OccupancyUpdate {
   color?: string;
 }
 
+// WGS84 coordinate, same shape the SDK's PositionTrackerOptions.position expects --
+// see injectTrackedPosition in useVisioMap.ts below, no conversion needed.
+export interface Position {
+  latitude: number;
+  longitude: number;
+  altitude?: number;
+}
+
 // Mirrors the SDK's View.UIPart type exactly (View.ts in visioone) -- these 5 string
 // values are the only ones the SDK recognizes, case-sensitive, no others exist.
 export type UIPart = 'floorSelector' | 'navigation' | 'poiDetails' | 'search' | 'userTracking';
@@ -107,6 +115,33 @@ export const useVisioMap = (hash: string) => {
     });
   };
 
+  // Resolves both place IDs to WGS84 positions on the WebView side (venue.pois lookup
+  // only exists there) -- the response comes back asynchronously as either
+  // 'poi_positions_resolved' or 'position_simulation_error', see VisioMapView.tsx.
+  const resolvePositionSimulationPois = (originId: string, destinationId: string) => {
+    sendMessage({
+      type: 'resolve_poi_positions',
+      data: { originId, destinationId },
+    });
+  };
+
+  // The ping-pong interpolation timer lives on the native side (same idiom as
+  // occupancy-simulated's color-cycling setInterval) -- this is called on every tick
+  // with the already-interpolated position, the WebView handler just forwards it to
+  // injectTrackedPosition (setting allowTracking on first call).
+  const injectTrackedPosition = (position: Position, precisionCircleRadius: number) => {
+    sendMessage({
+      type: 'inject_tracked_position',
+      data: { position, precisionCircleRadius },
+    });
+  };
+
+  // No dedicated "stop" call exists on the SDK side -- this sets view.allowTracking
+  // back to false, which is what removes the marker/circle from the map.
+  const stopPositionSimulation = () => {
+    sendMessage({ type: 'stop_position_simulation' });
+  };
+
   return {
     webRef,
     resetMap,
@@ -118,5 +153,8 @@ export const useVisioMap = (hash: string) => {
     updateOccupancy,
     startItinerary,
     setUIPartVisible,
+    resolvePositionSimulationPois,
+    injectTrackedPosition,
+    stopPositionSimulation,
   };
 };

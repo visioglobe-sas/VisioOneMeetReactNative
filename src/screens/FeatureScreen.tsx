@@ -12,6 +12,7 @@ import GoToPoiOverlay from '../features/GoToPoiOverlay';
 import OccupancySimulatedOverlay from '../features/OccupancySimulatedOverlay';
 import PoiClickOverlay from '../features/PoiClickOverlay';
 import ResetViewOverlay from '../features/ResetViewOverlay';
+import UIPartVisibilityOverlay from '../features/UIPartVisibilityOverlay';
 import { useLocale } from '../i18n/useLocale';
 import { RootStackParamList } from '../navigation/RootNavigator';
 import { ClickedPoi } from './useVisioMap';
@@ -55,6 +56,8 @@ const FeatureScreen = ({ route, navigation }: Props) => {
             goToBuilding={bridge.goToBuilding}
           />
         );
+      case 'ui-part-visibility':
+        return <UIPartVisibilityOverlay setUIPartVisible={bridge.setUIPartVisible} />;
       default:
         return null;
     }

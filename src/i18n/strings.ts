@@ -12,6 +12,13 @@ export const strings = {
     'poiClick.description': "Show a tapped place's info in a panel.",
     'floorSelector.title': 'Floor selector',
     'floorSelector.description': 'Switch floor or building from a list driven by the app.',
+    'uiPartVisibility.title': 'UI visibility',
+    'uiPartVisibility.description': "Show or hide individual parts of the map's default UI.",
+    'uiPartVisibility.floorSelector': 'Floor selector',
+    'uiPartVisibility.navigation': 'Navigation',
+    'uiPartVisibility.poiDetails': 'POI details',
+    'uiPartVisibility.search': 'Search',
+    'uiPartVisibility.userTracking': 'User tracking',
   },
   fr: {
     'resetView.title': 'Réinitialiser la vue',
@@ -27,6 +34,14 @@ export const strings = {
     'poiClick.description': "Affiche les infos d'un lieu tapé dans un panneau.",
     'floorSelector.title': "Sélection d'étage",
     'floorSelector.description': "Change d'étage ou de bâtiment depuis une liste pilotée par l'app.",
+    'uiPartVisibility.title': "Visibilité de l'UI",
+    'uiPartVisibility.description':
+      "Afficher ou masquer individuellement les parties de l'UI par défaut de la carte.",
+    'uiPartVisibility.floorSelector': "Sélecteur d'étage",
+    'uiPartVisibility.navigation': 'Navigation',
+    'uiPartVisibility.poiDetails': 'Détails du lieu',
+    'uiPartVisibility.search': 'Recherche',
+    'uiPartVisibility.userTracking': 'Suivi utilisateur',
   },
 };
 

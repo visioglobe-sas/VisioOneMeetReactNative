@@ -7,6 +7,10 @@ export interface OccupancyUpdate {
   color?: string;
 }
 
+// Mirrors the SDK's View.UIPart type exactly (View.ts in visioone) -- these 5 string
+// values are the only ones the SDK recognizes, case-sensitive, no others exist.
+export type UIPart = 'floorSelector' | 'navigation' | 'poiDetails' | 'search' | 'userTracking';
+
 // Mirrors the plain object shape sent from the WebView on 'poi_click' -- see the
 // poiclick handler in visioOneHtml.ts/visioOne.html. Not the live SDK POI type:
 // only serializable fields survive the WebView postMessage boundary.
@@ -96,6 +100,13 @@ export const useVisioMap = (hash: string) => {
     });
   };
 
+  const setUIPartVisible = (uiPart: UIPart, isVisible: boolean) => {
+    sendMessage({
+      type: 'set_ui_part_visible',
+      data: { uiPart, isVisible },
+    });
+  };
+
   return {
     webRef,
     resetMap,
@@ -106,5 +117,6 @@ export const useVisioMap = (hash: string) => {
     sendSetup,
     updateOccupancy,
     startItinerary,
+    setUIPartVisible,
   };
 };

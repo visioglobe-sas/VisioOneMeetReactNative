@@ -6,7 +6,8 @@ export type FeatureSlug =
   | 'goto-poi'
   | 'compute-navigation'
   | 'poi-click'
-  | 'floor-selector';
+  | 'floor-selector'
+  | 'ui-part-visibility';
 
 export interface FeatureDefinition {
   slug: FeatureSlug;
@@ -44,5 +45,10 @@ export const featureRegistry: FeatureDefinition[] = [
     slug: 'floor-selector',
     titleKey: 'floorSelector.title',
     descriptionKey: 'floorSelector.description',
+  },
+  {
+    slug: 'ui-part-visibility',
+    titleKey: 'uiPartVisibility.title',
+    descriptionKey: 'uiPartVisibility.description',
   },
 ];

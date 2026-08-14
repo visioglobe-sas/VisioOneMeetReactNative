@@ -28,15 +28,7 @@ export const visioOneHtml = `<!DOCTYPE html>
       let image = null
       let poiInfo = null
 
-      const DEFAULT_OPTIONS = {
-        userTracking: true,
-        navigation: true,
-        poiDetails: false,
-        search: false,
-        floorSelector: true,
-      }
-
-      const setup = async (hash, options) => {
+      const setup = async (hash) => {
         const venueHash = typeof hash === 'string' ? hash.trim() : ''
         let visioOneLoadError = null
         const originalConsoleWarn = console.warn
@@ -67,10 +59,8 @@ export const visioOneHtml = `<!DOCTYPE html>
               cameraProjection: 'perspective',
             })
             .then((v) => {
-              const opts = options || DEFAULT_OPTIONS
-              const hideKeys = Object.keys(opts).filter((key) => !opts[key])
-              // hide UI parts not requested by the host app
-              hideKeys.forEach((key) => v.setUIPartVisible(key, false))
+              // All UI parts start visible, matching the SDK's own default -- see
+              // setUIPartVisible below for the app-driven toggle (ui-part-visibility feature).
               // event.pois is an array because a single tap can hit several overlapping
               // POIs (e.g. a marker sitting on top of a surface). Forward all of them --
               // only plain serializable fields survive the WebView postMessage boundary,
@@ -85,8 +75,8 @@ export const visioOneHtml = `<!DOCTYPE html>
                 sendToNative({ type: 'poi_click', data: { pois } })
               })
               // Keeps the native floor-selector UI's highlighted floor in sync even when
-              // the SDK's own default floor-selector widget (floorSelector: true, see
-              // DEFAULT_OPTIONS above) is the one driving the change -- e.g. the user taps
+              // the SDK's own default floor-selector widget (visible by default, see
+              // setUIPartVisible below) is the one driving the change -- e.g. the user taps
               // it directly instead of the app's own control.
               v.addEventListener('currentfloorchanged', () => {
                 sendToNative({
@@ -232,6 +222,16 @@ export const visioOneHtml = `<!DOCTYPE html>
         })
       }
 
+      // uiPart must be one of the SDK's exact, case-sensitive View.UIPart values:
+      // 'floorSelector' | 'navigation' | 'poiDetails' | 'search' | 'userTracking'.
+      // Requires the view to already exist -- called only after 'ready', once setup()
+      // has resolved createView().
+      const setUIPartVisible = (uiPart, isVisible) => {
+        if (view) {
+          view.setUIPartVisible(uiPart, isVisible)
+        }
+      }
+
       const onMessage = (event) => {
         try {
           const evt = typeof event.data === 'string' ? JSON.parse(event.data) : event.data
@@ -262,6 +262,9 @@ export const visioOneHtml = `<!DOCTYPE html>
               break
             case 'start_itinerary':
               startItinerary(evt.data.origin, evt.data.destination, evt.data.isAccessible)
+              break
+            case 'set_ui_part_visible':
+              setUIPartVisible(evt.data.uiPart, evt.data.isVisible)
               break
             default:
               console.error('Unknown message type:', evt.type)

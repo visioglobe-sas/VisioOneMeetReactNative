@@ -84,10 +84,42 @@ export const visioOneHtml = `<!DOCTYPE html>
                 }))
                 sendToNative({ type: 'poi_click', data: { pois } })
               })
+              // Keeps the native floor-selector UI's highlighted floor in sync even when
+              // the SDK's own default floor-selector widget (floorSelector: true, see
+              // DEFAULT_OPTIONS above) is the one driving the change -- e.g. the user taps
+              // it directly instead of the app's own control.
+              v.addEventListener('currentfloorchanged', () => {
+                sendToNative({
+                  type: 'floor_changed',
+                  data: {
+                    buildingId: v.currentBuilding?.id,
+                    floorId: v.currentFloor?.id,
+                  },
+                })
+              })
               view = v
             })
+          // Only plain serializable fields survive the WebView postMessage boundary (see
+          // the poiclick handler above for the same constraint) -- labels are resolved
+          // through venue.translator so they match whatever the SDK's own floor-selector
+          // widget displays, rather than raw (often non human-readable) floor/building ids.
+          const buildings = venue.venueLayout.buildings.map((building) => ({
+            id: building.id,
+            label: venue.translator.translateBuilding(building, venue.currentLocale).name,
+            defaultFloorID: building.defaultFloorID,
+            floors: building.floors.map((floor) => ({
+              id: floor.id,
+              label: venue.translator.translateFloor(floor, venue.currentLocale).name,
+              levelIndex: floor.levelIndex,
+            })),
+          }))
           sendToNative({
             type: 'ready',
+            data: {
+              buildings,
+              currentBuildingId: view.currentBuilding?.id,
+              currentFloorId: view.currentFloor?.id,
+            },
           })
         } catch (error) {
           const cause = visioOneLoadError || error

@@ -4,9 +4,10 @@ import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import BottomSheet from '../components/BottomSheet';
-import VisioMapView, { VisioMapBridge } from '../components/VisioMapView';
+import VisioMapView, { VenueLayoutInfo, VisioMapBridge } from '../components/VisioMapView';
 import { featureRegistry } from '../features/registry';
 import ComputeNavigationOverlay from '../features/ComputeNavigationOverlay';
+import FloorSelectorOverlay from '../features/FloorSelectorOverlay';
 import GoToPoiOverlay from '../features/GoToPoiOverlay';
 import OccupancySimulatedOverlay from '../features/OccupancySimulatedOverlay';
 import PoiClickOverlay from '../features/PoiClickOverlay';
@@ -30,7 +31,11 @@ const FeatureScreen = ({ route, navigation }: Props) => {
     }
   }, [feature, navigation, t]);
 
-  const renderFeatureContent = (bridge: VisioMapBridge, clickedPois: ClickedPoi[]) => {
+  const renderFeatureContent = (
+    bridge: VisioMapBridge,
+    clickedPois: ClickedPoi[],
+    venueLayout: VenueLayoutInfo,
+  ) => {
     switch (slug) {
       case 'reset-view':
         return <ResetViewOverlay resetMap={bridge.resetMap} />;
@@ -42,6 +47,14 @@ const FeatureScreen = ({ route, navigation }: Props) => {
         return <ComputeNavigationOverlay startItinerary={bridge.startItinerary} />;
       case 'poi-click':
         return <PoiClickOverlay pois={clickedPois} />;
+      case 'floor-selector':
+        return (
+          <FloorSelectorOverlay
+            venueLayout={venueLayout}
+            goToFloor={bridge.goToFloor}
+            goToBuilding={bridge.goToBuilding}
+          />
+        );
       default:
         return null;
     }
@@ -60,7 +73,7 @@ const FeatureScreen = ({ route, navigation }: Props) => {
   return (
     <VisioMapView
       onPoiClick={handlePoiClick}
-      renderOverlay={(bridge, _status, clickedPois) => (
+      renderOverlay={(bridge, _status, clickedPois, venueLayout) => (
         <>
           {slug === 'poi-click' ? (
             !controlsVisible && clickedPois.length === 0 ? (
@@ -76,7 +89,7 @@ const FeatureScreen = ({ route, navigation }: Props) => {
             </TouchableOpacity>
           )}
           <BottomSheet visible={controlsVisible} onClose={() => setControlsVisible(false)}>
-            {renderFeatureContent(bridge, clickedPois)}
+            {renderFeatureContent(bridge, clickedPois, venueLayout)}
           </BottomSheet>
         </>
       )}

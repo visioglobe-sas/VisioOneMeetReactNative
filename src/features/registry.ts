@@ -5,7 +5,8 @@ export type FeatureSlug =
   | 'occupancy-simulated'
   | 'goto-poi'
   | 'compute-navigation'
-  | 'poi-click';
+  | 'poi-click'
+  | 'floor-selector';
 
 export interface FeatureDefinition {
   slug: FeatureSlug;
@@ -38,5 +39,10 @@ export const featureRegistry: FeatureDefinition[] = [
     slug: 'poi-click',
     titleKey: 'poiClick.title',
     descriptionKey: 'poiClick.description',
+  },
+  {
+    slug: 'floor-selector',
+    titleKey: 'floorSelector.title',
+    descriptionKey: 'floorSelector.description',
   },
 ];

@@ -22,6 +22,9 @@ export const strings = {
     'simulatedPosition.title': 'Simulated position',
     'simulatedPosition.description':
       'Animate a simulated position with an accuracy circle between two POIs.',
+    'cameraLockOnPosition.title': 'Camera lock on position',
+    'cameraLockOnPosition.description':
+      'Recenter and lock the camera onto a simulated tracked position, like a "recenter on me" toggle.',
   },
   fr: {
     'resetView.title': 'Réinitialiser la vue',
@@ -48,6 +51,9 @@ export const strings = {
     'simulatedPosition.title': 'Position simulée',
     'simulatedPosition.description':
       'Anime une position simulée avec un cercle de précision entre deux POI.',
+    'cameraLockOnPosition.title': 'Verrouillage caméra sur la position',
+    'cameraLockOnPosition.description':
+      'Recentre et verrouille la caméra sur une position simulée suivie, comme un bouton "recentrer sur moi".',
   },
 };
 

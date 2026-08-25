@@ -74,6 +74,20 @@ const FeatureScreen = ({ route, navigation }: Props) => {
             error={positionSimulation.error}
           />
         );
+      case 'camera-lock-on-position':
+        // Same tracking UI as simulated-position (a moving tracked position is needed
+        // to see the camera lock's effect at all) plus the extra toggle, enabled by
+        // passing setCameraLockOnPosition -- see SimulatedPositionOverlay.tsx.
+        return (
+          <SimulatedPositionOverlay
+            resolvePois={bridge.resolvePositionSimulationPois}
+            injectTrackedPosition={bridge.injectTrackedPosition}
+            stopSimulation={bridge.stopPositionSimulation}
+            resolution={positionSimulation.resolution}
+            error={positionSimulation.error}
+            setCameraLockOnPosition={bridge.setCameraLockOnPosition}
+          />
+        );
       default:
         return null;
     }

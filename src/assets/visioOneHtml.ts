@@ -289,6 +289,17 @@ export const visioOneHtml = `<!DOCTYPE html>
         }
       }
 
+      // camera-lock-on-position feature: binds/unbinds the camera's focus onto whatever
+      // position is currently being tracked. Only has a visible effect once
+      // view.allowTracking is true (see injectTrackedPosition above) -- setting this
+      // while allowTracking is still false is a harmless no-op per the SDK's own doc
+      // comment, unlike injectTrackedPosition, which throws in that situation.
+      const setCameraLockOnPosition = (locked) => {
+        if (view) {
+          view.lockCameraPositionOnTracking = locked
+        }
+      }
+
       const onMessage = (event) => {
         try {
           const evt = typeof event.data === 'string' ? JSON.parse(event.data) : event.data
@@ -331,6 +342,9 @@ export const visioOneHtml = `<!DOCTYPE html>
               break
             case 'stop_position_simulation':
               stopPositionSimulation()
+              break
+            case 'set_camera_lock_on_position':
+              setCameraLockOnPosition(evt.data.locked)
               break
             default:
               console.error('Unknown message type:', evt.type)

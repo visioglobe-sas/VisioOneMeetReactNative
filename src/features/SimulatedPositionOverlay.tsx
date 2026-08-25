@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, Switch, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
 import { PositionSimulationResolution, VisioMapBridge } from '../components/VisioMapView';
 
@@ -20,6 +20,10 @@ interface Props {
   stopSimulation: VisioMapBridge['stopPositionSimulation'];
   resolution: PositionSimulationResolution | null;
   error: string | null;
+  // Optional: only the camera-lock-on-position feature passes this, which is what
+  // makes the "Recenter camera on position" toggle below appear at all -- the plain
+  // simulated-position feature renders the same component without it.
+  setCameraLockOnPosition?: VisioMapBridge['setCameraLockOnPosition'];
 }
 
 const SimulatedPositionOverlay = ({
@@ -28,6 +32,7 @@ const SimulatedPositionOverlay = ({
   stopSimulation,
   resolution,
   error,
+  setCameraLockOnPosition,
 }: Props) => {
   const [originId, setOriginId] = React.useState('');
   const [destinationId, setDestinationId] = React.useState('');
@@ -36,6 +41,11 @@ const SimulatedPositionOverlay = ({
   // True from the moment Start is pressed until the WebView's async POI-lookup
   // response ('poi_positions_resolved' or 'position_simulation_error') comes back.
   const [awaitingResolution, setAwaitingResolution] = React.useState(false);
+  // camera-lock-on-position feature only (setCameraLockOnPosition undefined otherwise).
+  // Deliberately reset to false -- never persisted -- whenever tracking stops (Stop
+  // pressed, a POI-not-found error, or the effect's cleanup on unmount below), so
+  // restarting the simulation always begins unlocked, a fresh opt-in every time.
+  const [cameraLockOn, setCameraLockOn] = React.useState(false);
 
   // Read by the interpolation loop below without being a dependency of it -- so moving
   // the slider/stepper while the simulation is running changes the radius used on the
@@ -55,8 +65,13 @@ const SimulatedPositionOverlay = ({
       setRunning(true);
     } else if (error) {
       setAwaitingResolution(false);
+      // Simulation never actually started -- make sure a stale lock from a previous
+      // run doesn't linger (see the reset in the running effect's cleanup below, which
+      // normally handles this; this covers the case where resolution fails outright).
+      setCameraLockOn(false);
+      setCameraLockOnPosition?.(false);
     }
-  }, [resolution, error, awaitingResolution]);
+  }, [resolution, error, awaitingResolution, setCameraLockOnPosition]);
 
   React.useEffect(() => {
     if (!running || !resolution) {
@@ -97,6 +112,11 @@ const SimulatedPositionOverlay = ({
       clearInterval(timer);
       // No dedicated stop call on the SDK -- this is what removes the marker/circle.
       stopSimulation();
+      // Runs on Stop being pressed (running -> false, this effect re-runs) and on
+      // unmount (leaving the screen) alike -- both are "the simulation stopped", so
+      // both reset the lock, a deliberate fresh opt-in on every restart.
+      setCameraLockOn(false);
+      setCameraLockOnPosition?.(false);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [running, resolution]);
@@ -117,6 +137,11 @@ const SimulatedPositionOverlay = ({
 
   const adjustRadius = (delta: number) => {
     setRadius((prev) => Math.min(RADIUS_MAX, Math.max(RADIUS_MIN, prev + delta)));
+  };
+
+  const handleCameraLockToggle = (locked: boolean) => {
+    setCameraLockOn(locked);
+    setCameraLockOnPosition?.(locked);
   };
 
   const startDisabled = awaitingResolution || (!originId.trim() && !destinationId.trim());
@@ -174,6 +199,13 @@ const SimulatedPositionOverlay = ({
               : 'Simulate position between POIs'}
         </Text>
       </TouchableOpacity>
+
+      {setCameraLockOnPosition ? (
+        <View style={styles.lockRow}>
+          <Text style={styles.label}>Recenter camera on position</Text>
+          <Switch value={cameraLockOn} onValueChange={handleCameraLockToggle} disabled={!running} />
+        </View>
+      ) : null}
     </View>
   );
 };
@@ -195,6 +227,11 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
   },
   radiusRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  lockRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',

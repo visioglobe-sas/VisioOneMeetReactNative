@@ -142,6 +142,18 @@ export const useVisioMap = (hash: string) => {
     sendMessage({ type: 'stop_position_simulation' });
   };
 
+  // Binds/unbinds the camera's focus onto whatever position is currently being tracked
+  // (camera-lock-on-position feature) -- view.lockCameraPositionOnTracking. Only has a
+  // visible effect once view.allowTracking is true (see injectTrackedPosition above);
+  // unlike injectTrackedPosition, setting this while allowTracking is still false is a
+  // harmless no-op per the SDK's own doc comment, not an exception.
+  const setCameraLockOnPosition = (locked: boolean) => {
+    sendMessage({
+      type: 'set_camera_lock_on_position',
+      data: { locked },
+    });
+  };
+
   return {
     webRef,
     resetMap,
@@ -156,5 +168,6 @@ export const useVisioMap = (hash: string) => {
     resolvePositionSimulationPois,
     injectTrackedPosition,
     stopPositionSimulation,
+    setCameraLockOnPosition,
   };
 };

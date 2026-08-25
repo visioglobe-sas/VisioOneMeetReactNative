@@ -1,33 +1,79 @@
-# Aller à un lieu
+# Go to Place
 
 ## Description
 
-Centre la caméra du SDK sur un lieu (POI) à partir de son identifiant, en s'appuyant sur `select_place`/`clear_place` — déjà exposés côté pont JS (`goToPlace`/`clearPlace` dans `useVisioMap.ts`, gérés côté WebView dans `visioOneHtml.ts`/`visioOne.html`).
+Centers the camera on a place (POI) given its ID via `view.goToPOI(poi, options)`, and optionally highlights it. `venue.pois.find(...)` resolves the ID to the actual POI object first — the SDK has no "go to POI by ID" shortcut; POI lookup and camera framing are two separate steps.
 
-`goToPlace(placeId)` résout l'identifiant en POI côté SDK et recentre la vue dessus ; `clearPlace()` annule cette sélection sans paramètre, de la même façon que `resetMap()` ramène la caméra à son cadrage initial (voir `docs/features/reset-view.md`).
+## SDK usage
 
-## Step by step
+```ts
+// useVisioMap.ts
+const goToPlace = (placeId: string) => {
+  sendMessage({ type: 'select_place', data: { placeId } });
+};
 
-1. **Rien à ajouter côté pont** : `useVisioMap().goToPlace(placeId: string)` et `useVisioMap().clearPlace()` existent déjà et envoient respectivement `{ type: 'select_place', data: { placeId } }` et `{ type: 'clear_place' }` à la WebView.
-2. Dans le composant consommateur (`src/features/GoToPoiOverlay.tsx`, rendu par `FeatureScreen.tsx` à l'intérieur de `VisioMapView.tsx`), garder l'identifiant saisi dans un état local (`useState`) et exposer deux boutons :
-   ```tsx
-   <TextInput value={placeId} onChangeText={setPlaceId} placeholder="Place ID" />
-   <TouchableOpacity onPress={() => goToPlace(placeId)}>
-     <Text>Go</Text>
-   </TouchableOpacity>
-   <TouchableOpacity onPress={clearPlace}>
-     <Text>Clear</Text>
-   </TouchableOpacity>
-   ```
-3. Le bridge (`goToPlace`, `clearPlace`, `webRef`, `sendSetup`, ...) est fourni par `useVisioMap()` à l'intérieur de `VisioMapView.tsx`, qui le passe à l'overlay actif via la prop `renderOverlay` — voir `FeatureScreen.tsx` pour le branchement par `slug` de feature (`'goto-poi'`).
+const clearPlace = () => {
+  sendMessage({ type: 'clear_place' });
+};
+```
 
-## Points d'attention
+```js
+// visioOneHtml.ts / visioOne.html (kept in sync by hand)
+const goToPlace = (placeId) => {
+  if (venue && view) {
+    const poi = venue.pois.find((p) => p.id === placeId)
+    poiInfo = poi
 
-- **`placeId` doit être un vrai ID de POI de la carte chargée.** Comme pour `update_occupancy` (voir `docs/features/occupancy-simulated.md`), une résolution qui échoue côté SDK n'affiche pas d'erreur exploitable dans cette démo — vérifier avec un ID de POI existant de la carte de démo (voir VisioMapEditor pour la liste des POIs).
-- **Pas d'état à nettoyer au démontage** : contrairement à `occupancy-simulated`, il n'y a ni timer ni `useEffect` — `goToPlace`/`clearPlace` sont de simples appels ponctuels, sans effet de bord persistant.
-- Ce champ + ces deux boutons étaient auparavant regroupés avec les autres contrôles de démo (itinéraire, reset, occupation) dans un unique `MapScreen.tsx` ; ils vivent maintenant sur leur propre écran (`FeatureScreen` avec `slug: 'goto-poi'`), accessible depuis le menu (`HomeScreen.tsx`).
+    if (poi) {
+      view.goToPOI(poi, {
+        orientation: { pitch: 20 },
+        padding: { top: 100, bottom: 100, right: 100, left: 100 },
+      })
 
-## Pour aller plus loin
+      poi.surfaces.forEach((surface) => {
+        venue.updateSurface(surface, { selectionColor: '#057DBC' })
+      })
 
-- `docs/features/reset-view.md` de ce repo pour l'action symétrique sans paramètre (`resetMap`).
-- `docs/SDK_NOTES.md` de ce repo pour les gotchas SDK/WebView documentés indépendamment de toute feature.
+      const position = { latitude: 0, longitude: 0, altitude: poi.surfaces[0].extrusionHeight }
+      poi.surfaces[0].positions.forEach((p) => {
+        position.latitude += p.latitude
+        position.longitude += p.longitude
+      })
+      position.latitude /= poi.surfaces[0].positions.length
+      position.longitude /= poi.surfaces[0].positions.length
+
+      image = venue.createImage({
+        poi,
+        position,
+        width: 2,
+        height: 2,
+        orientationType: 'facing',
+        url: 'https://cdn-icons-png.flaticon.com/512/731/731582.png',
+      })
+    }
+  }
+}
+
+const clearPlace = () => {
+  if (venue && image && poiInfo) {
+    venue.removeImage(image)
+    poiInfo.surfaces.forEach((surface) => {
+      venue.updateSurface(surface, { selectionColor: undefined })
+    })
+    image = null
+    poiInfo = null
+  }
+}
+```
+
+## Things to know
+
+- `venue.pois.find((p) => p.id === placeId)` fails silently (returns `undefined`, no thrown error) if the ID doesn't match any POI in the loaded venue — validate IDs against the actual venue data (e.g. via VisioMapEditor) rather than assuming any string works.
+- `view.goToPOI(poi, options)` accepts an `orientation` (pitch/heading) and a `padding` (per-side, in pixels) to control the final framing — this example uses a fixed 20° pitch and 100px padding on all sides.
+- Highlighting is layered on top of the camera move, not part of `goToPOI` itself: `venue.updateSurface(surface, { selectionColor })` recolors the POI's surfaces, and `venue.createImage(...)` drops a marker image above it, computed as the centroid of the POI's first surface (averaging its `positions`, offset by `extrusionHeight`).
+- `clearPlace` reverses both effects: `venue.removeImage(image)` removes the marker, and setting `selectionColor: undefined` resets the surface's appearance — `undefined` is how you clear a color override, not a color value of its own.
+- The created `image` and the selected POI need to be tracked somewhere (e.g. module-level variables on the WebView side) so a later `clearPlace` call knows what to remove — calling it without a prior successful `goToPlace` is a no-op.
+
+## Learn more
+
+- [Reset View](reset-view.md) — the symmetric parameterless action that returns the camera to the venue's default framing.

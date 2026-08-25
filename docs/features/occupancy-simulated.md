@@ -1,34 +1,47 @@
-# Occupation temps réel (données simulées)
+# Simulated Occupancy
 
 ## Description
 
-Colore dynamiquement la surface d'un POI pour refléter un statut d'occupation (libre / bientôt occupé / occupé), en s'appuyant sur `update_occupancy` — déjà exposé côté pont JS (`updateOccupancy` dans `useVisioMap.ts`, géré côté WebView dans `visioOneHtml.ts`/`visioOne.html`).
+Colors a POI's surfaces to reflect an occupancy status (free / soon occupied / occupied) via `venue.updateSurface(surface, { color })`.
 
-Il n'y a pas de vrai capteur derrière : un `setInterval` côté React Native fait tourner la couleur toutes les 2,5 secondes, en lieu et place d'un flux IoT réel. C'est le point de départ pour brancher une vraie source de données (websocket, polling d'API) sans rien changer côté pont ou côté SDK.
+This example has no real sensor behind it: a native-side timer cycles through colors on an interval, standing in for a real occupancy feed (websocket, API polling). Swapping in a real data source only means changing what feeds this call — nothing on the SDK-call side changes.
 
-## Step by step
+## SDK usage
 
-1. **Rien à ajouter côté pont** : `useVisioMap().updateOccupancy(occupancy: OccupancyUpdate[])` existe déjà et envoie `{ type: 'update_occupancy', data: { occupancy } }` à la WebView, qui résout chaque `planId` en POI (`venue.pois.find(...)`) et colore ses surfaces (`venue.updateSurface(surface, { color })`).
-2. Dans le composant consommateur (`src/features/OccupancySimulatedOverlay.tsx`, rendu par `FeatureScreen.tsx` à l'intérieur de `VisioMapView.tsx`), démarrer un timer qui appelle `updateOccupancy([{ planId, color }])` avec une couleur qui change à chaque tick :
-   ```ts
-   const OCCUPANCY_COLORS = ['#2ECC71', '#F1C40F', '#E74C3C'];
-   // ...
-   const timer = setInterval(() => {
-     colorIndex = (colorIndex + 1) % OCCUPANCY_COLORS.length;
-     updateOccupancy([{ planId: targetPlaceId, color: OCCUPANCY_COLORS[colorIndex] }]);
-   }, 2500);
-   ```
-3. Toujours nettoyer le timer (`clearInterval`) **et** remettre la couleur à `undefined` en cleanup — sinon la surface reste bloquée sur la dernière couleur simulée après avoir arrêté la simulation ou changé de `planId`.
-4. Exposer un contrôle utilisateur pour démarrer/arrêter la simulation (ici, un bouton toggle associé à son propre champ "Place ID", sur l'écran dédié à cette feature — chaque feature du menu vit sur son propre écran, avec sa propre WebView recréée par React Navigation) — une feature du catalogue doit être démontrable via une interaction, pas seulement câblée en silence.
+```ts
+// useVisioMap.ts
+export interface OccupancyUpdate {
+  planId: string;
+  color?: string;
+}
 
-## Points d'attention
+const updateOccupancy = (occupancy: OccupancyUpdate[]) => {
+  sendMessage({ type: 'update_occupancy', data: { occupancy } });
+};
+```
 
-- **`planId` doit être un vrai ID de POI de la carte chargée.** `venue.pois.find((p) => p.id === entry.planId)` échoue silencieusement (pas d'erreur remontée) si l'ID ne correspond à rien — vérifier avec un ID de POI existant de la carte (voir VisioMapEditor pour la liste des POIs de la carte de démo).
-- **`color: undefined` réinitialise l'apparence de la surface** (même mécanisme que `clearPlace` avec `selectionColor: undefined`) — c'est la façon de "rendre" une place à son état normal, pas une couleur par défaut à coder en dur.
-- **Le timer doit vivre dans un `useEffect`**, dépendant de l'état "simulation active" et du `placeId` ciblé — sinon un changement de `placeId` en cours de simulation laisse tourner l'ancien timer sur l'ancien POI en plus du nouveau.
-- Ceci démontre la **mécanique** de mise à jour temps réel, pas une vraie intégration IoT — pour un cas client réel, remplacer le `setInterval` par un abonnement à la vraie source (websocket, polling d'API) sans toucher au pont ni au SDK.
+```js
+// visioOneHtml.ts / visioOne.html (kept in sync by hand)
+const updateOccupancy = (occupancy) => {
+  occupancy.forEach((entry) => {
+    const poi = venue.pois.find((p) => p.id === entry.planId)
+    if (!poi) {
+      return
+    }
+    poi.surfaces.forEach((surface) => {
+      venue.updateSurface(surface, { color: entry.color })
+    })
+  })
+}
+```
 
-## Pour aller plus loin
+## Things to know
 
-- Version "vrai capteur" : voir le [`ROADMAP.md`](https://github.com/visioglobe-sas/VisioOneHub) du hub, feature "Suivi d'actifs connectés (IoT)" — hors scope tant qu'aucun flux IoT réel n'est disponible.
-- `docs/SDK_NOTES.md` de ce repo pour les autres gotchas SDK/WebView déjà documentés ici.
+- `planId` must be a real POI ID from the loaded venue. `venue.pois.find((p) => p.id === entry.planId)` fails silently (no error) if the ID doesn't match anything — validate against the actual venue data (e.g. via VisioMapEditor).
+- `color: undefined` resets the surface's appearance back to normal (the same mechanism [Go to Place](goto-poi.md) uses with `selectionColor: undefined`) — that's how you clear a color override, not a color value in its own right.
+- A POI can have multiple surfaces; `updateSurface` is called on each of them, so the whole POI's footprint changes color, not just part of it.
+
+## Learn more
+
+- [Go to Place](goto-poi.md) — uses the same `venue.updateSurface(surface, { ... })` call, for highlighting instead of occupancy coloring.
+- A real-sensor version of this demo (websocket/API-driven occupancy) is out of scope for this repo; see the [VisioOneHub](https://github.com/visioglobe-sas/VisioOneHub) for the broader example catalog.

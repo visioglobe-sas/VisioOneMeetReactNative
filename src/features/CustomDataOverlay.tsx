@@ -14,6 +14,13 @@ interface Props {
   lookup: CustomDataLookupResult | null;
 }
 
+// This screen loads a dedicated map (see FeatureScreen.tsx's CUSTOM_DATA_MAP_HASH)
+// confirmed to carry real, published CustomData on these 3 POIs -- unlike the app's
+// shared demo map, which has none. Quick-select chips below let a lookup be
+// triggered with a single tap instead of typing an id by hand. See
+// docs/features/custom-data.md.
+const KNOWN_POI_IDS = ['B1', 'B3-UL00-ID0065', 'B3-UL00-ID0064'];
+
 const CustomDataOverlay = ({ refreshCustomData, getPoiCustomData, refresh, lookup }: Props) => {
   const [placeId, setPlaceId] = React.useState('');
   // True from the moment a button is pressed until the matching WebView response
@@ -41,8 +48,8 @@ const CustomDataOverlay = ({ refreshCustomData, getPoiCustomData, refresh, looku
     refreshCustomData();
   };
 
-  const handleLookup = () => {
-    const trimmed = placeId.trim();
+  const handleLookup = (id?: string) => {
+    const trimmed = (id ?? placeId).trim();
     if (!trimmed) {
       return;
     }
@@ -50,10 +57,28 @@ const CustomDataOverlay = ({ refreshCustomData, getPoiCustomData, refresh, looku
     getPoiCustomData(trimmed);
   };
 
+  // Fills the field and immediately triggers the lookup, so a real, non-empty
+  // result is one tap away -- see KNOWN_POI_IDS above.
+  const handleQuickSelect = (id: string) => {
+    setPlaceId(id);
+    handleLookup(id);
+  };
+
   const entries = lookup ? Object.entries(lookup.customData) : [];
 
   return (
     <View style={styles.column}>
+      <View style={styles.chipsRow}>
+        {KNOWN_POI_IDS.map((id) => (
+          <TouchableOpacity
+            key={id}
+            style={[styles.chip, placeId === id ? styles.chipSelected : null]}
+            onPress={() => handleQuickSelect(id)}>
+            <Text style={styles.chipText}>{id}</Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+
       <View style={styles.row}>
         <TextInput
           style={styles.input}
@@ -68,7 +93,7 @@ const CustomDataOverlay = ({ refreshCustomData, getPoiCustomData, refresh, looku
         <TouchableOpacity
           style={styles.button}
           disabled={!placeId.trim()}
-          onPress={handleLookup}>
+          onPress={() => handleLookup()}>
           <Text style={styles.buttonText}>{awaitingLookup ? 'Looking up…' : 'Look up'}</Text>
         </TouchableOpacity>
       </View>
@@ -95,8 +120,8 @@ const CustomDataOverlay = ({ refreshCustomData, getPoiCustomData, refresh, looku
         </View>
       ) : (
         <Text style={styles.hint}>
-          Refresh loads the latest data from the server, then Look up reads the entered
-          place's data.
+          Tap one of the place IDs above for a real, published example, or type any
+          other place ID and hit Look up.
         </Text>
       )}
     </View>
@@ -110,6 +135,27 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: 'row',
     gap: 8,
+  },
+  chipsRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  chip: {
+    backgroundColor: '#222',
+    borderRadius: 16,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderWidth: 1,
+    borderColor: '#444',
+  },
+  chipSelected: {
+    backgroundColor: '#057DBC',
+    borderColor: '#057DBC',
+  },
+  chipText: {
+    color: '#fff',
+    fontSize: 13,
   },
   input: {
     flex: 1,

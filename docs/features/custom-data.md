@@ -9,6 +9,12 @@ Reads business `CustomData` — a free `{ [key: string]: string }` bag of fields
 
 The two are deliberately separate calls: `refreshCustomData` is the (occasional, async, network) sync step, `getPOICustomData` is a cheap synchronous cache read that can be called as often as needed afterwards.
 
+**Note on the demo map:** unlike every other feature in this repo, this screen does not load the app's shared demo map (`DEMO_MAP_HASH` in `VisioMapView.tsx`) — that map has no `CustomData` published on any of its POIs, so it could only ever demonstrate the empty-state response. Instead, `FeatureScreen.tsx` passes `VisioMapView`'s `mapHash` prop with a dedicated, already-published map hash (`kd9426d8cb3f1c532f22b5bcbd325c280bd351feb`) confirmed to carry real `CustomData`, scoped to just this feature's slug (`custom-data`) so every other screen keeps using the shared demo map unchanged. Known POI ids with real, non-empty `CustomData` on that map (surfaced as quick-select chips in the demo UI):
+
+- `B1` → `{"CSM ID":"BLBLA"}`
+- `B3-UL00-ID0065` → `{"Sensor X":"17718393"}`
+- `B3-UL00-ID0064` → `{"SENSOR":"DDDZEZHJF"}`
+
 ## SDK usage
 
 ```ts

@@ -28,6 +28,14 @@ import { ClickedPoi } from './useVisioMap';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Feature'>;
 
+// custom-data feature: the shared DEMO_MAP_HASH (VisioMapView.tsx) has no CustomData
+// published, so it would only ever demonstrate the empty state. This is a different,
+// already-published map confirmed (via the mapserver API) to carry real CustomData
+// -- see docs/features/custom-data.md for the known POI ids with real data. Passed
+// as VisioMapView's mapHash prop only for this one slug; every other screen keeps
+// getting the shared demo map by not passing the prop.
+const CUSTOM_DATA_MAP_HASH = 'kd9426d8cb3f1c532f22b5bcbd325c280bd351feb';
+
 const FeatureScreen = ({ route, navigation }: Props) => {
   const { slug } = route.params;
   const { t } = useLocale();
@@ -121,6 +129,7 @@ const FeatureScreen = ({ route, navigation }: Props) => {
 
   return (
     <VisioMapView
+      mapHash={slug === 'custom-data' ? CUSTOM_DATA_MAP_HASH : undefined}
       onPoiClick={handlePoiClick}
       renderOverlay={(bridge, _status, clickedPois, venueLayout, positionSimulation, customData) => (
         <>

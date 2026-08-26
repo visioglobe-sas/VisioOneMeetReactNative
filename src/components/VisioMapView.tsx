@@ -49,6 +49,12 @@ export interface CustomDataRefreshOutcome {
 }
 
 interface VisioMapViewProps {
+  // Overrides the shared DEMO_MAP_HASH for this screen only -- e.g. the custom-data
+  // feature points at a dedicated, already-published map that actually carries
+  // CustomData (the shared demo map has none), while every other screen keeps
+  // getting DEMO_MAP_HASH by leaving this prop unset. See FeatureScreen.tsx and
+  // docs/features/custom-data.md.
+  mapHash?: string;
   renderOverlay?: (
     bridge: VisioMapBridge,
     status: Status,
@@ -69,7 +75,7 @@ interface VisioMapViewProps {
   onPoiClick?: (pois: ClickedPoi[]) => void;
 }
 
-const VisioMapView = ({ renderOverlay, onPoiClick }: VisioMapViewProps) => {
+const VisioMapView = ({ mapHash, renderOverlay, onPoiClick }: VisioMapViewProps) => {
   const [status, setStatus] = React.useState<Status>('loading');
   const [errorMessage, setErrorMessage] = React.useState<string | null>(null);
   const [clickedPois, setClickedPois] = React.useState<ClickedPoi[]>([]);
@@ -86,7 +92,7 @@ const VisioMapView = ({ renderOverlay, onPoiClick }: VisioMapViewProps) => {
     null,
   );
 
-  const bridge = useVisioMap(DEMO_MAP_HASH);
+  const bridge = useVisioMap(mapHash ?? DEMO_MAP_HASH);
   const { webRef, sendSetup } = bridge;
 
   const handleWebMessage = (event: WebViewMessageEvent) => {

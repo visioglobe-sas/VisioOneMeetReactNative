@@ -28,6 +28,9 @@ export const strings = {
     'clickableSurface.title': 'Clickable surface',
     'clickableSurface.description':
       "Make a place's surface interactive, letting the SDK swap its color on hover/tap.",
+    'customData.title': 'Custom data',
+    'customData.description':
+      'Read custom business data (price, hours, reference) attached to a POI in VisioMapEditor.',
   },
   fr: {
     'resetView.title': 'Réinitialiser la vue',
@@ -60,6 +63,9 @@ export const strings = {
     'clickableSurface.title': 'Surface cliquable',
     'clickableSurface.description':
       "Rend la surface d'un lieu interactive, en laissant la SDK changer sa couleur au survol/tap.",
+    'customData.title': 'Données personnalisées',
+    'customData.description':
+      "Lire des données métier (prix, horaires, référence) attachées à un POI dans VisioMapEditor.",
   },
 };
 

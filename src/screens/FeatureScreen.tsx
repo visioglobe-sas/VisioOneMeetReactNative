@@ -5,6 +5,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import BottomSheet from '../components/BottomSheet';
 import VisioMapView, {
+  CustomDataLookupResult,
+  CustomDataRefreshOutcome,
   PositionSimulationResolution,
   VenueLayoutInfo,
   VisioMapBridge,
@@ -12,6 +14,7 @@ import VisioMapView, {
 import { featureRegistry } from '../features/registry';
 import ClickableSurfaceOverlay from '../features/ClickableSurfaceOverlay';
 import ComputeNavigationOverlay from '../features/ComputeNavigationOverlay';
+import CustomDataOverlay from '../features/CustomDataOverlay';
 import FloorSelectorOverlay from '../features/FloorSelectorOverlay';
 import GoToPoiOverlay from '../features/GoToPoiOverlay';
 import OccupancySimulatedOverlay from '../features/OccupancySimulatedOverlay';
@@ -24,6 +27,14 @@ import { RootStackParamList } from '../navigation/RootNavigator';
 import { ClickedPoi } from './useVisioMap';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Feature'>;
+
+// custom-data feature: the shared DEMO_MAP_HASH (VisioMapView.tsx) has no CustomData
+// published, so it would only ever demonstrate the empty state. This is a different,
+// already-published map confirmed (via the mapserver API) to carry real CustomData
+// -- see docs/features/custom-data.md for the known POI ids with real data. Passed
+// as VisioMapView's mapHash prop only for this one slug; every other screen keeps
+// getting the shared demo map by not passing the prop.
+const CUSTOM_DATA_MAP_HASH = 'kd9426d8cb3f1c532f22b5bcbd325c280bd351feb';
 
 const FeatureScreen = ({ route, navigation }: Props) => {
   const { slug } = route.params;
@@ -43,6 +54,7 @@ const FeatureScreen = ({ route, navigation }: Props) => {
     clickedPois: ClickedPoi[],
     venueLayout: VenueLayoutInfo,
     positionSimulation: { resolution: PositionSimulationResolution | null; error: string | null },
+    customData: { refresh: CustomDataRefreshOutcome | null; lookup: CustomDataLookupResult | null },
   ) => {
     switch (slug) {
       case 'reset-view':
@@ -91,6 +103,15 @@ const FeatureScreen = ({ route, navigation }: Props) => {
         );
       case 'clickable-surface':
         return <ClickableSurfaceOverlay setSurfaceInteractive={bridge.setSurfaceInteractive} />;
+      case 'custom-data':
+        return (
+          <CustomDataOverlay
+            refreshCustomData={bridge.refreshCustomData}
+            getPoiCustomData={bridge.getPoiCustomData}
+            refresh={customData.refresh}
+            lookup={customData.lookup}
+          />
+        );
       default:
         return null;
     }
@@ -108,8 +129,9 @@ const FeatureScreen = ({ route, navigation }: Props) => {
 
   return (
     <VisioMapView
+      mapHash={slug === 'custom-data' ? CUSTOM_DATA_MAP_HASH : undefined}
       onPoiClick={handlePoiClick}
-      renderOverlay={(bridge, _status, clickedPois, venueLayout, positionSimulation) => (
+      renderOverlay={(bridge, _status, clickedPois, venueLayout, positionSimulation, customData) => (
         <>
           {slug === 'poi-click' ? (
             !controlsVisible && clickedPois.length === 0 ? (
@@ -125,7 +147,7 @@ const FeatureScreen = ({ route, navigation }: Props) => {
             </TouchableOpacity>
           )}
           <BottomSheet visible={controlsVisible} onClose={() => setControlsVisible(false)}>
-            {renderFeatureContent(bridge, clickedPois, venueLayout, positionSimulation)}
+            {renderFeatureContent(bridge, clickedPois, venueLayout, positionSimulation, customData)}
           </BottomSheet>
         </>
       )}

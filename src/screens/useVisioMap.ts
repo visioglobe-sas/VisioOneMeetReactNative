@@ -184,6 +184,29 @@ export const useVisioMap = (hash: string) => {
     });
   };
 
+  // Requests the venue's full category list (venue.categories) -- the response comes
+  // back asynchronously as 'categories_result', see VisioMapView.tsx. Same
+  // request/response idiom as getPoiCustomData above.
+  const getCategories = () => {
+    sendMessage({ type: 'get_categories' });
+  };
+
+  // Highlights every POI carrying this category id by recoloring its surfaces --
+  // fire-and-forget, no response expected. Reverting any previously-highlighted
+  // category first (so only one is ever highlighted at a time) happens on the
+  // WebView side, see highlightCategory in visioOneHtml.ts/visioOne.html.
+  const highlightCategory = (categoryId: string) => {
+    sendMessage({
+      type: 'highlight_category',
+      data: { categoryId },
+    });
+  };
+
+  // Reverts whichever category is currently highlighted, if any -- fire-and-forget.
+  const clearCategoryHighlight = () => {
+    sendMessage({ type: 'clear_category_highlight' });
+  };
+
   return {
     webRef,
     resetMap,
@@ -202,5 +225,8 @@ export const useVisioMap = (hash: string) => {
     setSurfaceInteractive,
     refreshCustomData,
     getPoiCustomData,
+    getCategories,
+    highlightCategory,
+    clearCategoryHighlight,
   };
 };

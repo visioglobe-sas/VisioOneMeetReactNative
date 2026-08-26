@@ -48,6 +48,20 @@ export interface CustomDataRefreshOutcome {
   at: number;
 }
 
+// Response to the 'get_categories' request -- venue.categories mapped down to an
+// { id, label } pair each: id is the raw internal identifier used for
+// filtering/highlighting, label is the human-readable name resolved via
+// venue.translator.translateCategory() for display only. See
+// docs/features/category-highlight.md.
+export interface CategoryOption {
+  id: string;
+  label: string;
+}
+
+export interface CategoriesResult {
+  categories: CategoryOption[];
+}
+
 interface VisioMapViewProps {
   // Overrides the shared DEMO_MAP_HASH for this screen only -- e.g. the custom-data
   // feature points at a dedicated, already-published map that actually carries
@@ -68,6 +82,7 @@ interface VisioMapViewProps {
       refresh: CustomDataRefreshOutcome | null;
       lookup: CustomDataLookupResult | null;
     },
+    categories: CategoryOption[],
   ) => React.ReactNode;
   // Fired from the WebView's onMessage handler (an event, not during render) so the
   // parent can safely react -- e.g. open its own controls -- without the "setState
@@ -91,9 +106,10 @@ const VisioMapView = ({ mapHash, renderOverlay, onPoiClick }: VisioMapViewProps)
   const [customDataLookup, setCustomDataLookup] = React.useState<CustomDataLookupResult | null>(
     null,
   );
+  const [categories, setCategories] = React.useState<CategoryOption[]>([]);
 
   const bridge = useVisioMap(mapHash ?? DEMO_MAP_HASH);
-  const { webRef, sendSetup } = bridge;
+  const { webRef, sendSetup, getCategories } = bridge;
 
   const handleWebMessage = (event: WebViewMessageEvent) => {
     const raw = event.nativeEvent.data;
@@ -107,6 +123,10 @@ const VisioMapView = ({ mapHash, renderOverlay, onPoiClick }: VisioMapViewProps)
         currentBuildingId: evt.data?.currentBuildingId,
         currentFloorId: evt.data?.currentFloorId,
       });
+      // Fetches venue.categories once the venue is loaded -- see the
+      // 'get_categories' / 'categories_result' round trip in
+      // visioOneHtml.ts/visioOne.html and docs/features/category-highlight.md.
+      getCategories();
     } else if (evt.type === 'error') {
       setStatus('error');
       setErrorMessage(String(evt.data));
@@ -136,6 +156,8 @@ const VisioMapView = ({ mapHash, renderOverlay, onPoiClick }: VisioMapViewProps)
       setCustomDataRefresh({ ok: false, error: String(evt.data?.message ?? evt.data), at: Date.now() });
     } else if (evt.type === 'poi_custom_data_result') {
       setCustomDataLookup(evt.data);
+    } else if (evt.type === 'categories_result') {
+      setCategories(evt.data?.categories ?? []);
     }
   };
 
@@ -177,6 +199,7 @@ const VisioMapView = ({ mapHash, renderOverlay, onPoiClick }: VisioMapViewProps)
           refresh: customDataRefresh,
           lookup: customDataLookup,
         },
+        categories,
       )}
     </SafeAreaView>
   );

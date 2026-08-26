@@ -354,6 +354,82 @@
         sendToNative({ type: 'poi_custom_data_result', data: { placeId, found: true, customData } })
       }
 
+      // category-highlight feature: reports the venue's full category list
+      // (venue.categories) back to native. category.id is a raw internal
+      // identifier (a numeric string on the shared demo map, e.g. "1".."11"),
+      // not itself human-readable -- confirmed live. The human-readable name
+      // comes from venue.translator.translateCategory(), same idiom the
+      // buildings/floors mapping above already uses. Both id (used for
+      // filtering/highlighting) and label (used for display only) are
+      // returned so native never needs to highlight by a translated string.
+      const getCategories = () => {
+        if (!venue) {
+          sendToNative({ type: 'categories_result', data: { categories: [] } })
+          return
+        }
+        sendToNative({
+          type: 'categories_result',
+          data: {
+            categories: venue.categories.map((c) => ({
+              id: c.id,
+              label: venue.translator.translateCategory(c, venue.currentLocale).name || c.id,
+            })),
+          },
+        })
+      }
+
+      // category-highlight feature: tracks which category (if any) is currently
+      // highlighted, so a new selection can revert the previous one first -- only one
+      // category is ever highlighted at a time.
+      let highlightedCategoryId = null
+
+      // Reverts the currently-highlighted category's POI surfaces back to their
+      // bundle-defined color. 'initial' (not undefined/omitting the key) is the
+      // SurfaceUpdateOptions sentinel that actually restores that color -- see
+      // docs/features/category-highlight.md.
+      const revertCategoryHighlight = () => {
+        if (!venue || !highlightedCategoryId) {
+          return
+        }
+        venue.pois
+          .filter((poi) => poi.categories.some((c) => c.id === highlightedCategoryId))
+          .forEach((poi) => {
+            poi.surfaces.forEach((surface) => {
+              venue.updateSurface(surface, { color: 'initial' })
+            })
+          })
+        highlightedCategoryId = null
+      }
+
+      // No dedicated "highlight by category" SDK method exists -- built from
+      // primitives: filter venue.pois by poi.categories, then color every matching
+      // POI's surfaces. Not every POI has surfaces (some are point/marker-only):
+      // poi.surfaces is simply an empty array for those, so they don't visually
+      // change -- expected, not a bug.
+      const highlightCategory = (categoryId) => {
+        if (!venue) {
+          return
+        }
+        if (highlightedCategoryId === categoryId) {
+          // Tapping the already-highlighted category again clears it.
+          revertCategoryHighlight()
+          return
+        }
+        revertCategoryHighlight()
+        venue.pois
+          .filter((poi) => poi.categories.some((c) => c.id === categoryId))
+          .forEach((poi) => {
+            poi.surfaces.forEach((surface) => {
+              venue.updateSurface(surface, { color: '#FF6B00' })
+            })
+          })
+        highlightedCategoryId = categoryId
+      }
+
+      const clearCategoryHighlight = () => {
+        revertCategoryHighlight()
+      }
+
       const onMessage = (event) => {
         try {
           const evt = typeof event.data === 'string' ? JSON.parse(event.data) : event.data
@@ -408,6 +484,15 @@
               break
             case 'get_poi_custom_data':
               getPoiCustomData(evt.data.placeId)
+              break
+            case 'get_categories':
+              getCategories()
+              break
+            case 'highlight_category':
+              highlightCategory(evt.data.categoryId)
+              break
+            case 'clear_category_highlight':
+              clearCategoryHighlight()
               break
             default:
               console.error('Unknown message type:', evt.type)

@@ -154,6 +154,17 @@ export const useVisioMap = (hash: string) => {
     });
   };
 
+  // Makes every surface of the given POI clickable (or not): once isInteractive is
+  // true, the SDK itself swaps the surface's displayed color on hover/tap using
+  // hoverColor/selectionColor -- no click listener needed on the app side for that
+  // part. See setSurfaceInteractive in visioOneHtml.ts/visioOne.html.
+  const setSurfaceInteractive = (placeId: string, interactive: boolean) => {
+    sendMessage({
+      type: 'set_surface_interactive',
+      data: { placeId, interactive },
+    });
+  };
+
   return {
     webRef,
     resetMap,
@@ -169,5 +180,6 @@ export const useVisioMap = (hash: string) => {
     injectTrackedPosition,
     stopPositionSimulation,
     setCameraLockOnPosition,
+    setSurfaceInteractive,
   };
 };

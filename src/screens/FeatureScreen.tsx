@@ -10,6 +10,7 @@ import VisioMapView, {
   VisioMapBridge,
 } from '../components/VisioMapView';
 import { featureRegistry } from '../features/registry';
+import ClickableSurfaceOverlay from '../features/ClickableSurfaceOverlay';
 import ComputeNavigationOverlay from '../features/ComputeNavigationOverlay';
 import FloorSelectorOverlay from '../features/FloorSelectorOverlay';
 import GoToPoiOverlay from '../features/GoToPoiOverlay';
@@ -88,6 +89,8 @@ const FeatureScreen = ({ route, navigation }: Props) => {
             setCameraLockOnPosition={bridge.setCameraLockOnPosition}
           />
         );
+      case 'clickable-surface':
+        return <ClickableSurfaceOverlay setSurfaceInteractive={bridge.setSurfaceInteractive} />;
       default:
         return null;
     }

@@ -9,7 +9,8 @@ export type FeatureSlug =
   | 'floor-selector'
   | 'ui-part-visibility'
   | 'simulated-position'
-  | 'camera-lock-on-position';
+  | 'camera-lock-on-position'
+  | 'clickable-surface';
 
 export interface FeatureDefinition {
   slug: FeatureSlug;
@@ -62,5 +63,10 @@ export const featureRegistry: FeatureDefinition[] = [
     slug: 'camera-lock-on-position',
     titleKey: 'cameraLockOnPosition.title',
     descriptionKey: 'cameraLockOnPosition.description',
+  },
+  {
+    slug: 'clickable-surface',
+    titleKey: 'clickableSurface.title',
+    descriptionKey: 'clickableSurface.description',
   },
 ];

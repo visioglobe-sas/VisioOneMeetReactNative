@@ -1,32 +1,34 @@
 # VisioOneMeetRN
 
-Exemple d'intégration du SDK [VisioOne](https://www.npmjs.com/package/@visioglobe/visioone) de Visioglobe dans une application React Native, via `react-native-webview`. Le SDK (moteur 3D pour cartes indoor/outdoor construites avec VisioMapEditor) tourne entièrement dans la WebView ; l'app React Native communique avec lui par `postMessage`.
+Example integration of Visioglobe's [VisioOne](https://www.npmjs.com/package/@visioglobe/visioone) SDK in a React Native application, via `react-native-webview`. The SDK (a 3D engine for indoor/outdoor maps built with VisioMapEditor) runs entirely inside the WebView; the React Native app communicates with it through `postMessage`.
 
-## Ce que montre cet exemple
+## Setup
 
-- Charger le SDK VisioOne en ESM depuis le CDN Visioglobe dans une `WebView` React Native ([`src/assets/visioOne.html`](src/assets/visioOne.html)).
-- Un pont typé `postMessage` entre le JS natif et la page web ([`src/screens/useVisioMap.ts`](src/screens/useVisioMap.ts)) pour piloter le SDK : aller à un lieu, changer d'étage, lancer un itinéraire, mettre à jour l'occupation de zones, réinitialiser la vue.
-- Un écran minimal ([`src/screens/MapScreen.tsx`](src/screens/MapScreen.tsx)) illustrant ces commandes.
-- Un contournement à connaître si vous chargez du HTML local dans une `WebView` en React Native — voir [`docs/SDK_NOTES.md`](docs/SDK_NOTES.md).
+### Prerequisites
 
-## Configurer votre propre carte
+Follow React Native's [Set Up Your Environment](https://reactnative.dev/docs/set-up-your-environment) guide for your target platform(s).
 
-Récupérez le hash de votre carte sur [my.visioglobe.com](https://my.visioglobe.com) et remplacez `DEMO_MAP_HASH` dans [`src/screens/MapScreen.tsx`](src/screens/MapScreen.tsx) (actuellement une carte de démonstration Visioglobe).
-
-## Démarrage
-
-Prérequis : suivre le guide [Set Up Your Environment](https://reactnative.dev/docs/set-up-your-environment) de React Native.
-
-### 1. Démarrer Metro
+### Install
 
 ```sh
 npm install
+```
+
+### Configure your own map
+
+This repo ships pointed at a Visioglobe demo venue. To load your own map, get a venue hash from [my.visioglobe.com](https://my.visioglobe.com) and replace `DEMO_MAP_HASH` in [`src/components/VisioMapView.tsx`](src/components/VisioMapView.tsx).
+
+### Run
+
+Start Metro:
+
+```sh
 npm start
 ```
 
-### 2. Build & run
+Then, in another terminal:
 
-**iOS** — installer les dépendances CocoaPods (première fois, ou après mise à jour des dépendances natives) :
+**iOS** — install CocoaPods dependencies first (first run, or after any native dependency change):
 
 ```sh
 bundle install
@@ -34,30 +36,54 @@ bundle exec pod install
 npm run ios
 ```
 
-**Android** :
+**Android**:
 
 ```sh
 npm run android
 ```
 
-## Structure
+## Features
+
+Each feature below is a self-contained screen in the app, demonstrating one piece of the VisioOne SDK. Every entry links to a developer doc with the exact SDK call, its signature, and any gotchas.
+
+- **[Reset view](docs/features/reset-view.md)** — recenter the camera on the venue's default view.
+- **[Go to place](docs/features/goto-poi.md)** — center the camera on a place (POI) by its ID.
+- **[Itinerary](docs/features/compute-navigation.md)** — compute and display a route between two places.
+- **[Tap a place](docs/features/poi-click.md)** — show a tapped place's info in a panel.
+- **[Floor selector](docs/features/floor-selector.md)** — switch floor or building from a list driven by the app, in sync with the SDK's own floor-selector widget.
+- **[Simulated occupancy](docs/features/occupancy-simulated.md)** — toggle a place's occupancy color with simulated data.
+- **[UI visibility](docs/features/ui-part-visibility.md)** — show or hide individual parts of the map's default UI.
+- **[Simulated position](docs/features/simulated-position.md)** — animate a simulated tracked position with an accuracy circle between two places.
+- **[Camera lock on position](docs/features/camera-lock-on-position.md)** — recenter and lock the camera onto a simulated tracked position, like a "recenter on me" toggle.
+- **[Clickable surface](docs/features/clickable-surface.md)** — make a place's surface interactive, letting the SDK swap its color on hover/tap.
+
+## Project structure
 
 ```
-App.tsx                          # entrée de l'app, bascule vers un mode diagnostic optionnel
+App.tsx                                    # entry point, optionally switches to a diagnostic mode
 src/
+├── navigation/
+│   └── RootNavigator.tsx                  # Home ↔ Feature screen stack
 ├── screens/
-│   ├── MapScreen.tsx            # écran carte : WebView + commandes (place, itinéraire, reset)
-│   └── useVisioMap.ts           # pont postMessage natif → WebView
+│   ├── HomeScreen.tsx                     # feature menu
+│   ├── FeatureScreen.tsx                  # hosts the map + the active feature's overlay
+│   └── useVisioMap.ts                     # native → WebView bridge (postMessage senders)
+├── components/
+│   └── VisioMapView.tsx                   # WebView wrapper, map status, incoming message handling
+├── features/
+│   ├── registry.ts                        # feature list (slug, title, description)
+│   └── *Overlay.tsx                       # per-feature controls
 └── assets/
-    ├── visioOne.html            # page hôte chargée dans la WebView (SDK en ESM depuis le CDN)
-    ├── visioOneHtml.ts          # même contenu que visioOne.html, exporté en template literal
-    ├── diagnostic.html          # page de debug bas niveau (isoler un souci WebView du SDK)
-    └── diagnosticInlineHtml.ts  # même contenu, en template literal
+    ├── visioOne.html                      # WebView-hosted page loading the SDK from the CDN
+    ├── visioOneHtml.ts                    # same content as visioOne.html, as a template literal
+    ├── diagnostic.html                    # low-level debug page (isolate WebView issues from SDK issues)
+    └── diagnosticInlineHtml.ts            # same content, as a template literal
 
 docs/
-└── SDK_NOTES.md                 # pourquoi le HTML est chargé "inline" plutôt que via require()
+├── SDK_NOTES.md                           # why the HTML is loaded "inline" rather than via require()
+└── features/                              # one doc per feature, see Features above
 ```
 
 ## Troubleshooting
 
-Voir la page [Troubleshooting](https://reactnative.dev/docs/troubleshooting) officielle de React Native pour les problèmes génériques de setup (Metro, CocoaPods, simulateur…). Pour tout ce qui touche au chargement de la carte VisioOne elle-même, voir [`docs/SDK_NOTES.md`](docs/SDK_NOTES.md).
+See React Native's official [Troubleshooting](https://reactnative.dev/docs/troubleshooting) page for generic setup issues (Metro, CocoaPods, simulator, etc.). For anything related to loading the VisioOne map itself, see [`docs/SDK_NOTES.md`](docs/SDK_NOTES.md).

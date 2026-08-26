@@ -25,6 +25,9 @@ export const strings = {
     'cameraLockOnPosition.title': 'Camera lock on position',
     'cameraLockOnPosition.description':
       'Recenter and lock the camera onto a simulated tracked position, like a "recenter on me" toggle.',
+    'clickableSurface.title': 'Clickable surface',
+    'clickableSurface.description':
+      "Make a place's surface interactive, letting the SDK swap its color on hover/tap.",
   },
   fr: {
     'resetView.title': 'Réinitialiser la vue',
@@ -54,6 +57,9 @@ export const strings = {
     'cameraLockOnPosition.title': 'Verrouillage caméra sur la position',
     'cameraLockOnPosition.description':
       'Recentre et verrouille la caméra sur une position simulée suivie, comme un bouton "recentrer sur moi".',
+    'clickableSurface.title': 'Surface cliquable',
+    'clickableSurface.description':
+      "Rend la surface d'un lieu interactive, en laissant la SDK changer sa couleur au survol/tap.",
   },
 };
 

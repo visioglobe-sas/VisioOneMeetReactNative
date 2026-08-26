@@ -300,6 +300,30 @@ export const visioOneHtml = `<!DOCTYPE html>
         }
       }
 
+      // clickable-surface feature: makes every surface of a POI interactive (or not).
+      // Once isInteractive is true, the SDK itself swaps the surface's displayed color
+      // on hover/tap using hoverColor/selectionColor -- no click listener is needed on
+      // this side for that visual feedback. Passing color: 'initial' when disabling
+      // resets the surface to whatever the map bundle originally defined, instead of
+      // leaving it stuck on the last custom color.
+      const setSurfaceInteractive = (placeId, interactive) => {
+        if (!venue) {
+          return
+        }
+        const poi = venue.pois.find((p) => p.id === placeId)
+        if (!poi) {
+          return
+        }
+        poi.surfaces.forEach((surface) => {
+          venue.updateSurface(
+            surface,
+            interactive
+              ? { isInteractive: true, color: '#2ECC71', hoverColor: '#F1C40F', selectionColor: '#E74C3C' }
+              : { isInteractive: false, color: 'initial' }
+          )
+        })
+      }
+
       const onMessage = (event) => {
         try {
           const evt = typeof event.data === 'string' ? JSON.parse(event.data) : event.data
@@ -345,6 +369,9 @@ export const visioOneHtml = `<!DOCTYPE html>
               break
             case 'set_camera_lock_on_position':
               setCameraLockOnPosition(evt.data.locked)
+              break
+            case 'set_surface_interactive':
+              setSurfaceInteractive(evt.data.placeId, evt.data.interactive)
               break
             default:
               console.error('Unknown message type:', evt.type)

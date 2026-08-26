@@ -31,6 +31,9 @@ export const strings = {
     'customData.title': 'Custom data',
     'customData.description':
       'Read custom business data (price, hours, reference) attached to a POI in VisioMapEditor.',
+    'categoryHighlight.title': 'Category highlight',
+    'categoryHighlight.description':
+      'Highlight every place belonging to a chosen category, e.g. all restaurants or all shops.',
   },
   fr: {
     'resetView.title': 'Réinitialiser la vue',
@@ -66,6 +69,9 @@ export const strings = {
     'customData.title': 'Données personnalisées',
     'customData.description':
       "Lire des données métier (prix, horaires, référence) attachées à un POI dans VisioMapEditor.",
+    'categoryHighlight.title': 'Surbrillance par catégorie',
+    'categoryHighlight.description':
+      'Met en surbrillance tous les lieux appartenant à une catégorie choisie, ex. tous les restaurants ou toutes les boutiques.',
   },
 };
 

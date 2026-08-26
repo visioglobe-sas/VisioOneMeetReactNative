@@ -11,7 +11,8 @@ export type FeatureSlug =
   | 'simulated-position'
   | 'camera-lock-on-position'
   | 'clickable-surface'
-  | 'custom-data';
+  | 'custom-data'
+  | 'category-highlight';
 
 export interface FeatureDefinition {
   slug: FeatureSlug;
@@ -74,5 +75,10 @@ export const featureRegistry: FeatureDefinition[] = [
     slug: 'custom-data',
     titleKey: 'customData.title',
     descriptionKey: 'customData.description',
+  },
+  {
+    slug: 'category-highlight',
+    titleKey: 'categoryHighlight.title',
+    descriptionKey: 'categoryHighlight.description',
   },
 ];

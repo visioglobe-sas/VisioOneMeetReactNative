@@ -12,6 +12,7 @@ import VisioMapView, {
   VisioMapBridge,
 } from '../components/VisioMapView';
 import { featureRegistry } from '../features/registry';
+import CategoryHighlightOverlay from '../features/CategoryHighlightOverlay';
 import ClickableSurfaceOverlay from '../features/ClickableSurfaceOverlay';
 import ComputeNavigationOverlay from '../features/ComputeNavigationOverlay';
 import CustomDataOverlay from '../features/CustomDataOverlay';
@@ -55,6 +56,7 @@ const FeatureScreen = ({ route, navigation }: Props) => {
     venueLayout: VenueLayoutInfo,
     positionSimulation: { resolution: PositionSimulationResolution | null; error: string | null },
     customData: { refresh: CustomDataRefreshOutcome | null; lookup: CustomDataLookupResult | null },
+    categories: string[],
   ) => {
     switch (slug) {
       case 'reset-view':
@@ -112,6 +114,14 @@ const FeatureScreen = ({ route, navigation }: Props) => {
             lookup={customData.lookup}
           />
         );
+      case 'category-highlight':
+        return (
+          <CategoryHighlightOverlay
+            categories={categories}
+            highlightCategory={bridge.highlightCategory}
+            clearCategoryHighlight={bridge.clearCategoryHighlight}
+          />
+        );
       default:
         return null;
     }
@@ -131,7 +141,15 @@ const FeatureScreen = ({ route, navigation }: Props) => {
     <VisioMapView
       mapHash={slug === 'custom-data' ? CUSTOM_DATA_MAP_HASH : undefined}
       onPoiClick={handlePoiClick}
-      renderOverlay={(bridge, _status, clickedPois, venueLayout, positionSimulation, customData) => (
+      renderOverlay={(
+        bridge,
+        _status,
+        clickedPois,
+        venueLayout,
+        positionSimulation,
+        customData,
+        categories,
+      ) => (
         <>
           {slug === 'poi-click' ? (
             !controlsVisible && clickedPois.length === 0 ? (
@@ -147,7 +165,14 @@ const FeatureScreen = ({ route, navigation }: Props) => {
             </TouchableOpacity>
           )}
           <BottomSheet visible={controlsVisible} onClose={() => setControlsVisible(false)}>
-            {renderFeatureContent(bridge, clickedPois, venueLayout, positionSimulation, customData)}
+            {renderFeatureContent(
+              bridge,
+              clickedPois,
+              venueLayout,
+              positionSimulation,
+              customData,
+              categories,
+            )}
           </BottomSheet>
         </>
       )}

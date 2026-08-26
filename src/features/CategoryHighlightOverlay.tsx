@@ -1,10 +1,10 @@
 import * as React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
-import { VisioMapBridge } from '../components/VisioMapView';
+import { CategoryOption, VisioMapBridge } from '../components/VisioMapView';
 
 interface Props {
-  categories: string[];
+  categories: CategoryOption[];
   highlightCategory: VisioMapBridge['highlightCategory'];
   clearCategoryHighlight: VisioMapBridge['clearCategoryHighlight'];
 }
@@ -39,12 +39,12 @@ const CategoryHighlightOverlay = ({ categories, highlightCategory, clearCategory
         <Text style={styles.hint}>Loading categories…</Text>
       ) : (
         <View style={styles.chipsRow}>
-          {categories.map((categoryId) => (
+          {categories.map((category) => (
             <TouchableOpacity
-              key={categoryId}
-              style={[styles.chip, selectedCategoryId === categoryId ? styles.chipSelected : null]}
-              onPress={() => handleSelect(categoryId)}>
-              <Text style={styles.chipText}>{categoryId}</Text>
+              key={category.id}
+              style={[styles.chip, selectedCategoryId === category.id ? styles.chipSelected : null]}
+              onPress={() => handleSelect(category.id)}>
+              <Text style={styles.chipText}>{category.label}</Text>
             </TouchableOpacity>
           ))}
         </View>

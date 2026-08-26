@@ -5,6 +5,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import BottomSheet from '../components/BottomSheet';
 import VisioMapView, {
+  CategoryOption,
   CustomDataLookupResult,
   CustomDataRefreshOutcome,
   PositionSimulationResolution,
@@ -56,7 +57,7 @@ const FeatureScreen = ({ route, navigation }: Props) => {
     venueLayout: VenueLayoutInfo,
     positionSimulation: { resolution: PositionSimulationResolution | null; error: string | null },
     customData: { refresh: CustomDataRefreshOutcome | null; lookup: CustomDataLookupResult | null },
-    categories: string[],
+    categories: CategoryOption[],
   ) => {
     switch (slug) {
       case 'reset-view':

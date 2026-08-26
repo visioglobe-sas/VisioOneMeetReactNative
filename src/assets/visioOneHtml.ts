@@ -365,15 +365,27 @@ export const visioOneHtml = `<!DOCTYPE html>
       }
 
       // category-highlight feature: reports the venue's full category list
-      // (venue.categories) back to native -- on the shared demo map these ids are
-      // already human-readable (e.g. "Food and Beverage", "Shops"), so no separate
-      // label/translation step is needed, unlike the buildings/floors mapping above.
+      // (venue.categories) back to native. category.id is a raw internal
+      // identifier (a numeric string on the shared demo map, e.g. "1".."11"),
+      // not itself human-readable -- confirmed live. The human-readable name
+      // comes from venue.translator.translateCategory(), same idiom the
+      // buildings/floors mapping above already uses. Both id (used for
+      // filtering/highlighting) and label (used for display only) are
+      // returned so native never needs to highlight by a translated string.
       const getCategories = () => {
         if (!venue) {
           sendToNative({ type: 'categories_result', data: { categories: [] } })
           return
         }
-        sendToNative({ type: 'categories_result', data: { categories: venue.categories.map((c) => c.id) } })
+        sendToNative({
+          type: 'categories_result',
+          data: {
+            categories: venue.categories.map((c) => ({
+              id: c.id,
+              label: venue.translator.translateCategory(c, venue.currentLocale).name || c.id,
+            })),
+          },
+        })
       }
 
       // category-highlight feature: tracks which category (if any) is currently

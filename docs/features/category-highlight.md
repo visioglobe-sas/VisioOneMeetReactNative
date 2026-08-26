@@ -4,7 +4,7 @@
 
 Highlights every place (POI) belonging to a chosen category in one action — e.g. every restaurant, or every shop — by recoloring their surfaces via `venue.updateSurface`. There is no dedicated "highlight by category" method on the SDK; this is built from three primitives:
 
-- `venue.categories: Category[]` — the venue's full category list (`Category = { readonly id: string }`).
+- `venue.categories: Category[]` — the venue's full category list (`Category = { readonly id: string }`). `id` is a raw internal identifier, not itself human-readable — see "Things to know".
 - `poi.categories: Category[]` — the categories attached to a given POI (a POI can carry several).
 - `venue.updateSurface(surface, options)` — same call used by [Clickable surface](clickable-surface.md), here used purely to recolor rather than to make interactive.
 
@@ -32,7 +32,15 @@ const getCategories = () => {
     sendToNative({ type: 'categories_result', data: { categories: [] } })
     return
   }
-  sendToNative({ type: 'categories_result', data: { categories: venue.categories.map((c) => c.id) } })
+  sendToNative({
+    type: 'categories_result',
+    data: {
+      categories: venue.categories.map((c) => ({
+        id: c.id,
+        label: venue.translator.translateCategory(c, venue.currentLocale).name || c.id,
+      })),
+    },
+  })
 }
 
 let highlightedCategoryId = null
@@ -75,7 +83,7 @@ const clearCategoryHighlight = () => {
 }
 ```
 
-Getting the category list into React Native needs a request/response round trip, the same idiom [Custom data](custom-data.md) uses: `get_categories` goes in, `categories_result` (`{ data: { categories: string[] } }`) comes back once the WebView has an answer. `highlight_category` and `clear_category_highlight` are fire-and-forget one-way messages — no response is needed since they don't return any data, only cause a side effect.
+Getting the category list into React Native needs a request/response round trip, the same idiom [Custom data](custom-data.md) uses: `get_categories` goes in, `categories_result` (`{ data: { categories: { id: string; label: string }[] } }`) comes back once the WebView has an answer. `highlight_category` and `clear_category_highlight` are fire-and-forget one-way messages — no response is needed since they don't return any data, only cause a side effect.
 
 ## Things to know
 
@@ -83,7 +91,7 @@ Getting the category list into React Native needs a request/response round trip,
 - **`color: 'initial'` is the correct reset value, not `undefined`.** Per `SurfaceUpdateOptions`'s own doc comment, `'initial'` restores the surface to whatever color the map bundle originally defined. Omitting the `color` key (or passing `undefined`) does not do this — it leaves the surface's color property unchanged from whatever it last was, so a previously-highlighted surface would stay stuck on the highlight color instead of reverting. Always pass the literal string `'initial'` to clear a highlight.
 - **Only one category is highlighted at a time by design**, not an SDK constraint. Selecting a new category first reverts the previously-highlighted one's surfaces (`revertCategoryHighlight()`) before applying the new color — nothing in the SDK itself prevents highlighting several categories simultaneously; this demo just doesn't do that.
 - **A POI can belong to several categories.** `poi.categories.some((c) => c.id === categoryId)` matches a POI if *any* of its categories match, so a POI tagged both "Food and Beverage" and "Shops" highlights under either selection.
-- On the shared demo map used by every feature in this repo, `venue.categories[].id` already resolves to human-readable names in the default locale (e.g. `Food and Beverage`, `Shops`, `Toilets`) — unlike building/floor labels elsewhere in this repo, no separate `venue.translator` step is needed here.
+- **`category.id` is a raw internal identifier, not a display name.** On the shared demo map used by every feature in this repo it's a numeric string (`"1"`.."`11`"`) — confirmed live. The human-readable name (`Food and Beverage`, `Shops`, `Toilets`, ...) comes from `venue.translator.translateCategory(category, venue.currentLocale).name`, the same idiom already used for building/floor labels elsewhere in this repo. `id` is still what filtering/highlighting must use; `label` is for display only.
 
 ## Learn more
 

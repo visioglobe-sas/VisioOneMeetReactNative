@@ -48,11 +48,18 @@ export interface CustomDataRefreshOutcome {
   at: number;
 }
 
-// Response to the 'get_categories' request -- venue.categories mapped down to just
-// their (already human-readable on the shared demo map) ids. See
+// Response to the 'get_categories' request -- venue.categories mapped down to an
+// { id, label } pair each: id is the raw internal identifier used for
+// filtering/highlighting, label is the human-readable name resolved via
+// venue.translator.translateCategory() for display only. See
 // docs/features/category-highlight.md.
+export interface CategoryOption {
+  id: string;
+  label: string;
+}
+
 export interface CategoriesResult {
-  categories: string[];
+  categories: CategoryOption[];
 }
 
 interface VisioMapViewProps {
@@ -75,7 +82,7 @@ interface VisioMapViewProps {
       refresh: CustomDataRefreshOutcome | null;
       lookup: CustomDataLookupResult | null;
     },
-    categories: string[],
+    categories: CategoryOption[],
   ) => React.ReactNode;
   // Fired from the WebView's onMessage handler (an event, not during render) so the
   // parent can safely react -- e.g. open its own controls -- without the "setState
@@ -99,7 +106,7 @@ const VisioMapView = ({ mapHash, renderOverlay, onPoiClick }: VisioMapViewProps)
   const [customDataLookup, setCustomDataLookup] = React.useState<CustomDataLookupResult | null>(
     null,
   );
-  const [categories, setCategories] = React.useState<string[]>([]);
+  const [categories, setCategories] = React.useState<CategoryOption[]>([]);
 
   const bridge = useVisioMap(mapHash ?? DEMO_MAP_HASH);
   const { webRef, sendSetup, getCategories } = bridge;

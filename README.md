@@ -58,6 +58,7 @@ Each feature below is a self-contained screen in the app, demonstrating one piec
 - **[Clickable surface](docs/features/clickable-surface.md)** — make a place's surface interactive, letting the SDK swap its color on hover/tap.
 - **[Custom data](docs/features/custom-data.md)** — read custom business data (price, hours, reference) attached to a place in VisioMapEditor.
 - **[Category highlight](docs/features/category-highlight.md)** — highlight every place belonging to a chosen category, e.g. all restaurants or all shops.
+- **[Dynamic POI](docs/features/dynamic-poi-crud.md)** — create, edit and remove a place at runtime, without republishing the map.
 
 ## Project structure
 

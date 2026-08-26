@@ -430,6 +430,87 @@
         revertCategoryHighlight()
       }
 
+      // dynamic-poi-crud feature: only one dynamically-created POI/Label pair is
+      // tracked at a time (this demo's own choice, not an SDK limit) -- the live SDK
+      // objects only exist here, native only holds the display id/text it gets back
+      // over the bridge. See docs/features/dynamic-poi-crud.md.
+      let dynamicPoi = null
+      let dynamicLabel = null
+
+      // A bare POI created via venue.createPOI() has no visual representation of its
+      // own -- its images/labels/lines/surfaces/markers arrays all start empty -- so
+      // this demo makes it visible by attaching a Label at a position copied from an
+      // existing "anchor" POI (there's no tap-to-place UI here). anchorPoi.labels[0]
+      // and .markers[0] are checked, in that order, since either is a normal way for a
+      // POI to carry a position; a POI with neither (e.g. surface-only) reports a
+      // distinct "no position to copy" outcome instead of crashing.
+      const createDynamicPoi = (newId, anchorId, labelText) => {
+        if (!venue) {
+          return
+        }
+        if (dynamicPoi) {
+          // The app already disables the Create control once a dynamic POI is
+          // tracked -- this is just a defensive backstop.
+          sendToNative({ type: 'dynamic_poi_create_result', data: { ok: false, reason: 'already_tracked' } })
+          return
+        }
+        const anchorPoi = venue.pois.find((p) => p.id === anchorId)
+        if (!anchorPoi) {
+          sendToNative({ type: 'dynamic_poi_create_result', data: { ok: false, reason: 'anchor_not_found' } })
+          return
+        }
+        const position = anchorPoi.labels[0]?.position ?? anchorPoi.markers[0]?.position
+        if (!position) {
+          sendToNative({ type: 'dynamic_poi_create_result', data: { ok: false, reason: 'no_position' } })
+          return
+        }
+        let poi
+        try {
+          // The SDK's own doc comment documents exactly one failure mode here:
+          // POIAlreadyExistsError when newId is already used in the venue. Reported
+          // as a normal outcome by message rather than by error class/instanceof --
+          // the SDK is loaded as a minified CDN bundle, which doesn't reliably
+          // preserve constructor names for that kind of check.
+          poi = venue.createPOI({ id: newId })
+        } catch (error) {
+          sendToNative({
+            type: 'dynamic_poi_create_result',
+            data: {
+              ok: false,
+              reason: 'duplicate_id',
+              message: error instanceof Error ? `${error.name}: ${error.message}` : String(error),
+            },
+          })
+          return
+        }
+        const label = venue.createLabel({ poi, position, width: 2, text: labelText })
+        dynamicPoi = poi
+        dynamicLabel = label
+        sendToNative({ type: 'dynamic_poi_create_result', data: { ok: true, id: newId, text: labelText } })
+      }
+
+      // updatePOI (POIUpdateOptions) can only ever change categories, never anything
+      // visual -- so "editing" the dynamic POI's visible content means updating its
+      // attached Label's text instead. Fire-and-forget: always valid while a dynamic
+      // POI is tracked, since the app disables this control otherwise.
+      const updateDynamicPoiLabel = (text) => {
+        if (!venue || !dynamicLabel) {
+          return
+        }
+        venue.updateLabel(dynamicLabel, { text })
+      }
+
+      // removePOI cascades: removing the POI also removes its attached Label from the
+      // view, no separate removeLabel call needed.
+      const removeDynamicPoi = () => {
+        if (!venue || !dynamicPoi) {
+          return
+        }
+        venue.removePOI(dynamicPoi)
+        dynamicPoi = null
+        dynamicLabel = null
+      }
+
       const onMessage = (event) => {
         try {
           const evt = typeof event.data === 'string' ? JSON.parse(event.data) : event.data
@@ -493,6 +574,15 @@
               break
             case 'clear_category_highlight':
               clearCategoryHighlight()
+              break
+            case 'create_dynamic_poi':
+              createDynamicPoi(evt.data.newId, evt.data.anchorId, evt.data.labelText)
+              break
+            case 'update_dynamic_poi_label':
+              updateDynamicPoiLabel(evt.data.text)
+              break
+            case 'remove_dynamic_poi':
+              removeDynamicPoi()
               break
             default:
               console.error('Unknown message type:', evt.type)

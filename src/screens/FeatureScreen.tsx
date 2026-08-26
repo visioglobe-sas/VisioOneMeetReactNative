@@ -8,6 +8,7 @@ import VisioMapView, {
   CategoryOption,
   CustomDataLookupResult,
   CustomDataRefreshOutcome,
+  DynamicPoiCreateResult,
   PositionSimulationResolution,
   VenueLayoutInfo,
   VisioMapBridge,
@@ -17,6 +18,7 @@ import CategoryHighlightOverlay from '../features/CategoryHighlightOverlay';
 import ClickableSurfaceOverlay from '../features/ClickableSurfaceOverlay';
 import ComputeNavigationOverlay from '../features/ComputeNavigationOverlay';
 import CustomDataOverlay from '../features/CustomDataOverlay';
+import DynamicPoiCrudOverlay from '../features/DynamicPoiCrudOverlay';
 import FloorSelectorOverlay from '../features/FloorSelectorOverlay';
 import GoToPoiOverlay from '../features/GoToPoiOverlay';
 import OccupancySimulatedOverlay from '../features/OccupancySimulatedOverlay';
@@ -58,6 +60,7 @@ const FeatureScreen = ({ route, navigation }: Props) => {
     positionSimulation: { resolution: PositionSimulationResolution | null; error: string | null },
     customData: { refresh: CustomDataRefreshOutcome | null; lookup: CustomDataLookupResult | null },
     categories: CategoryOption[],
+    dynamicPoiCreateResult: DynamicPoiCreateResult | null,
   ) => {
     switch (slug) {
       case 'reset-view':
@@ -123,6 +126,15 @@ const FeatureScreen = ({ route, navigation }: Props) => {
             clearCategoryHighlight={bridge.clearCategoryHighlight}
           />
         );
+      case 'dynamic-poi-crud':
+        return (
+          <DynamicPoiCrudOverlay
+            createDynamicPoi={bridge.createDynamicPoi}
+            updateDynamicPoiLabel={bridge.updateDynamicPoiLabel}
+            removeDynamicPoi={bridge.removeDynamicPoi}
+            createResult={dynamicPoiCreateResult}
+          />
+        );
       default:
         return null;
     }
@@ -150,6 +162,7 @@ const FeatureScreen = ({ route, navigation }: Props) => {
         positionSimulation,
         customData,
         categories,
+        dynamicPoiCreateResult,
       ) => (
         <>
           {slug === 'poi-click' ? (
@@ -173,6 +186,7 @@ const FeatureScreen = ({ route, navigation }: Props) => {
               positionSimulation,
               customData,
               categories,
+              dynamicPoiCreateResult,
             )}
           </BottomSheet>
         </>

@@ -207,6 +207,38 @@ export const useVisioMap = (hash: string) => {
     sendMessage({ type: 'clear_category_highlight' });
   };
 
+  // dynamic-poi-crud feature: creates a POI at runtime (venue.createPOI) and attaches
+  // a Label to it, copying its WGS84 position from an existing "anchor" POI (a bare
+  // POI has no visual footprint of its own). The live POI/Label objects only exist on
+  // the WebView side -- this needs a round trip to learn whether it succeeded (the
+  // anchor id not resolving, the anchor having no position to copy, or newId already
+  // being used all come back as normal, non-crash outcomes), see
+  // 'dynamic_poi_create_result' in VisioMapView.tsx and docs/features/dynamic-poi-crud.md.
+  const createDynamicPoi = (newId: string, anchorId: string, labelText: string) => {
+    sendMessage({
+      type: 'create_dynamic_poi',
+      data: { newId, anchorId, labelText },
+    });
+  };
+
+  // updatePOI itself can only ever touch categories, never anything visual -- editing
+  // the dynamic POI's visible content means updating its attached Label's text
+  // instead (venue.updateLabel). Fire-and-forget: always valid while a dynamic POI is
+  // tracked, so no response is needed.
+  const updateDynamicPoiLabel = (text: string) => {
+    sendMessage({
+      type: 'update_dynamic_poi_label',
+      data: { text },
+    });
+  };
+
+  // removePOI cascades: removing the tracked POI also removes its attached Label from
+  // the view, no separate removeLabel call needed. Fire-and-forget, clears the WebView
+  // side's tracking; the app clears its own local tracking state at the same time.
+  const removeDynamicPoi = () => {
+    sendMessage({ type: 'remove_dynamic_poi' });
+  };
+
   return {
     webRef,
     resetMap,
@@ -228,5 +260,8 @@ export const useVisioMap = (hash: string) => {
     getCategories,
     highlightCategory,
     clearCategoryHighlight,
+    createDynamicPoi,
+    updateDynamicPoiLabel,
+    removeDynamicPoi,
   };
 };

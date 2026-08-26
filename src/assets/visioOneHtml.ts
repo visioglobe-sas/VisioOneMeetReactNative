@@ -324,6 +324,46 @@ export const visioOneHtml = `<!DOCTYPE html>
         })
       }
 
+      // custom-data feature: (re)loads all CustomData from the server. The cache
+      // starts empty ({}) until this resolves at least once -- see getPoiCustomData
+      // below for what that means for a not-yet-refreshed lookup.
+      const refreshCustomData = async () => {
+        if (!venue) {
+          return
+        }
+        try {
+          await venue.refreshCustomData()
+          sendToNative({ type: 'custom_data_refreshed' })
+        } catch (error) {
+          console.error('Unable to refresh custom data', error)
+          sendToNative({
+            type: 'custom_data_refresh_error',
+            data: { message: error instanceof Error ? \`\${error.name}: \${error.message}\` : String(error) },
+          })
+        }
+      }
+
+      // custom-data feature: synchronous read of a POI's CustomData, a free
+      // { [key: string]: string } bag of business fields (price, opening hours,
+      // product reference...) set in VisioMapEditor. venue.getPOICustomData(poi)
+      // always returns a plain object, never null/undefined -- {} both when the POI
+      // has no CustomData and when refreshCustomData() hasn't resolved yet. "POI not
+      // found" (found: false) is reported separately from "found, no CustomData"
+      // (found: true, empty customData) -- both are normal, non-error states.
+      const getPoiCustomData = (placeId) => {
+        if (!venue) {
+          sendToNative({ type: 'poi_custom_data_result', data: { placeId, found: false, customData: {} } })
+          return
+        }
+        const poi = venue.pois.find((p) => p.id === placeId)
+        if (!poi) {
+          sendToNative({ type: 'poi_custom_data_result', data: { placeId, found: false, customData: {} } })
+          return
+        }
+        const customData = venue.getPOICustomData(poi)
+        sendToNative({ type: 'poi_custom_data_result', data: { placeId, found: true, customData } })
+      }
+
       const onMessage = (event) => {
         try {
           const evt = typeof event.data === 'string' ? JSON.parse(event.data) : event.data
@@ -372,6 +412,12 @@ export const visioOneHtml = `<!DOCTYPE html>
               break
             case 'set_surface_interactive':
               setSurfaceInteractive(evt.data.placeId, evt.data.interactive)
+              break
+            case 'refresh_custom_data':
+              refreshCustomData()
+              break
+            case 'get_poi_custom_data':
+              getPoiCustomData(evt.data.placeId)
               break
             default:
               console.error('Unknown message type:', evt.type)

@@ -165,6 +165,25 @@ export const useVisioMap = (hash: string) => {
     });
   };
 
+  // (Re)loads all CustomData from the server -- venue.refreshCustomData(). The cache
+  // starts empty ({}) until this resolves at least once; the response comes back
+  // asynchronously as 'custom_data_refreshed' or 'custom_data_refresh_error', see
+  // VisioMapView.tsx. See docs/features/custom-data.md.
+  const refreshCustomData = () => {
+    sendMessage({ type: 'refresh_custom_data' });
+  };
+
+  // Synchronous lookup on the WebView side (venue.getPOICustomData(poi) only exists
+  // there) -- the response comes back asynchronously as 'poi_custom_data_result',
+  // see VisioMapView.tsx. Distinguishes "POI not found" (found: false) from "POI has
+  // no CustomData" (found: true, customData: {}) -- both are normal, non-error states.
+  const getPoiCustomData = (placeId: string) => {
+    sendMessage({
+      type: 'get_poi_custom_data',
+      data: { placeId },
+    });
+  };
+
   return {
     webRef,
     resetMap,
@@ -181,5 +200,7 @@ export const useVisioMap = (hash: string) => {
     stopPositionSimulation,
     setCameraLockOnPosition,
     setSurfaceInteractive,
+    refreshCustomData,
+    getPoiCustomData,
   };
 };

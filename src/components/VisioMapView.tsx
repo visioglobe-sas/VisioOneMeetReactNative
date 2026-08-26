@@ -29,6 +29,25 @@ export interface PositionSimulationResolution {
   destination: Position;
 }
 
+// Result of the WebView resolving the 'get_poi_custom_data' message -- see
+// VisioMapBridge.getPoiCustomData. `found: false` means the id didn't resolve to a
+// POI at all; `found: true` with an empty `customData` means the POI resolved but
+// carries no CustomData -- both are normal, non-error states (see custom-data.md).
+export interface CustomDataLookupResult {
+  placeId: string;
+  found: boolean;
+  customData: Record<string, string>;
+}
+
+// Outcome of the most recent 'refresh_custom_data' round trip (venue.refreshCustomData()).
+// `at` is a fresh timestamp on every response so repeating the same outcome (e.g.
+// refreshing twice with nothing changed on the server) still updates state.
+export interface CustomDataRefreshOutcome {
+  ok: boolean;
+  error: string | null;
+  at: number;
+}
+
 interface VisioMapViewProps {
   renderOverlay?: (
     bridge: VisioMapBridge,
@@ -38,6 +57,10 @@ interface VisioMapViewProps {
     positionSimulation: {
       resolution: PositionSimulationResolution | null;
       error: string | null;
+    },
+    customData: {
+      refresh: CustomDataRefreshOutcome | null;
+      lookup: CustomDataLookupResult | null;
     },
   ) => React.ReactNode;
   // Fired from the WebView's onMessage handler (an event, not during render) so the
@@ -54,6 +77,12 @@ const VisioMapView = ({ renderOverlay, onPoiClick }: VisioMapViewProps) => {
   const [positionSimulationResolution, setPositionSimulationResolution] =
     React.useState<PositionSimulationResolution | null>(null);
   const [positionSimulationError, setPositionSimulationError] = React.useState<string | null>(
+    null,
+  );
+  const [customDataRefresh, setCustomDataRefresh] = React.useState<CustomDataRefreshOutcome | null>(
+    null,
+  );
+  const [customDataLookup, setCustomDataLookup] = React.useState<CustomDataLookupResult | null>(
     null,
   );
 
@@ -95,6 +124,12 @@ const VisioMapView = ({ renderOverlay, onPoiClick }: VisioMapViewProps) => {
     } else if (evt.type === 'position_simulation_error') {
       setPositionSimulationResolution(null);
       setPositionSimulationError(String(evt.data?.message ?? evt.data));
+    } else if (evt.type === 'custom_data_refreshed') {
+      setCustomDataRefresh({ ok: true, error: null, at: Date.now() });
+    } else if (evt.type === 'custom_data_refresh_error') {
+      setCustomDataRefresh({ ok: false, error: String(evt.data?.message ?? evt.data), at: Date.now() });
+    } else if (evt.type === 'poi_custom_data_result') {
+      setCustomDataLookup(evt.data);
     }
   };
 
@@ -123,10 +158,20 @@ const VisioMapView = ({ renderOverlay, onPoiClick }: VisioMapViewProps) => {
         </Text>
       </View>
 
-      {renderOverlay?.(bridge, status, clickedPois, venueLayout, {
-        resolution: positionSimulationResolution,
-        error: positionSimulationError,
-      })}
+      {renderOverlay?.(
+        bridge,
+        status,
+        clickedPois,
+        venueLayout,
+        {
+          resolution: positionSimulationResolution,
+          error: positionSimulationError,
+        },
+        {
+          refresh: customDataRefresh,
+          lookup: customDataLookup,
+        },
+      )}
     </SafeAreaView>
   );
 };

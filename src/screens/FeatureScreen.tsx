@@ -5,6 +5,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import BottomSheet from '../components/BottomSheet';
 import VisioMapView, {
+  CustomDataLookupResult,
+  CustomDataRefreshOutcome,
   PositionSimulationResolution,
   VenueLayoutInfo,
   VisioMapBridge,
@@ -12,6 +14,7 @@ import VisioMapView, {
 import { featureRegistry } from '../features/registry';
 import ClickableSurfaceOverlay from '../features/ClickableSurfaceOverlay';
 import ComputeNavigationOverlay from '../features/ComputeNavigationOverlay';
+import CustomDataOverlay from '../features/CustomDataOverlay';
 import FloorSelectorOverlay from '../features/FloorSelectorOverlay';
 import GoToPoiOverlay from '../features/GoToPoiOverlay';
 import OccupancySimulatedOverlay from '../features/OccupancySimulatedOverlay';
@@ -43,6 +46,7 @@ const FeatureScreen = ({ route, navigation }: Props) => {
     clickedPois: ClickedPoi[],
     venueLayout: VenueLayoutInfo,
     positionSimulation: { resolution: PositionSimulationResolution | null; error: string | null },
+    customData: { refresh: CustomDataRefreshOutcome | null; lookup: CustomDataLookupResult | null },
   ) => {
     switch (slug) {
       case 'reset-view':
@@ -91,6 +95,15 @@ const FeatureScreen = ({ route, navigation }: Props) => {
         );
       case 'clickable-surface':
         return <ClickableSurfaceOverlay setSurfaceInteractive={bridge.setSurfaceInteractive} />;
+      case 'custom-data':
+        return (
+          <CustomDataOverlay
+            refreshCustomData={bridge.refreshCustomData}
+            getPoiCustomData={bridge.getPoiCustomData}
+            refresh={customData.refresh}
+            lookup={customData.lookup}
+          />
+        );
       default:
         return null;
     }
@@ -109,7 +122,7 @@ const FeatureScreen = ({ route, navigation }: Props) => {
   return (
     <VisioMapView
       onPoiClick={handlePoiClick}
-      renderOverlay={(bridge, _status, clickedPois, venueLayout, positionSimulation) => (
+      renderOverlay={(bridge, _status, clickedPois, venueLayout, positionSimulation, customData) => (
         <>
           {slug === 'poi-click' ? (
             !controlsVisible && clickedPois.length === 0 ? (
@@ -125,7 +138,7 @@ const FeatureScreen = ({ route, navigation }: Props) => {
             </TouchableOpacity>
           )}
           <BottomSheet visible={controlsVisible} onClose={() => setControlsVisible(false)}>
-            {renderFeatureContent(bridge, clickedPois, venueLayout, positionSimulation)}
+            {renderFeatureContent(bridge, clickedPois, venueLayout, positionSimulation, customData)}
           </BottomSheet>
         </>
       )}

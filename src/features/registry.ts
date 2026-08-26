@@ -10,7 +10,8 @@ export type FeatureSlug =
   | 'ui-part-visibility'
   | 'simulated-position'
   | 'camera-lock-on-position'
-  | 'clickable-surface';
+  | 'clickable-surface'
+  | 'custom-data';
 
 export interface FeatureDefinition {
   slug: FeatureSlug;
@@ -68,5 +69,10 @@ export const featureRegistry: FeatureDefinition[] = [
     slug: 'clickable-surface',
     titleKey: 'clickableSurface.title',
     descriptionKey: 'clickableSurface.description',
+  },
+  {
+    slug: 'custom-data',
+    titleKey: 'customData.title',
+    descriptionKey: 'customData.description',
   },
 ];

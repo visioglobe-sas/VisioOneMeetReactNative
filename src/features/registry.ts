@@ -8,6 +8,7 @@ export type FeatureSlug =
   | 'poi-click'
   | 'floor-selector'
   | 'ui-part-visibility'
+  | 'native-ui-replacement'
   | 'simulated-position'
   | 'camera-lock-on-position'
   | 'clickable-surface'
@@ -57,6 +58,11 @@ export const featureRegistry: FeatureDefinition[] = [
     slug: 'ui-part-visibility',
     titleKey: 'uiPartVisibility.title',
     descriptionKey: 'uiPartVisibility.description',
+  },
+  {
+    slug: 'native-ui-replacement',
+    titleKey: 'nativeUiReplacement.title',
+    descriptionKey: 'nativeUiReplacement.description',
   },
   {
     slug: 'simulated-position',

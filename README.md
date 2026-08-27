@@ -53,6 +53,7 @@ Each feature below is a self-contained screen in the app, demonstrating one piec
 - **[Floor selector](docs/features/floor-selector.md)** — switch floor or building from a list driven by the app, in sync with the SDK's own floor-selector widget.
 - **[Simulated occupancy](docs/features/occupancy-simulated.md)** — toggle a place's occupancy color with simulated data.
 - **[UI visibility](docs/features/ui-part-visibility.md)** — show or hide individual parts of the map's default UI.
+- **[Native UI replacement](docs/features/native-ui-replacement.md)** — hide the SDK's own floor selector and drive floor changes entirely from the app's native picker.
 - **[Simulated position](docs/features/simulated-position.md)** — animate a simulated tracked position with an accuracy circle between two places.
 - **[Camera lock on position](docs/features/camera-lock-on-position.md)** — recenter and lock the camera onto a simulated tracked position, like a "recenter on me" toggle.
 - **[Clickable surface](docs/features/clickable-surface.md)** — make a place's surface interactive, letting the SDK swap its color on hover/tap.

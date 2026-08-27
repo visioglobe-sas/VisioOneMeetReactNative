@@ -22,6 +22,7 @@ import CustomDataOverlay from '../features/CustomDataOverlay';
 import DynamicPoiCrudOverlay from '../features/DynamicPoiCrudOverlay';
 import FloorSelectorOverlay from '../features/FloorSelectorOverlay';
 import GoToPoiOverlay from '../features/GoToPoiOverlay';
+import NativeUiReplacementOverlay from '../features/NativeUiReplacementOverlay';
 import OccupancySimulatedOverlay from '../features/OccupancySimulatedOverlay';
 import PoiClickOverlay from '../features/PoiClickOverlay';
 import ResetViewOverlay from '../features/ResetViewOverlay';
@@ -41,6 +42,30 @@ type Props = NativeStackScreenProps<RootStackParamList, 'Feature'>;
 // as VisioMapView's mapHash prop only for this one slug; every other screen keeps
 // getting the shared demo map by not passing the prop.
 const CUSTOM_DATA_MAP_HASH = 'kd9426d8cb3f1c532f22b5bcbd325c280bd351feb';
+
+// native-ui-replacement feature: hides the SDK's own floor-selector widget
+// (view.setUIPartVisible('floorSelector', false), same bridge call as
+// ui-part-visibility) as soon as the map is ready, so the screen opens with only the
+// app's native floor selector visible/functional -- not just once the FAB panel
+// (NativeUiReplacementOverlay) has been opened. A plain child of the always-mounted
+// renderOverlay tree rather than logic inlined in FeatureScreen itself, because
+// BottomSheet's content (a React Native Modal) isn't mounted -- and its effects don't
+// run -- until the panel has been opened at least once, see BottomSheet.tsx.
+const SdkFloorSelectorDefaultOff = ({
+  status,
+  setUIPartVisible,
+}: {
+  status: 'loading' | 'ready' | 'error';
+  setUIPartVisible: VisioMapBridge['setUIPartVisible'];
+}) => {
+  React.useEffect(() => {
+    if (status === 'ready') {
+      setUIPartVisible('floorSelector', false);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [status]);
+  return null;
+};
 
 const FeatureScreen = ({ route, navigation }: Props) => {
   const { slug } = route.params;
@@ -86,6 +111,15 @@ const FeatureScreen = ({ route, navigation }: Props) => {
         );
       case 'ui-part-visibility':
         return <UIPartVisibilityOverlay setUIPartVisible={bridge.setUIPartVisible} />;
+      case 'native-ui-replacement':
+        return (
+          <NativeUiReplacementOverlay
+            venueLayout={venueLayout}
+            goToFloor={bridge.goToFloor}
+            goToBuilding={bridge.goToBuilding}
+            setUIPartVisible={bridge.setUIPartVisible}
+          />
+        );
       case 'simulated-position':
         return (
           <SimulatedPositionOverlay
@@ -167,7 +201,7 @@ const FeatureScreen = ({ route, navigation }: Props) => {
       onPoiClick={handlePoiClick}
       renderOverlay={(
         bridge,
-        _status,
+        status,
         clickedPois,
         venueLayout,
         positionSimulation,
@@ -177,6 +211,9 @@ const FeatureScreen = ({ route, navigation }: Props) => {
         locale,
       ) => (
         <>
+          {slug === 'native-ui-replacement' ? (
+            <SdkFloorSelectorDefaultOff status={status} setUIPartVisible={bridge.setUIPartVisible} />
+          ) : null}
           {slug === 'poi-click' ? (
             !controlsVisible && clickedPois.length === 0 ? (
               <View style={[styles.hint, { bottom: 24 + insets.bottom }]}>

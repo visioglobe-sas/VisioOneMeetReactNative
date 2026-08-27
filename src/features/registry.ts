@@ -13,7 +13,8 @@ export type FeatureSlug =
   | 'clickable-surface'
   | 'custom-data'
   | 'category-highlight'
-  | 'dynamic-poi-crud';
+  | 'dynamic-poi-crud'
+  | 'runtime-locale';
 
 export interface FeatureDefinition {
   slug: FeatureSlug;
@@ -86,5 +87,10 @@ export const featureRegistry: FeatureDefinition[] = [
     slug: 'dynamic-poi-crud',
     titleKey: 'dynamicPoiCrud.title',
     descriptionKey: 'dynamicPoiCrud.description',
+  },
+  {
+    slug: 'runtime-locale',
+    titleKey: 'runtimeLocale.title',
+    descriptionKey: 'runtimeLocale.description',
   },
 ];

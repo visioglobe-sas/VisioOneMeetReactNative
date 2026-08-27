@@ -239,6 +239,21 @@ export const useVisioMap = (hash: string) => {
     sendMessage({ type: 'remove_dynamic_poi' });
   };
 
+  // Requests the venue's available locales (venue.translator.allLocales) plus the
+  // currently active one (venue.currentLocale) -- the response comes back
+  // asynchronously as 'locales_result', see VisioMapView.tsx. Same request/response
+  // idiom as getCategories above.
+  const getLocales = () => {
+    sendMessage({ type: 'get_locales' });
+  };
+
+  // Switches the map's displayed language at runtime -- venue.setCurrentLocale(locale).
+  // Async on the SDK side: the response comes back as either 'locale_changed' or
+  // 'locale_change_error', see VisioMapView.tsx and docs/features/runtime-locale.md.
+  const setLocale = (locale: string) => {
+    sendMessage({ type: 'set_locale', data: { locale } });
+  };
+
   return {
     webRef,
     resetMap,
@@ -263,5 +278,7 @@ export const useVisioMap = (hash: string) => {
     createDynamicPoi,
     updateDynamicPoiLabel,
     removeDynamicPoi,
+    getLocales,
+    setLocale,
   };
 };

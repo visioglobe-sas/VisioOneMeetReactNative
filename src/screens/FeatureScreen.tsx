@@ -9,6 +9,7 @@ import VisioMapView, {
   CustomDataLookupResult,
   CustomDataRefreshOutcome,
   DynamicPoiCreateResult,
+  LocaleInfo,
   PositionSimulationResolution,
   VenueLayoutInfo,
   VisioMapBridge,
@@ -24,6 +25,7 @@ import GoToPoiOverlay from '../features/GoToPoiOverlay';
 import OccupancySimulatedOverlay from '../features/OccupancySimulatedOverlay';
 import PoiClickOverlay from '../features/PoiClickOverlay';
 import ResetViewOverlay from '../features/ResetViewOverlay';
+import RuntimeLocaleOverlay from '../features/RuntimeLocaleOverlay';
 import SimulatedPositionOverlay from '../features/SimulatedPositionOverlay';
 import UIPartVisibilityOverlay from '../features/UIPartVisibilityOverlay';
 import { useLocale } from '../i18n/useLocale';
@@ -61,6 +63,7 @@ const FeatureScreen = ({ route, navigation }: Props) => {
     customData: { refresh: CustomDataRefreshOutcome | null; lookup: CustomDataLookupResult | null },
     categories: CategoryOption[],
     dynamicPoiCreateResult: DynamicPoiCreateResult | null,
+    locale: { info: LocaleInfo; error: string | null },
   ) => {
     switch (slug) {
       case 'reset-view':
@@ -135,6 +138,14 @@ const FeatureScreen = ({ route, navigation }: Props) => {
             createResult={dynamicPoiCreateResult}
           />
         );
+      case 'runtime-locale':
+        return (
+          <RuntimeLocaleOverlay
+            localeInfo={locale.info}
+            error={locale.error}
+            setLocale={bridge.setLocale}
+          />
+        );
       default:
         return null;
     }
@@ -163,6 +174,7 @@ const FeatureScreen = ({ route, navigation }: Props) => {
         customData,
         categories,
         dynamicPoiCreateResult,
+        locale,
       ) => (
         <>
           {slug === 'poi-click' ? (
@@ -187,6 +199,7 @@ const FeatureScreen = ({ route, navigation }: Props) => {
               customData,
               categories,
               dynamicPoiCreateResult,
+              locale,
             )}
           </BottomSheet>
         </>

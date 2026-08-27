@@ -521,6 +521,46 @@ export const visioOneHtml = `<!DOCTYPE html>
         dynamicLabel = null
       }
 
+      // runtime-locale feature: reports the venue's available locales
+      // (venue.translator.allLocales) plus the currently active one (venue.currentLocale)
+      // back to native. 'default' is filtered out here rather than left for native to
+      // dedupe: on this repo's shared demo map it's a byte-identical duplicate of 'fr'
+      // (confirmed against the published map payload), so surfacing it as a third
+      // choice would just be confusing. See docs/features/runtime-locale.md.
+      const getLocales = () => {
+        if (!venue) {
+          sendToNative({ type: 'locales_result', data: { locales: [], currentLocale: null } })
+          return
+        }
+        sendToNative({
+          type: 'locales_result',
+          data: {
+            locales: venue.translator.allLocales.filter((locale) => locale !== 'default'),
+            currentLocale: venue.currentLocale,
+          },
+        })
+      }
+
+      // Switches the map's displayed language at runtime -- venue.setCurrentLocale is
+      // async (returns a Promise) and, per its own doc comment, re-renders every POI
+      // label and current UI item (including the active Navigation) on its own once it
+      // resolves -- no manual re-fetch of POI data or view refresh needed on this side.
+      const setLocale = async (locale) => {
+        if (!venue) {
+          return
+        }
+        try {
+          await venue.setCurrentLocale(locale)
+          sendToNative({ type: 'locale_changed', data: { currentLocale: venue.currentLocale } })
+        } catch (error) {
+          console.error('Unable to set locale', error)
+          sendToNative({
+            type: 'locale_change_error',
+            data: { message: error instanceof Error ? \`\${error.name}: \${error.message}\` : String(error) },
+          })
+        }
+      }
+
       const onMessage = (event) => {
         try {
           const evt = typeof event.data === 'string' ? JSON.parse(event.data) : event.data
@@ -593,6 +633,12 @@ export const visioOneHtml = `<!DOCTYPE html>
               break
             case 'remove_dynamic_poi':
               removeDynamicPoi()
+              break
+            case 'get_locales':
+              getLocales()
+              break
+            case 'set_locale':
+              setLocale(evt.data.locale)
               break
             default:
               console.error('Unknown message type:', evt.type)

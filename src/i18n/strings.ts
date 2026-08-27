@@ -19,6 +19,12 @@ export const strings = {
     'uiPartVisibility.poiDetails': 'POI details',
     'uiPartVisibility.search': 'Search',
     'uiPartVisibility.userTracking': 'User tracking',
+    'nativeUiReplacement.title': 'Native UI replacement',
+    'nativeUiReplacement.description':
+      "Replace the SDK's own floor selector with the app's native one, entirely.",
+    'nativeUiReplacement.toggleLabel': "Show SDK's own floor selector",
+    'nativeUiReplacement.hint':
+      "Off by default: the SDK's own floor-selector widget is hidden and this list is the only way to change floor. Switch it on to compare both, live.",
     'simulatedPosition.title': 'Simulated position',
     'simulatedPosition.description':
       'Animate a simulated position with an accuracy circle between two POIs.',
@@ -63,6 +69,12 @@ export const strings = {
     'uiPartVisibility.poiDetails': 'Détails du lieu',
     'uiPartVisibility.search': 'Recherche',
     'uiPartVisibility.userTracking': 'Suivi utilisateur',
+    'nativeUiReplacement.title': "Remplacement d'UI native",
+    'nativeUiReplacement.description':
+      "Remplace entièrement le sélecteur d'étage du SDK par celui, natif, de l'app.",
+    'nativeUiReplacement.toggleLabel': "Afficher le sélecteur d'étage natif du SDK",
+    'nativeUiReplacement.hint':
+      "Désactivé par défaut : le widget natif du SDK est masqué et cette liste est le seul moyen de changer d'étage. Activez-le pour comparer les deux, en direct.",
     'simulatedPosition.title': 'Position simulée',
     'simulatedPosition.description':
       'Anime une position simulée avec un cercle de précision entre deux POI.',

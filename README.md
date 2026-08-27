@@ -59,6 +59,7 @@ Each feature below is a self-contained screen in the app, demonstrating one piec
 - **[Custom data](docs/features/custom-data.md)** — read custom business data (price, hours, reference) attached to a place in VisioMapEditor.
 - **[Category highlight](docs/features/category-highlight.md)** — highlight every place belonging to a chosen category, e.g. all restaurants or all shops.
 - **[Dynamic POI](docs/features/dynamic-poi-crud.md)** — create, edit and remove a place at runtime, without republishing the map.
+- **[Runtime language](docs/features/runtime-locale.md)** — switch the map's displayed language at runtime, without reloading or republishing the map.
 
 ## Project structure
 

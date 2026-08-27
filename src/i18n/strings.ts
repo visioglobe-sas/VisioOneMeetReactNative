@@ -37,6 +37,9 @@ export const strings = {
     'dynamicPoiCrud.title': 'Dynamic POI',
     'dynamicPoiCrud.description':
       'Create, edit and remove a place at runtime, without republishing the map.',
+    'runtimeLocale.title': 'Runtime language',
+    'runtimeLocale.description':
+      "Switch the map's displayed language live, without reloading or republishing it.",
   },
   fr: {
     'resetView.title': 'Réinitialiser la vue',
@@ -78,6 +81,9 @@ export const strings = {
     'dynamicPoiCrud.title': 'POI dynamique',
     'dynamicPoiCrud.description':
       'Crée, modifie et supprime un lieu à la volée, sans republier la carte.',
+    'runtimeLocale.title': 'Langue à la volée',
+    'runtimeLocale.description':
+      "Change la langue affichée sur la carte en direct, sans recharger ni republier.",
   },
 };
 

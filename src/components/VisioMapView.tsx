@@ -76,6 +76,16 @@ export interface DynamicPoiCreateResult {
   message?: string;
 }
 
+// Response to the 'get_locales' request -- venue.translator.allLocales, with 'default'
+// already filtered out on the WebView side (it's a byte-identical duplicate of 'fr' on
+// this repo's shared demo map, see getLocales in visioOneHtml.ts/visioOne.html and
+// docs/features/runtime-locale.md), plus venue.currentLocale so the panel can highlight
+// the active one. Both start empty/null until the venue is ready.
+export interface LocaleInfo {
+  locales: string[];
+  currentLocale: string | null;
+}
+
 interface VisioMapViewProps {
   // Overrides the shared DEMO_MAP_HASH for this screen only -- e.g. the custom-data
   // feature points at a dedicated, already-published map that actually carries
@@ -98,6 +108,7 @@ interface VisioMapViewProps {
     },
     categories: CategoryOption[],
     dynamicPoiCreateResult: DynamicPoiCreateResult | null,
+    locale: { info: LocaleInfo; error: string | null },
   ) => React.ReactNode;
   // Fired from the WebView's onMessage handler (an event, not during render) so the
   // parent can safely react -- e.g. open its own controls -- without the "setState
@@ -124,9 +135,14 @@ const VisioMapView = ({ mapHash, renderOverlay, onPoiClick }: VisioMapViewProps)
   const [categories, setCategories] = React.useState<CategoryOption[]>([]);
   const [dynamicPoiCreateResult, setDynamicPoiCreateResult] =
     React.useState<DynamicPoiCreateResult | null>(null);
+  const [localeInfo, setLocaleInfo] = React.useState<LocaleInfo>({
+    locales: [],
+    currentLocale: null,
+  });
+  const [localeError, setLocaleError] = React.useState<string | null>(null);
 
   const bridge = useVisioMap(mapHash ?? DEMO_MAP_HASH);
-  const { webRef, sendSetup, getCategories } = bridge;
+  const { webRef, sendSetup, getCategories, getLocales } = bridge;
 
   const handleWebMessage = (event: WebViewMessageEvent) => {
     const raw = event.nativeEvent.data;
@@ -144,6 +160,10 @@ const VisioMapView = ({ mapHash, renderOverlay, onPoiClick }: VisioMapViewProps)
       // 'get_categories' / 'categories_result' round trip in
       // visioOneHtml.ts/visioOne.html and docs/features/category-highlight.md.
       getCategories();
+      // Fetches the venue's available locales + the current one once the venue is
+      // loaded -- see the 'get_locales' / 'locales_result' round trip in
+      // visioOneHtml.ts/visioOne.html and docs/features/runtime-locale.md.
+      getLocales();
     } else if (evt.type === 'error') {
       setStatus('error');
       setErrorMessage(String(evt.data));
@@ -177,6 +197,16 @@ const VisioMapView = ({ mapHash, renderOverlay, onPoiClick }: VisioMapViewProps)
       setCategories(evt.data?.categories ?? []);
     } else if (evt.type === 'dynamic_poi_create_result') {
       setDynamicPoiCreateResult(evt.data);
+    } else if (evt.type === 'locales_result') {
+      setLocaleInfo({
+        locales: evt.data?.locales ?? [],
+        currentLocale: evt.data?.currentLocale ?? null,
+      });
+    } else if (evt.type === 'locale_changed') {
+      setLocaleError(null);
+      setLocaleInfo((prev) => ({ ...prev, currentLocale: evt.data?.currentLocale ?? prev.currentLocale }));
+    } else if (evt.type === 'locale_change_error') {
+      setLocaleError(String(evt.data?.message ?? evt.data));
     }
   };
 
@@ -220,6 +250,7 @@ const VisioMapView = ({ mapHash, renderOverlay, onPoiClick }: VisioMapViewProps)
         },
         categories,
         dynamicPoiCreateResult,
+        { info: localeInfo, error: localeError },
       )}
     </SafeAreaView>
   );

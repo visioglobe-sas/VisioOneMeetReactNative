@@ -34,6 +34,9 @@ export const strings = {
     'categoryHighlight.title': 'Category highlight',
     'categoryHighlight.description':
       'Highlight every place belonging to a chosen category, e.g. all restaurants or all shops.',
+    'dynamicPoiCrud.title': 'Dynamic POI',
+    'dynamicPoiCrud.description':
+      'Create, edit and remove a place at runtime, without republishing the map.',
   },
   fr: {
     'resetView.title': 'Réinitialiser la vue',
@@ -72,6 +75,9 @@ export const strings = {
     'categoryHighlight.title': 'Surbrillance par catégorie',
     'categoryHighlight.description':
       'Met en surbrillance tous les lieux appartenant à une catégorie choisie, ex. tous les restaurants ou toutes les boutiques.',
+    'dynamicPoiCrud.title': 'POI dynamique',
+    'dynamicPoiCrud.description':
+      'Crée, modifie et supprime un lieu à la volée, sans republier la carte.',
   },
 };
 

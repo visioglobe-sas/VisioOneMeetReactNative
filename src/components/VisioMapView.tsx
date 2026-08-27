@@ -62,6 +62,20 @@ export interface CategoriesResult {
   categories: CategoryOption[];
 }
 
+// Result of the WebView resolving a 'create_dynamic_poi' request -- see
+// VisioMapBridge.createDynamicPoi. `ok: false` covers three distinct, non-crash
+// outcomes distinguished by `reason` (the anchor id didn't resolve to a POI at all,
+// the anchor resolved but has no label/marker position to copy, or `newId` is already
+// used in the venue -- venue.createPOI's POIAlreadyExistsError). `ok: true` carries
+// back the id/text that are now tracked. See docs/features/dynamic-poi-crud.md.
+export interface DynamicPoiCreateResult {
+  ok: boolean;
+  id?: string;
+  text?: string;
+  reason?: 'anchor_not_found' | 'no_position' | 'duplicate_id' | 'already_tracked';
+  message?: string;
+}
+
 interface VisioMapViewProps {
   // Overrides the shared DEMO_MAP_HASH for this screen only -- e.g. the custom-data
   // feature points at a dedicated, already-published map that actually carries
@@ -83,6 +97,7 @@ interface VisioMapViewProps {
       lookup: CustomDataLookupResult | null;
     },
     categories: CategoryOption[],
+    dynamicPoiCreateResult: DynamicPoiCreateResult | null,
   ) => React.ReactNode;
   // Fired from the WebView's onMessage handler (an event, not during render) so the
   // parent can safely react -- e.g. open its own controls -- without the "setState
@@ -107,6 +122,8 @@ const VisioMapView = ({ mapHash, renderOverlay, onPoiClick }: VisioMapViewProps)
     null,
   );
   const [categories, setCategories] = React.useState<CategoryOption[]>([]);
+  const [dynamicPoiCreateResult, setDynamicPoiCreateResult] =
+    React.useState<DynamicPoiCreateResult | null>(null);
 
   const bridge = useVisioMap(mapHash ?? DEMO_MAP_HASH);
   const { webRef, sendSetup, getCategories } = bridge;
@@ -158,6 +175,8 @@ const VisioMapView = ({ mapHash, renderOverlay, onPoiClick }: VisioMapViewProps)
       setCustomDataLookup(evt.data);
     } else if (evt.type === 'categories_result') {
       setCategories(evt.data?.categories ?? []);
+    } else if (evt.type === 'dynamic_poi_create_result') {
+      setDynamicPoiCreateResult(evt.data);
     }
   };
 
@@ -200,6 +219,7 @@ const VisioMapView = ({ mapHash, renderOverlay, onPoiClick }: VisioMapViewProps)
           lookup: customDataLookup,
         },
         categories,
+        dynamicPoiCreateResult,
       )}
     </SafeAreaView>
   );

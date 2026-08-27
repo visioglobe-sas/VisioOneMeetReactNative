@@ -12,7 +12,8 @@ export type FeatureSlug =
   | 'camera-lock-on-position'
   | 'clickable-surface'
   | 'custom-data'
-  | 'category-highlight';
+  | 'category-highlight'
+  | 'dynamic-poi-crud';
 
 export interface FeatureDefinition {
   slug: FeatureSlug;
@@ -80,5 +81,10 @@ export const featureRegistry: FeatureDefinition[] = [
     slug: 'category-highlight',
     titleKey: 'categoryHighlight.title',
     descriptionKey: 'categoryHighlight.description',
+  },
+  {
+    slug: 'dynamic-poi-crud',
+    titleKey: 'dynamicPoiCrud.title',
+    descriptionKey: 'dynamicPoiCrud.description',
   },
 ];

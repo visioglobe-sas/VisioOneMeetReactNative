@@ -19,6 +19,10 @@ export interface Position {
 // values are the only ones the SDK recognizes, case-sensitive, no others exist.
 export type UIPart = 'floorSelector' | 'navigation' | 'poiDetails' | 'search' | 'userTracking';
 
+// Mirrors the SDK's View.ExploreMode type exactly (ExploreMode.ts in visioone) -- see
+// docs/features/explore-mode.md for what each of the 3 values actually does.
+export type ExploreMode = 'global' | 'building' | 'floor';
+
 // Mirrors the plain object shape sent from the WebView on 'poi_click' -- see the
 // poiclick handler in visioOneHtml.ts/visioOne.html. Not the live SDK POI type:
 // only serializable fields survive the WebView postMessage boundary.
@@ -112,6 +116,18 @@ export const useVisioMap = (hash: string) => {
     sendMessage({
       type: 'set_ui_part_visible',
       data: { uiPart, isVisible },
+    });
+  };
+
+  // Sets view.currentExploreMode directly -- see docs/features/explore-mode.md. Fire-and-
+  // forget: the WebView side's 'exploremodechanged' listener reports back whatever the
+  // mode ends up being (this call included, but also camera/click-driven changes the app
+  // never asked for -- e.g. clicking in 'building' mode auto-switches to 'floor'), see
+  // the 'explore_mode_changed' handling in VisioMapView.tsx.
+  const setExploreMode = (mode: ExploreMode) => {
+    sendMessage({
+      type: 'set_explore_mode',
+      data: { mode },
     });
   };
 
@@ -265,6 +281,7 @@ export const useVisioMap = (hash: string) => {
     updateOccupancy,
     startItinerary,
     setUIPartVisible,
+    setExploreMode,
     resolvePositionSimulationPois,
     injectTrackedPosition,
     stopPositionSimulation,

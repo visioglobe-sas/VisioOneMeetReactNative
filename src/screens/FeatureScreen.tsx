@@ -20,6 +20,7 @@ import ClickableSurfaceOverlay from '../features/ClickableSurfaceOverlay';
 import ComputeNavigationOverlay from '../features/ComputeNavigationOverlay';
 import CustomDataOverlay from '../features/CustomDataOverlay';
 import DynamicPoiCrudOverlay from '../features/DynamicPoiCrudOverlay';
+import ExploreModeOverlay from '../features/ExploreModeOverlay';
 import FloorSelectorOverlay from '../features/FloorSelectorOverlay';
 import GoToPoiOverlay from '../features/GoToPoiOverlay';
 import NativeUiReplacementOverlay from '../features/NativeUiReplacementOverlay';
@@ -31,7 +32,7 @@ import SimulatedPositionOverlay from '../features/SimulatedPositionOverlay';
 import UIPartVisibilityOverlay from '../features/UIPartVisibilityOverlay';
 import { useLocale } from '../i18n/useLocale';
 import { RootStackParamList } from '../navigation/RootNavigator';
-import { ClickedPoi } from './useVisioMap';
+import { ClickedPoi, ExploreMode } from './useVisioMap';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Feature'>;
 
@@ -89,6 +90,7 @@ const FeatureScreen = ({ route, navigation }: Props) => {
     categories: CategoryOption[],
     dynamicPoiCreateResult: DynamicPoiCreateResult | null,
     locale: { info: LocaleInfo; error: string | null },
+    exploreMode: ExploreMode,
   ) => {
     switch (slug) {
       case 'reset-view':
@@ -180,6 +182,8 @@ const FeatureScreen = ({ route, navigation }: Props) => {
             setLocale={bridge.setLocale}
           />
         );
+      case 'explore-mode':
+        return <ExploreModeOverlay exploreMode={exploreMode} setExploreMode={bridge.setExploreMode} />;
       default:
         return null;
     }
@@ -209,6 +213,7 @@ const FeatureScreen = ({ route, navigation }: Props) => {
         categories,
         dynamicPoiCreateResult,
         locale,
+        exploreMode,
       ) => (
         <>
           {slug === 'native-ui-replacement' ? (
@@ -237,6 +242,7 @@ const FeatureScreen = ({ route, navigation }: Props) => {
               categories,
               dynamicPoiCreateResult,
               locale,
+              exploreMode,
             )}
           </BottomSheet>
         </>

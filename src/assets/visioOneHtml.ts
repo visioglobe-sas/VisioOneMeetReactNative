@@ -87,6 +87,16 @@ export const visioOneHtml = `<!DOCTYPE html>
                   },
                 })
               })
+              // Keeps the native explore-mode UI's highlighted option in sync even when
+              // the mode changes from direct camera/map interaction rather than a
+              // set_explore_mode message from native -- e.g. a click while in 'building'
+              // mode auto-switches to 'floor' on its own (see ExploreMode.ts in visioone).
+              v.addEventListener('exploremodechanged', (event) => {
+                sendToNative({
+                  type: 'explore_mode_changed',
+                  data: { currentExploreMode: event.currentExploreMode },
+                })
+              })
               view = v
             })
           // Only plain serializable fields survive the WebView postMessage boundary (see
@@ -109,6 +119,9 @@ export const visioOneHtml = `<!DOCTYPE html>
               buildings,
               currentBuildingId: view.currentBuilding?.id,
               currentFloorId: view.currentFloor?.id,
+              // The SDK's own default, see ExploreMode.ts in visioone -- 'global' at
+              // this point since createView just resolved and nothing has changed it yet.
+              currentExploreMode: view.currentExploreMode,
             },
           })
         } catch (error) {
@@ -229,6 +242,20 @@ export const visioOneHtml = `<!DOCTYPE html>
       const setUIPartVisible = (uiPart, isVisible) => {
         if (view) {
           view.setUIPartVisible(uiPart, isVisible)
+        }
+      }
+
+      // explore-mode feature: drives the SDK's 3 building-exploration modes. Just an
+      // assignment -- view.currentExploreMode is a plain settable property, not a
+      // method (see ExploreMode.ts in visioone). Entering 'building' mode with no
+      // building currently open falls back to the venue's first building on its own
+      // (the SDK's own behavior, not something this demo has to arrange), so the
+      // "carousel" effect is reachable from 'global' with a single tap. The resulting
+      // mode -- this call's or a later camera/click-driven change -- is reported back
+      // via the 'exploremodechanged' listener registered above, not from here.
+      const setExploreMode = (mode) => {
+        if (view) {
+          view.currentExploreMode = mode
         }
       }
 
@@ -594,6 +621,9 @@ export const visioOneHtml = `<!DOCTYPE html>
               break
             case 'set_ui_part_visible':
               setUIPartVisible(evt.data.uiPart, evt.data.isVisible)
+              break
+            case 'set_explore_mode':
+              setExploreMode(evt.data.mode)
               break
             case 'resolve_poi_positions':
               resolvePositionSimulationPois(evt.data.originId, evt.data.destinationId)

@@ -61,6 +61,7 @@ Each feature below is a self-contained screen in the app, demonstrating one piec
 - **[Category highlight](docs/features/category-highlight.md)** — highlight every place belonging to a chosen category, e.g. all restaurants or all shops.
 - **[Dynamic POI](docs/features/dynamic-poi-crud.md)** — create, edit and remove a place at runtime, without republishing the map.
 - **[Runtime language](docs/features/runtime-locale.md)** — switch the map's displayed language at runtime, without reloading or republishing the map.
+- **[Explore mode](docs/features/explore-mode.md)** — switch between the SDK's 3 building-exploration modes, including the exploded "carousel" view.
 
 ## Project structure
 

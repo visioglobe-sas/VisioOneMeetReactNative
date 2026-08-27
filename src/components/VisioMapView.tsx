@@ -4,7 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { WebView, WebViewMessageEvent } from 'react-native-webview';
 
 import { visioOneHtml } from '../assets/visioOneHtml';
-import { ClickedPoi, Position, useVisioMap, VenueBuilding } from '../screens/useVisioMap';
+import { ClickedPoi, ExploreMode, Position, useVisioMap, VenueBuilding } from '../screens/useVisioMap';
 
 // Replace with a hash of your own venue from https://my.visioglobe.com
 // This one points at a Visioglobe demo venue.
@@ -109,6 +109,11 @@ interface VisioMapViewProps {
     categories: CategoryOption[],
     dynamicPoiCreateResult: DynamicPoiCreateResult | null,
     locale: { info: LocaleInfo; error: string | null },
+    // Forwarded from the WebView's 'ready' message (initial value) and every
+    // 'exploremodechanged' event after (see the explore-mode feature) -- kept in sync
+    // even when the mode changes from direct camera/map interaction rather than a call
+    // to bridge.setExploreMode, same idiom as venueLayout.currentFloorId above.
+    exploreMode: ExploreMode,
   ) => React.ReactNode;
   // Fired from the WebView's onMessage handler (an event, not during render) so the
   // parent can safely react -- e.g. open its own controls -- without the "setState
@@ -140,6 +145,9 @@ const VisioMapView = ({ mapHash, renderOverlay, onPoiClick }: VisioMapViewProps)
     currentLocale: null,
   });
   const [localeError, setLocaleError] = React.useState<string | null>(null);
+  // The SDK's own default is 'global' -- mirrored here until the first 'ready'/
+  // 'explore_mode_changed' message reports the real value (see docs/features/explore-mode.md).
+  const [exploreMode, setExploreModeState] = React.useState<ExploreMode>('global');
 
   const bridge = useVisioMap(mapHash ?? DEMO_MAP_HASH);
   const { webRef, sendSetup, getCategories, getLocales } = bridge;
@@ -156,6 +164,7 @@ const VisioMapView = ({ mapHash, renderOverlay, onPoiClick }: VisioMapViewProps)
         currentBuildingId: evt.data?.currentBuildingId,
         currentFloorId: evt.data?.currentFloorId,
       });
+      setExploreModeState(evt.data?.currentExploreMode ?? 'global');
       // Fetches venue.categories once the venue is loaded -- see the
       // 'get_categories' / 'categories_result' round trip in
       // visioOneHtml.ts/visioOne.html and docs/features/category-highlight.md.
@@ -207,6 +216,12 @@ const VisioMapView = ({ mapHash, renderOverlay, onPoiClick }: VisioMapViewProps)
       setLocaleInfo((prev) => ({ ...prev, currentLocale: evt.data?.currentLocale ?? prev.currentLocale }));
     } else if (evt.type === 'locale_change_error') {
       setLocaleError(String(evt.data?.message ?? evt.data));
+    } else if (evt.type === 'explore_mode_changed') {
+      // Also fires when the mode changes from direct camera/map interaction (e.g. a
+      // click in 'building' mode auto-switches to 'floor') rather than the app's own
+      // bridge.setExploreMode call -- see the 'exploremodechanged' listener in
+      // visioOneHtml.ts/visioOne.html and docs/features/explore-mode.md.
+      setExploreModeState(evt.data?.currentExploreMode ?? 'global');
     }
   };
 
@@ -251,6 +266,7 @@ const VisioMapView = ({ mapHash, renderOverlay, onPoiClick }: VisioMapViewProps)
         categories,
         dynamicPoiCreateResult,
         { info: localeInfo, error: localeError },
+        exploreMode,
       )}
     </SafeAreaView>
   );

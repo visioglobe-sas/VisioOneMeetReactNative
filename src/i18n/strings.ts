@@ -46,6 +46,17 @@ export const strings = {
     'runtimeLocale.title': 'Runtime language',
     'runtimeLocale.description':
       "Switch the map's displayed language live, without reloading or republishing it.",
+    'exploreMode.title': 'Explore mode',
+    'exploreMode.description':
+      "Switch between the SDK's 3 building-exploration modes, including the exploded \"carousel\" view.",
+    'exploreMode.global': 'Global',
+    'exploreMode.building': 'Building',
+    'exploreMode.floor': 'Floor',
+    'exploreMode.globalHint':
+      'Normal outside view. Moving the camera in or out of a building opens or closes it.',
+    'exploreMode.buildingHint':
+      'Outside hidden, every opened building shown as an exploded "carousel". Scroll to change the active floor, tap to switch to Floor mode.',
+    'exploreMode.floorHint': 'Only the current floor is shown.',
   },
   fr: {
     'resetView.title': 'Réinitialiser la vue',
@@ -96,6 +107,17 @@ export const strings = {
     'runtimeLocale.title': 'Langue à la volée',
     'runtimeLocale.description':
       "Change la langue affichée sur la carte en direct, sans recharger ni republier.",
+    'exploreMode.title': "Mode d'exploration",
+    'exploreMode.description':
+      "Bascule entre les 3 modes d'exploration du bâtiment du SDK, dont la vue éclatée en \"carousel\".",
+    'exploreMode.global': 'Global',
+    'exploreMode.building': 'Bâtiment',
+    'exploreMode.floor': 'Étage',
+    'exploreMode.globalHint':
+      "Vue extérieure normale. Déplacer la caméra dans ou hors d'un bâtiment l'ouvre ou le ferme.",
+    'exploreMode.buildingHint':
+      'Extérieur masqué, chaque bâtiment ouvert affiché en "carousel" éclaté. Faites défiler pour changer d\'étage actif, tapez pour passer en mode Étage.',
+    'exploreMode.floorHint': "Seul l'étage courant est affiché.",
   },
 };
 

@@ -86,6 +86,16 @@ export interface LocaleInfo {
   currentLocale: string | null;
 }
 
+// Result of the WebView resolving an 'add_locale' request -- see VisioMapBridge.addLocale
+// and docs/features/add-locale.md. `translations` is keyed by the same fixed dictionary
+// keys the WebView's addSpanishLocale hardcodes, each value already resolved via
+// venue.translator.translate(key, 'es') right after addLocale -- this is the primary
+// proof the round trip succeeded, independent of whether any SDK UI text is visible.
+// null until the "Add Spanish locale" button has been pressed at least once.
+export interface AddLocaleResult {
+  translations: Record<string, string>;
+}
+
 interface VisioMapViewProps {
   // Overrides the shared DEMO_MAP_HASH for this screen only -- e.g. the custom-data
   // feature points at a dedicated, already-published map that actually carries
@@ -109,6 +119,7 @@ interface VisioMapViewProps {
     categories: CategoryOption[],
     dynamicPoiCreateResult: DynamicPoiCreateResult | null,
     locale: { info: LocaleInfo; error: string | null },
+    addLocaleResult: AddLocaleResult | null,
     // Forwarded from the WebView's 'ready' message (initial value) and every
     // 'exploremodechanged' event after (see the explore-mode feature) -- kept in sync
     // even when the mode changes from direct camera/map interaction rather than a call
@@ -145,6 +156,7 @@ const VisioMapView = ({ mapHash, renderOverlay, onPoiClick }: VisioMapViewProps)
     currentLocale: null,
   });
   const [localeError, setLocaleError] = React.useState<string | null>(null);
+  const [addLocaleResult, setAddLocaleResult] = React.useState<AddLocaleResult | null>(null);
   // The SDK's own default is 'global' -- mirrored here until the first 'ready'/
   // 'explore_mode_changed' message reports the real value (see docs/features/explore-mode.md).
   const [exploreMode, setExploreModeState] = React.useState<ExploreMode>('global');
@@ -216,6 +228,8 @@ const VisioMapView = ({ mapHash, renderOverlay, onPoiClick }: VisioMapViewProps)
       setLocaleInfo((prev) => ({ ...prev, currentLocale: evt.data?.currentLocale ?? prev.currentLocale }));
     } else if (evt.type === 'locale_change_error') {
       setLocaleError(String(evt.data?.message ?? evt.data));
+    } else if (evt.type === 'locale_added') {
+      setAddLocaleResult({ translations: evt.data?.translations ?? {} });
     } else if (evt.type === 'explore_mode_changed') {
       // Also fires when the mode changes from direct camera/map interaction (e.g. a
       // click in 'building' mode auto-switches to 'floor') rather than the app's own
@@ -266,6 +280,7 @@ const VisioMapView = ({ mapHash, renderOverlay, onPoiClick }: VisioMapViewProps)
         categories,
         dynamicPoiCreateResult,
         { info: localeInfo, error: localeError },
+        addLocaleResult,
         exploreMode,
       )}
     </SafeAreaView>

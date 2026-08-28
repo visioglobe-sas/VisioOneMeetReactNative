@@ -5,6 +5,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import BottomSheet from '../components/BottomSheet';
 import VisioMapView, {
+  AddLocaleResult,
   CategoryOption,
   CustomDataLookupResult,
   CustomDataRefreshOutcome,
@@ -15,6 +16,7 @@ import VisioMapView, {
   VisioMapBridge,
 } from '../components/VisioMapView';
 import { featureRegistry } from '../features/registry';
+import AddLocaleOverlay from '../features/AddLocaleOverlay';
 import CategoryHighlightOverlay from '../features/CategoryHighlightOverlay';
 import ClickableSurfaceOverlay from '../features/ClickableSurfaceOverlay';
 import ComputeNavigationOverlay from '../features/ComputeNavigationOverlay';
@@ -90,6 +92,7 @@ const FeatureScreen = ({ route, navigation }: Props) => {
     categories: CategoryOption[],
     dynamicPoiCreateResult: DynamicPoiCreateResult | null,
     locale: { info: LocaleInfo; error: string | null },
+    addLocaleResult: AddLocaleResult | null,
     exploreMode: ExploreMode,
   ) => {
     switch (slug) {
@@ -184,6 +187,16 @@ const FeatureScreen = ({ route, navigation }: Props) => {
         );
       case 'explore-mode':
         return <ExploreModeOverlay exploreMode={exploreMode} setExploreMode={bridge.setExploreMode} />;
+      case 'add-locale':
+        return (
+          <AddLocaleOverlay
+            addLocaleResult={addLocaleResult}
+            addLocale={bridge.addLocale}
+            localeInfo={locale.info}
+            localeError={locale.error}
+            setLocale={bridge.setLocale}
+          />
+        );
       default:
         return null;
     }
@@ -213,6 +226,7 @@ const FeatureScreen = ({ route, navigation }: Props) => {
         categories,
         dynamicPoiCreateResult,
         locale,
+        addLocaleResult,
         exploreMode,
       ) => (
         <>
@@ -242,6 +256,7 @@ const FeatureScreen = ({ route, navigation }: Props) => {
               categories,
               dynamicPoiCreateResult,
               locale,
+              addLocaleResult,
               exploreMode,
             )}
           </BottomSheet>

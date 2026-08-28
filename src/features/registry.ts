@@ -16,7 +16,8 @@ export type FeatureSlug =
   | 'category-highlight'
   | 'dynamic-poi-crud'
   | 'runtime-locale'
-  | 'explore-mode';
+  | 'explore-mode'
+  | 'add-locale';
 
 export interface FeatureDefinition {
   slug: FeatureSlug;
@@ -104,5 +105,10 @@ export const featureRegistry: FeatureDefinition[] = [
     slug: 'explore-mode',
     titleKey: 'exploreMode.title',
     descriptionKey: 'exploreMode.description',
+  },
+  {
+    slug: 'add-locale',
+    titleKey: 'addLocale.title',
+    descriptionKey: 'addLocale.description',
   },
 ];

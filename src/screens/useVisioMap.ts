@@ -270,6 +270,17 @@ export const useVisioMap = (hash: string) => {
     sendMessage({ type: 'set_locale', data: { locale } });
   };
 
+  // add-locale feature: adds a brand-new 'es' locale at runtime --
+  // venue.translator.addLocale('es', resources) -- one never authored in VisioMapEditor
+  // for this map. The fixed dictionary itself lives on the WebView side (same idiom as
+  // e.g. category-highlight's hardcoded highlight color), not passed over the bridge.
+  // Fire-and-forget from here: the WebView immediately reads each key back via
+  // venue.translator.translate(key, 'es') and reports the result as 'locale_added', see
+  // VisioMapView.tsx and docs/features/add-locale.md.
+  const addLocale = () => {
+    sendMessage({ type: 'add_locale' });
+  };
+
   return {
     webRef,
     resetMap,
@@ -297,5 +308,6 @@ export const useVisioMap = (hash: string) => {
     removeDynamicPoi,
     getLocales,
     setLocale,
+    addLocale,
   };
 };

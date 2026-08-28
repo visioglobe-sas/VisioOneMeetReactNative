@@ -57,6 +57,9 @@ export const strings = {
     'exploreMode.buildingHint':
       'Outside hidden, every opened building shown as an exploded "carousel". Scroll to change the active floor, tap to switch to Floor mode.',
     'exploreMode.floorHint': 'Only the current floor is shown.',
+    'addLocale.title': 'Add a locale',
+    'addLocale.description':
+      "Add a brand-new 'es' (Spanish) locale at runtime, never authored in VisioMapEditor.",
   },
   fr: {
     'resetView.title': 'Réinitialiser la vue',
@@ -118,6 +121,9 @@ export const strings = {
     'exploreMode.buildingHint':
       'Extérieur masqué, chaque bâtiment ouvert affiché en "carousel" éclaté. Faites défiler pour changer d\'étage actif, tapez pour passer en mode Étage.',
     'exploreMode.floorHint': "Seul l'étage courant est affiché.",
+    'addLocale.title': 'Ajouter une langue',
+    'addLocale.description':
+      "Ajoute une nouvelle langue 'es' (espagnol) à l'exécution, jamais créée dans VisioMapEditor.",
   },
 };
 

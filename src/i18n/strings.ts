@@ -60,6 +60,9 @@ export const strings = {
     'addLocale.title': 'Add a locale',
     'addLocale.description':
       "Add a brand-new 'es' (Spanish) locale at runtime, never authored in VisioMapEditor.",
+    'geofencing.title': 'Geofencing',
+    'geofencing.description':
+      'Flag a place as a zone and alert when a simulated tracked position enters or leaves it.',
   },
   fr: {
     'resetView.title': 'Réinitialiser la vue',
@@ -124,6 +127,9 @@ export const strings = {
     'addLocale.title': 'Ajouter une langue',
     'addLocale.description':
       "Ajoute une nouvelle langue 'es' (espagnol) à l'exécution, jamais créée dans VisioMapEditor.",
+    'geofencing.title': 'Geofencing',
+    'geofencing.description':
+      "Marque un lieu comme zone et alerte quand une position simulée suivie y entre ou en sort.",
   },
 };
 

@@ -618,6 +618,54 @@ export const visioOneHtml = `<!DOCTYPE html>
         sendToNative({ type: 'locale_added', data: { translations } })
       }
 
+      // geofencing feature: a "zone" is just an existing POI's Surface polygon --
+      // there's no separate geofence concept on the SDK. Reports every surface's WGS84
+      // boundary vertices back to native (a POI can have more than one Surface); the
+      // point-in-polygon check itself happens on the native side, piggybacked on
+      // simulated-position's tick loop -- see docs/features/geofencing.md.
+      const resolveGeofenceZone = (placeId) => {
+        if (!venue) {
+          return
+        }
+        const poi = venue.pois.find((p) => p.id === placeId)
+        if (!poi) {
+          sendToNative({ type: 'geofence_zone_error', data: { message: \`POI not found: \${placeId}\` } })
+          return
+        }
+        if (!poi.surfaces || poi.surfaces.length === 0) {
+          sendToNative({
+            type: 'geofence_zone_error',
+            data: { message: \`Zone POI has no surface geometry: \${placeId}\` },
+          })
+          return
+        }
+        sendToNative({
+          type: 'geofence_zone_resolved',
+          data: {
+            placeId,
+            surfaces: poi.surfaces.map((surface) =>
+              surface.positions.map((p) => ({ latitude: p.latitude, longitude: p.longitude })),
+            ),
+          },
+        })
+      }
+
+      // geofencing feature: flags the zone POI's surfaces as "alert" (entered) or back
+      // to their bundle-defined color (left) -- 'initial' is the same
+      // SurfaceUpdateOptions sentinel used by clickable-surface/category-highlight.
+      const setGeofenceAlert = (placeId, active) => {
+        if (!venue) {
+          return
+        }
+        const poi = venue.pois.find((p) => p.id === placeId)
+        if (!poi) {
+          return
+        }
+        poi.surfaces.forEach((surface) => {
+          venue.updateSurface(surface, { color: active ? '#E74C3C' : 'initial' })
+        })
+      }
+
       const onMessage = (event) => {
         try {
           const evt = typeof event.data === 'string' ? JSON.parse(event.data) : event.data
@@ -702,6 +750,12 @@ export const visioOneHtml = `<!DOCTYPE html>
               break
             case 'add_locale':
               addSpanishLocale()
+              break
+            case 'resolve_geofence_zone':
+              resolveGeofenceZone(evt.data.placeId)
+              break
+            case 'set_geofence_alert':
+              setGeofenceAlert(evt.data.placeId, evt.data.active)
               break
             default:
               console.error('Unknown message type:', evt.type)

@@ -96,6 +96,16 @@ export interface AddLocaleResult {
   translations: Record<string, string>;
 }
 
+// Result of the WebView resolving the geofencing feature's 'resolve_geofence_zone'
+// message -- a "zone" is just an existing POI's Surface polygon(s), see
+// docs/features/geofencing.md. Each entry of `surfaces` is one surface's WGS84
+// boundary vertices (a POI can have more than one Surface); the app treats a position
+// as "inside" the zone if it falls within any of them.
+export interface GeofenceZone {
+  placeId: string;
+  surfaces: Position[][];
+}
+
 interface VisioMapViewProps {
   // Overrides the shared DEMO_MAP_HASH for this screen only -- e.g. the custom-data
   // feature points at a dedicated, already-published map that actually carries
@@ -125,6 +135,10 @@ interface VisioMapViewProps {
     // even when the mode changes from direct camera/map interaction rather than a call
     // to bridge.setExploreMode, same idiom as venueLayout.currentFloorId above.
     exploreMode: ExploreMode,
+    // geofencing feature: the currently-loaded zone (an existing POI's Surface
+    // polygon(s)) plus the last resolution error, if any -- see
+    // docs/features/geofencing.md.
+    geofencing: { zone: GeofenceZone | null; error: string | null },
   ) => React.ReactNode;
   // Fired from the WebView's onMessage handler (an event, not during render) so the
   // parent can safely react -- e.g. open its own controls -- without the "setState
@@ -160,6 +174,8 @@ const VisioMapView = ({ mapHash, renderOverlay, onPoiClick }: VisioMapViewProps)
   // The SDK's own default is 'global' -- mirrored here until the first 'ready'/
   // 'explore_mode_changed' message reports the real value (see docs/features/explore-mode.md).
   const [exploreMode, setExploreModeState] = React.useState<ExploreMode>('global');
+  const [geofenceZone, setGeofenceZone] = React.useState<GeofenceZone | null>(null);
+  const [geofenceZoneError, setGeofenceZoneError] = React.useState<string | null>(null);
 
   const bridge = useVisioMap(mapHash ?? DEMO_MAP_HASH);
   const { webRef, sendSetup, getCategories, getLocales } = bridge;
@@ -236,6 +252,12 @@ const VisioMapView = ({ mapHash, renderOverlay, onPoiClick }: VisioMapViewProps)
       // bridge.setExploreMode call -- see the 'exploremodechanged' listener in
       // visioOneHtml.ts/visioOne.html and docs/features/explore-mode.md.
       setExploreModeState(evt.data?.currentExploreMode ?? 'global');
+    } else if (evt.type === 'geofence_zone_resolved') {
+      setGeofenceZoneError(null);
+      setGeofenceZone(evt.data);
+    } else if (evt.type === 'geofence_zone_error') {
+      setGeofenceZone(null);
+      setGeofenceZoneError(String(evt.data?.message ?? evt.data));
     }
   };
 
@@ -282,6 +304,7 @@ const VisioMapView = ({ mapHash, renderOverlay, onPoiClick }: VisioMapViewProps)
         { info: localeInfo, error: localeError },
         addLocaleResult,
         exploreMode,
+        { zone: geofenceZone, error: geofenceZoneError },
       )}
     </SafeAreaView>
   );

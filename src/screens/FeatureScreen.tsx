@@ -10,6 +10,7 @@ import VisioMapView, {
   CustomDataLookupResult,
   CustomDataRefreshOutcome,
   DynamicPoiCreateResult,
+  GeofenceZone,
   LocaleInfo,
   PositionSimulationResolution,
   VenueLayoutInfo,
@@ -24,6 +25,7 @@ import CustomDataOverlay from '../features/CustomDataOverlay';
 import DynamicPoiCrudOverlay from '../features/DynamicPoiCrudOverlay';
 import ExploreModeOverlay from '../features/ExploreModeOverlay';
 import FloorSelectorOverlay from '../features/FloorSelectorOverlay';
+import GeofencingOverlay from '../features/GeofencingOverlay';
 import GoToPoiOverlay from '../features/GoToPoiOverlay';
 import NativeUiReplacementOverlay from '../features/NativeUiReplacementOverlay';
 import OccupancySimulatedOverlay from '../features/OccupancySimulatedOverlay';
@@ -94,6 +96,7 @@ const FeatureScreen = ({ route, navigation }: Props) => {
     locale: { info: LocaleInfo; error: string | null },
     addLocaleResult: AddLocaleResult | null,
     exploreMode: ExploreMode,
+    geofencing: { zone: GeofenceZone | null; error: string | null },
   ) => {
     switch (slug) {
       case 'reset-view':
@@ -197,6 +200,20 @@ const FeatureScreen = ({ route, navigation }: Props) => {
             setLocale={bridge.setLocale}
           />
         );
+      case 'geofencing':
+        return (
+          <GeofencingOverlay
+            resolvePois={bridge.resolvePositionSimulationPois}
+            injectTrackedPosition={bridge.injectTrackedPosition}
+            stopSimulation={bridge.stopPositionSimulation}
+            resolution={positionSimulation.resolution}
+            error={positionSimulation.error}
+            resolveZone={bridge.resolveGeofenceZone}
+            setGeofenceAlert={bridge.setGeofenceAlert}
+            zone={geofencing.zone}
+            zoneError={geofencing.error}
+          />
+        );
       default:
         return null;
     }
@@ -228,6 +245,7 @@ const FeatureScreen = ({ route, navigation }: Props) => {
         locale,
         addLocaleResult,
         exploreMode,
+        geofencing,
       ) => (
         <>
           {slug === 'native-ui-replacement' ? (
@@ -258,6 +276,7 @@ const FeatureScreen = ({ route, navigation }: Props) => {
               locale,
               addLocaleResult,
               exploreMode,
+              geofencing,
             )}
           </BottomSheet>
         </>

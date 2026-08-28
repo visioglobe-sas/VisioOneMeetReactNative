@@ -281,6 +281,23 @@ export const useVisioMap = (hash: string) => {
     sendMessage({ type: 'add_locale' });
   };
 
+  // geofencing feature: a "zone" is just an existing POI's Surface polygon -- there's
+  // no separate geofence concept on the SDK side. Resolves that POI's surfaces on the
+  // WebView side (venue.pois lookup only exists there); the response comes back
+  // asynchronously as 'geofence_zone_resolved' or 'geofence_zone_error', see
+  // VisioMapView.tsx and docs/features/geofencing.md.
+  const resolveGeofenceZone = (placeId: string) => {
+    sendMessage({ type: 'resolve_geofence_zone', data: { placeId } });
+  };
+
+  // Recolors the zone POI's surfaces to flag whether the tracked position is currently
+  // inside it. The containment check itself happens on the React side (see
+  // GeofencingOverlay.tsx, piggybacked onto simulated-position's tick loop) -- the SDK
+  // has no point-in-polygon primitive of its own, this just applies the visual result.
+  const setGeofenceAlert = (placeId: string, active: boolean) => {
+    sendMessage({ type: 'set_geofence_alert', data: { placeId, active } });
+  };
+
   return {
     webRef,
     resetMap,
@@ -309,5 +326,7 @@ export const useVisioMap = (hash: string) => {
     getLocales,
     setLocale,
     addLocale,
+    resolveGeofenceZone,
+    setGeofenceAlert,
   };
 };

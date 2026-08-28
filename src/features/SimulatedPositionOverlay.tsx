@@ -2,6 +2,7 @@ import * as React from 'react';
 import { StyleSheet, Switch, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
 import { PositionSimulationResolution, VisioMapBridge } from '../components/VisioMapView';
+import { Position } from '../screens/useVisioMap';
 
 // Stand-in for a real positioning feed: linearly interpolates between two resolved POI
 // positions and ping-pongs back and forth on a timer, calling injectTrackedPosition on
@@ -24,6 +25,14 @@ interface Props {
   // makes the "Recenter camera on position" toggle below appear at all -- the plain
   // simulated-position feature renders the same component without it.
   setCameraLockOnPosition?: VisioMapBridge['setCameraLockOnPosition'];
+  // Optional: only the geofencing feature passes these, to piggyback its point-in-
+  // polygon check onto this component's own tick loop instead of polling separately
+  // (the SDK has no trackedpositionchanged event to hook into). onPositionTick fires
+  // with the freshly-interpolated position on every tick while running; onTrackingStopped
+  // fires once when the loop stops (Stop pressed, or the screen is left), so the
+  // geofencing feature can revert its own "inside zone" alert.
+  onPositionTick?: (position: Position) => void;
+  onTrackingStopped?: () => void;
 }
 
 const SimulatedPositionOverlay = ({
@@ -33,6 +42,8 @@ const SimulatedPositionOverlay = ({
   resolution,
   error,
   setCameraLockOnPosition,
+  onPositionTick,
+  onTrackingStopped,
 }: Props) => {
   const [originId, setOriginId] = React.useState('');
   const [destinationId, setDestinationId] = React.useState('');
@@ -84,16 +95,15 @@ const SimulatedPositionOverlay = ({
 
     const tick = () => {
       const hasAltitude = origin.altitude != null && destination.altitude != null;
-      injectTrackedPosition(
-        {
-          latitude: origin.latitude + (destination.latitude - origin.latitude) * progress,
-          longitude: origin.longitude + (destination.longitude - origin.longitude) * progress,
-          altitude: hasAltitude
-            ? origin.altitude! + (destination.altitude! - origin.altitude!) * progress
-            : undefined,
-        },
-        radiusRef.current,
-      );
+      const position = {
+        latitude: origin.latitude + (destination.latitude - origin.latitude) * progress,
+        longitude: origin.longitude + (destination.longitude - origin.longitude) * progress,
+        altitude: hasAltitude
+          ? origin.altitude! + (destination.altitude! - origin.altitude!) * progress
+          : undefined,
+      };
+      injectTrackedPosition(position, radiusRef.current);
+      onPositionTick?.(position);
 
       progress += direction * STEP_PER_TICK;
       if (progress >= 1) {
@@ -117,6 +127,7 @@ const SimulatedPositionOverlay = ({
       // both reset the lock, a deliberate fresh opt-in on every restart.
       setCameraLockOn(false);
       setCameraLockOnPosition?.(false);
+      onTrackingStopped?.();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [running, resolution]);

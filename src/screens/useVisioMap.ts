@@ -50,7 +50,11 @@ export interface VenueBuilding {
   floors: VenueFloor[];
 }
 
-export const useVisioMap = (hash: string) => {
+// baseURL is the custom-base-url feature's override of LoadOptions.baseURL -- undefined
+// means "let the WebView page fall back to the SDK's own default"
+// (https://mapserver.visioglobe.com/), same as every other screen. See
+// docs/features/custom-base-url.md.
+export const useVisioMap = (hash: string, baseURL?: string) => {
   const webRef = useRef<WebView>(null);
 
   const sendMessage = (message: object) => {
@@ -64,7 +68,7 @@ export const useVisioMap = (hash: string) => {
     setTimeout(() => {
       sendMessage({
         type: 'setup',
-        data: { hash },
+        data: { hash, baseURL },
       });
     }, 500);
   };

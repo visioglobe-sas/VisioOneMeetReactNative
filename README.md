@@ -64,6 +64,7 @@ Each feature below is a self-contained screen in the app, demonstrating one piec
 - **[Explore mode](docs/features/explore-mode.md)** — switch between the SDK's 3 building-exploration modes, including the exploded "carousel" view.
 - **[Add locale](docs/features/add-locale.md)** — add a brand-new locale at runtime, never authored in VisioMapEditor, and prove it with a live translation round trip.
 - **[Geofencing](docs/features/geofencing.md)** — flag a place as a zone and alert when a simulated tracked position enters or leaves it.
+- **[Custom map server](docs/features/custom-base-url.md)** — point the SDK at a different map server than Visioglobe's default SaaS.
 
 ## Project structure
 

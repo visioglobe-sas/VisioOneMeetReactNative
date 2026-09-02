@@ -10,6 +10,11 @@ import { ClickedPoi, ExploreMode, Position, useVisioMap, VenueBuilding } from '.
 // This one points at a Visioglobe demo venue.
 const DEMO_MAP_HASH = 'kbae8e6c066cca4b02c2afac2bc963a643d87437a';
 
+// The SDK's own default LoadOptions.baseURL, mirrored here so the custom-base-url
+// feature can pre-fill its field with the real value instead of a placeholder -- see
+// docs/features/custom-base-url.md.
+export const DEFAULT_BASE_URL = 'https://mapserver.visioglobe.com/';
+
 type Status = 'loading' | 'ready' | 'error';
 
 export type VisioMapBridge = ReturnType<typeof useVisioMap>;
@@ -113,6 +118,14 @@ interface VisioMapViewProps {
   // getting DEMO_MAP_HASH by leaving this prop unset. See FeatureScreen.tsx and
   // docs/features/custom-data.md.
   mapHash?: string;
+  // custom-base-url feature: overrides LoadOptions.baseURL for this screen only.
+  // undefined means "let the WebView fall back to the SDK's own default", same as
+  // every other screen -- see docs/features/custom-base-url.md. Since baseURL is a
+  // loadVenue option (not a live property), changing it requires a full venue reload:
+  // FeatureScreen does this by changing VisioMapView's `key`, forcing React to unmount
+  // and remount this whole component (and its WebView) rather than trying to reload
+  // in place.
+  baseURL?: string;
   renderOverlay?: (
     bridge: VisioMapBridge,
     status: Status,
@@ -146,7 +159,7 @@ interface VisioMapViewProps {
   onPoiClick?: (pois: ClickedPoi[]) => void;
 }
 
-const VisioMapView = ({ mapHash, renderOverlay, onPoiClick }: VisioMapViewProps) => {
+const VisioMapView = ({ mapHash, baseURL, renderOverlay, onPoiClick }: VisioMapViewProps) => {
   const [status, setStatus] = React.useState<Status>('loading');
   const [errorMessage, setErrorMessage] = React.useState<string | null>(null);
   const [clickedPois, setClickedPois] = React.useState<ClickedPoi[]>([]);
@@ -177,7 +190,7 @@ const VisioMapView = ({ mapHash, renderOverlay, onPoiClick }: VisioMapViewProps)
   const [geofenceZone, setGeofenceZone] = React.useState<GeofenceZone | null>(null);
   const [geofenceZoneError, setGeofenceZoneError] = React.useState<string | null>(null);
 
-  const bridge = useVisioMap(mapHash ?? DEMO_MAP_HASH);
+  const bridge = useVisioMap(mapHash ?? DEMO_MAP_HASH, baseURL);
   const { webRef, sendSetup, getCategories, getLocales } = bridge;
 
   const handleWebMessage = (event: WebViewMessageEvent) => {

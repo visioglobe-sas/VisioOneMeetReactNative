@@ -9,6 +9,7 @@ import VisioMapView, {
   CategoryOption,
   CustomDataLookupResult,
   CustomDataRefreshOutcome,
+  DEFAULT_BASE_URL,
   DynamicPoiCreateResult,
   GeofenceZone,
   LocaleInfo,
@@ -21,6 +22,7 @@ import AddLocaleOverlay from '../features/AddLocaleOverlay';
 import CategoryHighlightOverlay from '../features/CategoryHighlightOverlay';
 import ClickableSurfaceOverlay from '../features/ClickableSurfaceOverlay';
 import ComputeNavigationOverlay from '../features/ComputeNavigationOverlay';
+import CustomBaseUrlOverlay from '../features/CustomBaseUrlOverlay';
 import CustomDataOverlay from '../features/CustomDataOverlay';
 import DynamicPoiCrudOverlay from '../features/DynamicPoiCrudOverlay';
 import ExploreModeOverlay from '../features/ExploreModeOverlay';
@@ -78,6 +80,12 @@ const FeatureScreen = ({ route, navigation }: Props) => {
   const insets = useSafeAreaInsets();
   const feature = featureRegistry.find((item) => item.slug === slug);
   const [controlsVisible, setControlsVisible] = React.useState(false);
+  // custom-base-url feature: baseURL is a loadVenue option, not a live property, so
+  // "Reload" can't just call a setter on the already-loaded venue -- bumping this key
+  // forces VisioMapView (and its WebView) to fully unmount/remount against the current
+  // customBaseUrl value instead. See docs/features/custom-base-url.md.
+  const [customBaseUrl, setCustomBaseUrl] = React.useState(DEFAULT_BASE_URL);
+  const [customBaseUrlReloadKey, setCustomBaseUrlReloadKey] = React.useState(0);
 
   React.useEffect(() => {
     if (feature) {
@@ -214,6 +222,14 @@ const FeatureScreen = ({ route, navigation }: Props) => {
             zoneError={geofencing.error}
           />
         );
+      case 'custom-base-url':
+        return (
+          <CustomBaseUrlOverlay
+            baseURL={customBaseUrl}
+            onChangeBaseURL={setCustomBaseUrl}
+            onReload={() => setCustomBaseUrlReloadKey((key) => key + 1)}
+          />
+        );
       default:
         return null;
     }
@@ -231,7 +247,9 @@ const FeatureScreen = ({ route, navigation }: Props) => {
 
   return (
     <VisioMapView
+      key={slug === 'custom-base-url' ? `custom-base-url-${customBaseUrlReloadKey}` : slug}
       mapHash={slug === 'custom-data' ? CUSTOM_DATA_MAP_HASH : undefined}
+      baseURL={slug === 'custom-base-url' ? customBaseUrl : undefined}
       onPoiClick={handlePoiClick}
       renderOverlay={(
         bridge,

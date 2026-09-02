@@ -28,8 +28,13 @@ export const visioOneHtml = `<!DOCTYPE html>
       let image = null
       let poiInfo = null
 
-      const setup = async (hash) => {
+      // baseURL is optional -- LoadOptions.baseURL defaults to
+      // https://mapserver.visioglobe.com/ inside the SDK itself when omitted, so a blank
+      // field here means "use the SDK's own default", not some hardcoded fallback of
+      // this demo's own. See docs/features/custom-base-url.md.
+      const setup = async (hash, baseURL) => {
         const venueHash = typeof hash === 'string' ? hash.trim() : ''
+        const trimmedBaseURL = typeof baseURL === 'string' ? baseURL.trim() : ''
         let visioOneLoadError = null
         const originalConsoleWarn = console.warn
 
@@ -44,16 +49,20 @@ export const visioOneHtml = `<!DOCTYPE html>
         }
 
         try {
+          const effectiveBaseURL = trimmedBaseURL || 'https://mapserver.visioglobe.com/'
           sendToNative({
             type: 'loading',
             data: {
               hash: venueHash,
-              descriptorURL: \`https://mapserver.visioglobe.com/\${venueHash}/descriptor.json\`,
+              descriptorURL: \`\${effectiveBaseURL}\${venueHash}/descriptor.json\`,
             },
           })
           const visioOne = await visioOneReady
           const container = document.querySelector('#content')
-          venue = await visioOne.loadVenue({ hash: venueHash }, container)
+          const loadOptions = trimmedBaseURL
+            ? { hash: venueHash, baseURL: trimmedBaseURL }
+            : { hash: venueHash }
+          venue = await visioOne.loadVenue(loadOptions, container)
           await visioOne
             .createView(container, venue, {
               cameraProjection: 'perspective',
@@ -677,7 +686,7 @@ export const visioOneHtml = `<!DOCTYPE html>
 
           switch (evt.type) {
             case 'setup':
-              setup(evt.data.hash)
+              setup(evt.data.hash, evt.data.baseURL)
               break
             case 'reset_map':
               resetMap()

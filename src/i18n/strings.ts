@@ -63,6 +63,9 @@ export const strings = {
     'geofencing.title': 'Geofencing',
     'geofencing.description':
       'Flag a place as a zone and alert when a simulated tracked position enters or leaves it.',
+    'customBaseUrl.title': 'Custom map server',
+    'customBaseUrl.description':
+      "Point the SDK at a different map server than Visioglobe's default SaaS.",
   },
   fr: {
     'resetView.title': 'Réinitialiser la vue',
@@ -130,6 +133,9 @@ export const strings = {
     'geofencing.title': 'Geofencing',
     'geofencing.description':
       "Marque un lieu comme zone et alerte quand une position simulée suivie y entre ou en sort.",
+    'customBaseUrl.title': 'Serveur de carte personnalisé',
+    'customBaseUrl.description':
+      "Pointe le SDK vers un autre serveur de cartes que le SaaS Visioglobe par défaut.",
   },
 };
 

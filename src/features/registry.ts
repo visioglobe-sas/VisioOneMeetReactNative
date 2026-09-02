@@ -17,7 +17,8 @@ export type FeatureSlug =
   | 'dynamic-poi-crud'
   | 'runtime-locale'
   | 'explore-mode'
-  | 'add-locale';
+  | 'add-locale'
+  | 'geofencing';
 
 export interface FeatureDefinition {
   slug: FeatureSlug;
@@ -110,5 +111,10 @@ export const featureRegistry: FeatureDefinition[] = [
     slug: 'add-locale',
     titleKey: 'addLocale.title',
     descriptionKey: 'addLocale.description',
+  },
+  {
+    slug: 'geofencing',
+    titleKey: 'geofencing.title',
+    descriptionKey: 'geofencing.description',
   },
 ];

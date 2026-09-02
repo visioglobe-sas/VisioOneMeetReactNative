@@ -63,6 +63,7 @@ Each feature below is a self-contained screen in the app, demonstrating one piec
 - **[Runtime language](docs/features/runtime-locale.md)** — switch the map's displayed language at runtime, without reloading or republishing the map.
 - **[Explore mode](docs/features/explore-mode.md)** — switch between the SDK's 3 building-exploration modes, including the exploded "carousel" view.
 - **[Add locale](docs/features/add-locale.md)** — add a brand-new locale at runtime, never authored in VisioMapEditor, and prove it with a live translation round trip.
+- **[Geofencing](docs/features/geofencing.md)** — flag a place as a zone and alert when a simulated tracked position enters or leaves it.
 
 ## Project structure
 

@@ -15,6 +15,19 @@ export interface Position {
   altitude?: number;
 }
 
+// custom-navigation-trace feature: mirrors the SDK's NavigationTraceUpdateOptions type
+// exactly (Navigation/NavigationTraceUpdateOptions.d.ts in visioone) -- colors only.
+// The type also has textureRepeat/animationSpeed, omitted here since they only matter
+// for the 'textured' displayMode, which createNavigationTrace() has no option to select
+// in the first place. See docs/features/custom-navigation-trace.md.
+export interface NavigationTraceStyle {
+  progressColor?: string;
+  progressOutlineColor?: string;
+  progressFutureColor?: string;
+  previewColor?: string;
+  previewOutlineColor?: string;
+}
+
 // Mirrors the SDK's View.UIPart type exactly (View.ts in visioone) -- these 5 string
 // values are the only ones the SDK recognizes, case-sensitive, no others exist.
 export type UIPart = 'floorSelector' | 'navigation' | 'poiDetails' | 'search' | 'userTracking';
@@ -113,6 +126,19 @@ export const useVisioMap = (hash: string, baseURL?: string) => {
     sendMessage({
       type: 'start_itinerary',
       data: { origin, destination, isAccessible },
+    });
+  };
+
+  // custom-navigation-trace feature: restyles whichever NavigationTrace is currently
+  // tracked on the WebView side (the one created by the last startItinerary call) --
+  // venue.updateNavigationTrace(trace, style). Fire-and-forget: colors only affect a
+  // trace that already exists, a harmless no-op on the WebView side if none is tracked
+  // yet. See docs/features/custom-navigation-trace.md, including the SDK's own
+  // throwing-but-still-applying quirk this call can hit on this demo venue.
+  const updateNavigationTrace = (style: NavigationTraceStyle) => {
+    sendMessage({
+      type: 'update_navigation_trace',
+      data: { style },
     });
   };
 
@@ -312,6 +338,7 @@ export const useVisioMap = (hash: string, baseURL?: string) => {
     sendSetup,
     updateOccupancy,
     startItinerary,
+    updateNavigationTrace,
     setUIPartVisible,
     setExploreMode,
     resolvePositionSimulationPois,

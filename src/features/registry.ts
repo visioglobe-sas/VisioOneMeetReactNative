@@ -5,6 +5,7 @@ export type FeatureSlug =
   | 'occupancy-simulated'
   | 'goto-poi'
   | 'compute-navigation'
+  | 'custom-navigation-trace'
   | 'poi-click'
   | 'floor-selector'
   | 'ui-part-visibility'
@@ -47,6 +48,11 @@ export const featureRegistry: FeatureDefinition[] = [
     slug: 'compute-navigation',
     titleKey: 'computeNavigation.title',
     descriptionKey: 'computeNavigation.description',
+  },
+  {
+    slug: 'custom-navigation-trace',
+    titleKey: 'customNavigationTrace.title',
+    descriptionKey: 'customNavigationTrace.description',
   },
   {
     slug: 'poi-click',

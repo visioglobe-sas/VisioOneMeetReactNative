@@ -30,6 +30,7 @@ import FloorSelectorOverlay from '../features/FloorSelectorOverlay';
 import GeofencingOverlay from '../features/GeofencingOverlay';
 import GoToPoiOverlay from '../features/GoToPoiOverlay';
 import NativeUiReplacementOverlay from '../features/NativeUiReplacementOverlay';
+import NavigationExcludeModalitiesOverlay from '../features/NavigationExcludeModalitiesOverlay';
 import OccupancySimulatedOverlay from '../features/OccupancySimulatedOverlay';
 import PoiClickOverlay from '../features/PoiClickOverlay';
 import ResetViewOverlay from '../features/ResetViewOverlay';
@@ -125,6 +126,8 @@ const FeatureScreen = ({ route, navigation }: Props) => {
             updateNavigationTrace={bridge.updateNavigationTrace}
           />
         );
+      case 'navigation-exclude-modalities':
+        return <NavigationExcludeModalitiesOverlay startItinerary={bridge.startItinerary} />;
       case 'poi-click':
         return <PoiClickOverlay pois={clickedPois} />;
       case 'floor-selector':

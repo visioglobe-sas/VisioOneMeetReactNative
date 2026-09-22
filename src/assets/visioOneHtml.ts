@@ -230,7 +230,15 @@ export const visioOneHtml = `<!DOCTYPE html>
         })
       }
 
-      const startItinerary = (origin, destination, isAccessible) => {
+      // navigation-exclude-modalities feature: excludedAttributes is an optional array
+      // of segment-particularity attribute strings (Segment.attributes) the computed
+      // route must not use -- forwarded as-is into computeNavigation's own
+      // excludedAttributes option. undefined (every caller but
+      // navigation-exclude-modalities) behaves exactly as before this option existed.
+      // On this demo venue the attribute that excludes the elevator hop is 'lift', not
+      // 'elevator' as the SDK's own JSDoc comment on excludedAttributes misleadingly
+      // suggests -- see docs/features/navigation-exclude-modalities.md.
+      const startItinerary = (origin, destination, isAccessible, excludedAttributes) => {
         const navigation = venue.computeNavigation({
           origin,
           destination,
@@ -238,6 +246,7 @@ export const visioOneHtml = `<!DOCTYPE html>
           type: 'fastest',
           firstNodeAsIntersection: false,
           mergeFloorChangeInstructions: false,
+          excludedAttributes,
         })
 
         currentNavigationTrace = venue.createNavigationTrace(navigation)
@@ -728,7 +737,12 @@ export const visioOneHtml = `<!DOCTYPE html>
               updateOccupancy(evt.data.occupancy)
               break
             case 'start_itinerary':
-              startItinerary(evt.data.origin, evt.data.destination, evt.data.isAccessible)
+              startItinerary(
+                evt.data.origin,
+                evt.data.destination,
+                evt.data.isAccessible,
+                evt.data.excludedAttributes
+              )
               break
             case 'update_navigation_trace':
               updateNavigationTraceStyle(evt.data.style)

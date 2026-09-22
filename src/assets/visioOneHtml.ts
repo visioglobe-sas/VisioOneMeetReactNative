@@ -27,6 +27,11 @@ export const visioOneHtml = `<!DOCTYPE html>
       let venue = null
       let image = null
       let poiInfo = null
+      // custom-navigation-trace feature: the trace created by the last startItinerary
+      // call, kept around so a later 'update_navigation_trace' message has something to
+      // restyle -- venue.updateNavigationTrace() only affects a trace that already
+      // exists. See docs/features/custom-navigation-trace.md.
+      let currentNavigationTrace = null
 
       // baseURL is optional -- LoadOptions.baseURL defaults to
       // https://mapserver.visioglobe.com/ inside the SDK itself when omitted, so a blank
@@ -235,13 +240,32 @@ export const visioOneHtml = `<!DOCTYPE html>
           mergeFloorChangeInstructions: false,
         })
 
-        const navigationTrace = venue.createNavigationTrace(navigation)
-        view.setCurrentNavigationTrace(navigationTrace)
+        currentNavigationTrace = venue.createNavigationTrace(navigation)
+        view.setCurrentNavigationTrace(currentNavigationTrace)
 
         sendToNative({
           type: 'itinerary_instructions',
           data: navigation.instructions,
         })
+      }
+
+      // custom-navigation-trace feature: restyles the trace startItinerary last created
+      // -- venue.updateNavigationTrace(trace, style), colors only (NavigationTraceUpdateOptions).
+      // A no-op if no itinerary has been computed yet, same "nothing to act on" idiom as
+      // clearPlace above. venue.updateNavigationTrace() throws internally on this demo
+      // venue (TypeError reading 'material' deep in the SDK's line-rendering pipeline)
+      // even though every color is still applied correctly before it throws -- caught
+      // here so it doesn't surface as an uncaught WebView error. Not our bug to fix. See
+      // docs/features/custom-navigation-trace.md.
+      const updateNavigationTraceStyle = (style) => {
+        if (!venue || !currentNavigationTrace) {
+          return
+        }
+        try {
+          venue.updateNavigationTrace(currentNavigationTrace, style)
+        } catch (error) {
+          console.warn('updateNavigationTrace threw (trace styling still applied):', error)
+        }
       }
 
       // uiPart must be one of the SDK's exact, case-sensitive View.UIPart values:
@@ -705,6 +729,9 @@ export const visioOneHtml = `<!DOCTYPE html>
               break
             case 'start_itinerary':
               startItinerary(evt.data.origin, evt.data.destination, evt.data.isAccessible)
+              break
+            case 'update_navigation_trace':
+              updateNavigationTraceStyle(evt.data.style)
               break
             case 'set_ui_part_visible':
               setUIPartVisible(evt.data.uiPart, evt.data.isVisible)

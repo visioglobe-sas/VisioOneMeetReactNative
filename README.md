@@ -49,6 +49,7 @@ Each feature below is a self-contained screen in the app, demonstrating one piec
 - **[Reset view](docs/features/reset-view.md)** — recenter the camera on the venue's default view.
 - **[Go to place](docs/features/goto-poi.md)** — center the camera on a place (POI) by its ID.
 - **[Itinerary](docs/features/compute-navigation.md)** — compute and display a route between two places.
+- **[Custom navigation trace](docs/features/custom-navigation-trace.md)** — restyle a computed route's colors with a tappable preset palette.
 - **[Tap a place](docs/features/poi-click.md)** — show a tapped place's info in a panel.
 - **[Floor selector](docs/features/floor-selector.md)** — switch floor or building from a list driven by the app, in sync with the SDK's own floor-selector widget.
 - **[Simulated occupancy](docs/features/occupancy-simulated.md)** — toggle a place's occupancy color with simulated data.

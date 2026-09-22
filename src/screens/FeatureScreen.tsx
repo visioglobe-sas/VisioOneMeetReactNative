@@ -115,6 +115,16 @@ const FeatureScreen = ({ route, navigation }: Props) => {
         return <GoToPoiOverlay goToPlace={bridge.goToPlace} clearPlace={bridge.clearPlace} />;
       case 'compute-navigation':
         return <ComputeNavigationOverlay startItinerary={bridge.startItinerary} />;
+      case 'custom-navigation-trace':
+        // Same itinerary fields/button as compute-navigation, plus the color-preset
+        // swatch row enabled by passing updateNavigationTrace -- see
+        // ComputeNavigationOverlay.tsx and docs/features/custom-navigation-trace.md.
+        return (
+          <ComputeNavigationOverlay
+            startItinerary={bridge.startItinerary}
+            updateNavigationTrace={bridge.updateNavigationTrace}
+          />
+        );
       case 'poi-click':
         return <PoiClickOverlay pois={clickedPois} />;
       case 'floor-selector':

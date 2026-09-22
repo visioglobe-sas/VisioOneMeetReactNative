@@ -11,6 +11,9 @@ export const strings = {
     'customNavigationTrace.title': 'Custom navigation trace',
     'customNavigationTrace.description':
       "Restyle a computed route's colors with a tappable preset palette.",
+    'navigationExcludeModalities.title': 'Avoid elevator',
+    'navigationExcludeModalities.description':
+      'Exclude elevator segments from a computed route, rerouting through stairs instead.',
     'poiClick.title': 'Tap a place',
     'poiClick.description': "Show a tapped place's info in a panel.",
     'floorSelector.title': 'Floor selector',
@@ -83,6 +86,9 @@ export const strings = {
     'customNavigationTrace.title': "Style d'itinéraire personnalisé",
     'customNavigationTrace.description':
       "Change les couleurs d'un itinéraire calculé via une palette de préréglages à taper.",
+    'navigationExcludeModalities.title': "Éviter l'ascenseur",
+    'navigationExcludeModalities.description':
+      "Exclut les segments en ascenseur d'un itinéraire calculé, en repassant par les escaliers.",
     'poiClick.title': 'Taper un lieu',
     'poiClick.description': "Affiche les infos d'un lieu tapé dans un panneau.",
     'floorSelector.title': "Sélection d'étage",

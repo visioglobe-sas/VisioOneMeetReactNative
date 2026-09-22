@@ -122,10 +122,22 @@ export const useVisioMap = (hash: string, baseURL?: string) => {
     });
   };
 
-  const startItinerary = (origin: string, destination: string, isAccessible: boolean) => {
+  // navigation-exclude-modalities feature: excludedAttributes is an optional 4th field
+  // forwarded straight into venue.computeNavigation({ ..., excludedAttributes }) on the
+  // WebView side -- an array of segment-particularity attribute strings (e.g. an
+  // elevator hop) the computed route must not use. Omitted (undefined) by every other
+  // caller of startItinerary, which behaves exactly as before. See
+  // docs/features/navigation-exclude-modalities.md, including why the attribute string
+  // to exclude an elevator is 'lift', not 'elevator' as the SDK's own JSDoc suggests.
+  const startItinerary = (
+    origin: string,
+    destination: string,
+    isAccessible: boolean,
+    excludedAttributes?: string[],
+  ) => {
     sendMessage({
       type: 'start_itinerary',
-      data: { origin, destination, isAccessible },
+      data: { origin, destination, isAccessible, excludedAttributes },
     });
   };
 

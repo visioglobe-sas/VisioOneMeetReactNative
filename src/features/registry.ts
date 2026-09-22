@@ -6,6 +6,7 @@ export type FeatureSlug =
   | 'goto-poi'
   | 'compute-navigation'
   | 'custom-navigation-trace'
+  | 'navigation-exclude-modalities'
   | 'poi-click'
   | 'floor-selector'
   | 'ui-part-visibility'
@@ -53,6 +54,11 @@ export const featureRegistry: FeatureDefinition[] = [
     slug: 'custom-navigation-trace',
     titleKey: 'customNavigationTrace.title',
     descriptionKey: 'customNavigationTrace.description',
+  },
+  {
+    slug: 'navigation-exclude-modalities',
+    titleKey: 'navigationExcludeModalities.title',
+    descriptionKey: 'navigationExcludeModalities.description',
   },
   {
     slug: 'poi-click',

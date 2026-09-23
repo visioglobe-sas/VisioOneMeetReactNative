@@ -51,6 +51,7 @@ Each feature below is a self-contained screen in the app, demonstrating one piec
 - **[Itinerary](docs/features/compute-navigation.md)** — compute and display a route between two places.
 - **[Custom navigation trace](docs/features/custom-navigation-trace.md)** — restyle a computed route's colors with a tappable preset palette.
 - **[Avoid elevator](docs/features/navigation-exclude-modalities.md)** — exclude elevator segments from a computed route, rerouting through stairs instead.
+- **[Accessible route](docs/features/accessible-mode.md)** — compute a route that avoids stairs, rerouting through a lift/ramp instead.
 - **[Tap a place](docs/features/poi-click.md)** — show a tapped place's info in a panel.
 - **[Floor selector](docs/features/floor-selector.md)** — switch floor or building from a list driven by the app, in sync with the SDK's own floor-selector widget.
 - **[Simulated occupancy](docs/features/occupancy-simulated.md)** — toggle a place's occupancy color with simulated data.

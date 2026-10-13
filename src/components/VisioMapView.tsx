@@ -96,6 +96,22 @@ export interface IconMarkerCreateResult {
   at: number;
 }
 
+// Result of the WebView resolving a 'create_text_label' request -- see
+// VisioMapBridge.createTextLabel. `ok: false` covers empty text (createLabel would throw
+// "Cannot create Label, text is required"), the anchor id not resolving to a POI, the
+// anchor having no label/marker position to copy (all normal, non-crash outcomes), or
+// venue.createLabel itself throwing ('sdk_error', e.g. an invalid color). `at` is a
+// fresh timestamp so repeating the same outcome still updates state. See
+// docs/features/custom-text-label.md.
+export interface TextLabelCreateResult {
+  ok: boolean;
+  labelId: string;
+  anchorId: string;
+  reason?: 'empty_text' | 'anchor_not_found' | 'no_position' | 'sdk_error';
+  message?: string;
+  at: number;
+}
+
 // Response to the 'get_locales' request -- venue.translator.allLocales, with 'default'
 // already filtered out on the WebView side (it's a byte-identical duplicate of 'fr' on
 // this repo's shared demo map, see getLocales in visioOneHtml.ts/visioOne.html and
@@ -169,6 +185,8 @@ interface VisioMapViewProps {
     geofencing: { zone: GeofenceZone | null; error: string | null },
     // 3d-icon-marker feature: outcome of the last 'create_icon_marker' request.
     iconMarkerCreateResult: IconMarkerCreateResult | null,
+    // custom-text-label feature: outcome of the last 'create_text_label' request.
+    textLabelCreateResult: TextLabelCreateResult | null,
   ) => React.ReactNode;
   // Fired from the WebView's onMessage handler (an event, not during render) so the
   // parent can safely react -- e.g. open its own controls -- without the "setState
@@ -208,6 +226,8 @@ const VisioMapView = ({ mapHash, baseURL, renderOverlay, onPoiClick }: VisioMapV
   const [geofenceZoneError, setGeofenceZoneError] = React.useState<string | null>(null);
   const [iconMarkerCreateResult, setIconMarkerCreateResult] =
     React.useState<IconMarkerCreateResult | null>(null);
+  const [textLabelCreateResult, setTextLabelCreateResult] =
+    React.useState<TextLabelCreateResult | null>(null);
 
   const bridge = useVisioMap(mapHash ?? DEMO_MAP_HASH, baseURL);
   const { webRef, sendSetup, getCategories, getLocales } = bridge;
@@ -292,6 +312,8 @@ const VisioMapView = ({ mapHash, baseURL, renderOverlay, onPoiClick }: VisioMapV
       setGeofenceZoneError(String(evt.data?.message ?? evt.data));
     } else if (evt.type === 'icon_marker_create_result') {
       setIconMarkerCreateResult({ ...evt.data, at: Date.now() });
+    } else if (evt.type === 'text_label_create_result') {
+      setTextLabelCreateResult({ ...evt.data, at: Date.now() });
     }
   };
 
@@ -340,6 +362,7 @@ const VisioMapView = ({ mapHash, baseURL, renderOverlay, onPoiClick }: VisioMapV
         exploreMode,
         { zone: geofenceZone, error: geofenceZoneError },
         iconMarkerCreateResult,
+        textLabelCreateResult,
       )}
     </SafeAreaView>
   );

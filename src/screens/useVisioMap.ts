@@ -53,6 +53,28 @@ export interface IconMarkerOptions {
   orientationType: ImageOrientationType;
 }
 
+// Subset of the SDK's LabelCreateOptions that can cross the bridge -- `poi` and
+// `position` are resolved on the WebView side from an anchor POI id instead (a live POI
+// object can't be serialized). width/height are in meters and always both sent:
+// createLabel defaults height to width when omitted. rotation is in degrees, relative
+// to the map's orientation. color is a hex / rgb() / hsl() string. See
+// docs/features/custom-text-label.md.
+export interface TextLabelOptions {
+  text: string;
+  color: string;
+  width: number;
+  height: number;
+  rotation: number;
+}
+
+// Mirrors the subset of the SDK's LabelUpdateOptions this demo uses. width and height
+// go together (updateLabel with width alone also sets height = width); rotation is
+// absent on purpose -- it isn't part of LabelUpdateOptions.
+export type TextLabelUpdate =
+  | { text: string }
+  | { color: string }
+  | { width: number; height: number };
+
 // Mirrors the plain object shape sent from the WebView on 'poi_click' -- see the
 // poiclick handler in visioOneHtml.ts/visioOne.html. Not the live SDK POI type:
 // only serializable fields survive the WebView postMessage boundary.
@@ -334,6 +356,35 @@ export const useVisioMap = (hash: string, baseURL?: string) => {
     sendMessage({ type: 'remove_icon_marker', data: { imageId } });
   };
 
+  // custom-text-label feature: venue.createLabel owned by an existing "anchor" POI, at
+  // the position copied from it (same anchor-position resolution as createDynamicPoi /
+  // createIconMarker), offset by ~4 m. The live Label object only exists on the WebView
+  // side, keyed by `labelId`; the outcome comes back as 'text_label_create_result'
+  // (empty text / anchor not found / no position are normal, non-crash outcomes), see
+  // VisioMapView.tsx and docs/features/custom-text-label.md. Creating again under the
+  // same id replaces the previous label. `moveCamera: false` skips the camera move
+  // after creation -- used when only recreating the label to change its rotation.
+  const createTextLabel = (
+    labelId: string,
+    anchorId: string,
+    options: TextLabelOptions,
+    moveCamera = true,
+  ) => {
+    sendMessage({ type: 'create_text_label', data: { labelId, anchorId, options, moveCamera } });
+  };
+
+  // venue.updateLabel(label, update) on the Label tracked under `labelId` --
+  // fire-and-forget, a no-op on the WebView side if nothing is placed.
+  const updateTextLabel = (labelId: string, update: TextLabelUpdate) => {
+    sendMessage({ type: 'update_text_label', data: { labelId, update } });
+  };
+
+  // venue.removeLabel(label) on the Label tracked under `labelId` -- fire-and-forget,
+  // a no-op on the WebView side if nothing is placed.
+  const removeTextLabel = (labelId: string) => {
+    sendMessage({ type: 'remove_text_label', data: { labelId } });
+  };
+
   // Requests the venue's available locales (venue.translator.allLocales) plus the
   // currently active one (venue.currentLocale) -- the response comes back
   // asynchronously as 'locales_result', see VisioMapView.tsx. Same request/response
@@ -406,6 +457,9 @@ export const useVisioMap = (hash: string, baseURL?: string) => {
     createIconMarker,
     updateIconMarkerOrientation,
     removeIconMarker,
+    createTextLabel,
+    updateTextLabel,
+    removeTextLabel,
     getLocales,
     setLocale,
     addLocale,

@@ -19,6 +19,7 @@ export type FeatureSlug =
   | 'category-highlight'
   | 'dynamic-poi-crud'
   | '3d-icon-marker'
+  | 'custom-text-label'
   | 'runtime-locale'
   | 'explore-mode'
   | 'add-locale'
@@ -121,6 +122,11 @@ export const featureRegistry: FeatureDefinition[] = [
     slug: '3d-icon-marker',
     titleKey: 'iconMarker.title',
     descriptionKey: 'iconMarker.description',
+  },
+  {
+    slug: 'custom-text-label',
+    titleKey: 'customTextLabel.title',
+    descriptionKey: 'customTextLabel.description',
   },
   {
     slug: 'runtime-locale',

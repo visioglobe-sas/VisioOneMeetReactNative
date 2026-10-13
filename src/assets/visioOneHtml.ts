@@ -534,13 +534,17 @@ export const visioOneHtml = `<!DOCTYPE html>
       // a normal way for a POI to carry a position. Returns { reason } instead of throwing on the two normal,
       // non-crash failure outcomes: 'anchor_not_found' (no POI with that id) and
       // 'no_position' (the POI exists but has neither a label nor a marker, e.g. a
-      // surface-only POI).
-      const resolveAnchorPoi = (anchorId) => {
+      // surface-only POI). excludeLabel (optional, custom-text-label only) is a Label
+      // this demo itself attached to the anchor POI: it's skipped, so a re-place never
+      // copies the custom label's own (already offset) position when the anchor has no
+      // label of its own.
+      const resolveAnchorPoi = (anchorId, excludeLabel) => {
         const poi = venue.pois.find((p) => p.id === anchorId)
         if (!poi) {
           return { reason: 'anchor_not_found' }
         }
-        const position = poi.labels[0]?.position ?? poi.markers[0]?.position
+        const ownLabel = poi.labels.find((label) => label !== excludeLabel)
+        const position = ownLabel?.position ?? poi.markers[0]?.position
         if (!position) {
           return { reason: 'no_position' }
         }
@@ -716,7 +720,8 @@ export const visioOneHtml = `<!DOCTYPE html>
           fail('empty_text')
           return
         }
-        const anchor = resolveAnchorPoi(anchorId)
+        // Skip our own currently tracked label when copying the anchor's position.
+        const anchor = resolveAnchorPoi(anchorId, textLabels.get(labelId))
         if (anchor.reason) {
           fail(anchor.reason)
           return

@@ -59,13 +59,15 @@ removeTextLabel('custom-text-label');
 // visioOneHtml.ts / visioOne.html (kept in sync by hand)
 
 // Shared with Dynamic POI and 3D icon marker: resolves an anchor POI id to the POI plus
-// a WGS84 position copied from its first label, or else its first marker.
-const resolveAnchorPoi = (anchorId) => {
+// a WGS84 position copied from its first label, or else its first marker. excludeLabel
+// (used here only) skips the custom label we already attached to that POI.
+const resolveAnchorPoi = (anchorId, excludeLabel) => {
   const poi = venue.pois.find((p) => p.id === anchorId)
   if (!poi) {
     return { reason: 'anchor_not_found' }
   }
-  const position = poi.labels[0]?.position ?? poi.markers[0]?.position
+  const ownLabel = poi.labels.find((label) => label !== excludeLabel)
+  const position = ownLabel?.position ?? poi.markers[0]?.position
   if (!position) {
     return { reason: 'no_position' }
   }
@@ -84,7 +86,7 @@ const createTextLabel = (labelId, anchorId, options, moveCamera) => {
     fail('empty_text') // createLabel would throw "Cannot create Label, text is required"
     return
   }
-  const anchor = resolveAnchorPoi(anchorId)
+  const anchor = resolveAnchorPoi(anchorId, textLabels.get(labelId))
   if (anchor.reason) {
     fail(anchor.reason)
     return
@@ -162,6 +164,7 @@ Placing needs a round trip: `create_text_label` goes in, `text_label_create_resu
 - **`text` is required.** An empty string throws `Cannot create Label, text is required`. The text is fitted inside the `width`×`height` box; a long text wraps onto two lines.
 - **`color` format.** A hex (`#E53935`), `rgb()` or `hsl()` string; alpha is ignored. Anything else throws `Invalid color format provided…`.
 - **A Label needs an owner POI.** `createLabel` requires `poi` — this demo uses the anchor POI itself. The new Label is pushed onto `poi.labels`, after the POI's own label (`poi.labels[0]`, e.g. "Restaurant"), which is left untouched; `removeLabel` only removes the one you created.
+- **Your label joins `poi.labels`.** If the anchor POI has no label of its own (only a marker), your custom label becomes `poi.labels[0]` while attached. Copying "the POI's first label position" again (e.g. to recreate the label for a new rotation) would then copy your already-offset position and the offset would build up on each recreation — skip your own label when resolving the anchor's position.
 - **`removeLabel` / `updateLabel` on a removed label throw** `Provided label is not registered`. Forget your reference once removed (this demo deletes it from its map, so a second remove is a no-op).
 - **A POI has no direct lat/lng field.** Its position comes from one of its sub-objects — `poi.labels[0].position` or `poi.markers[0].position` here. A POI with neither (e.g. a surface-only POI) has nothing to copy, reported as `no_position`. The copied position keeps its altitude.
 - **Indoor labels are only visible on their floor.** A Label is rendered only while its POI's floor is displayed; from the default whole-venue view indoor floors aren't shown, so the camera is moved to the anchor POI after placing (`view.goToPOI`, the same call as [Go to place](goto-poi.md)).

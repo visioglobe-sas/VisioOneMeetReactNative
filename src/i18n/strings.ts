@@ -54,6 +54,8 @@ export const strings = {
       'Create, edit and remove a place at runtime, without republishing the map.',
     'iconMarker.title': '3D icon marker',
     'iconMarker.description': 'Place a custom image at a spot on the 3D map',
+    'customTextLabel.title': 'Custom text label',
+    'customTextLabel.description': 'Place your own text on the map and restyle it live',
     'runtimeLocale.title': 'Runtime language',
     'runtimeLocale.description':
       "Switch the map's displayed language live, without reloading or republishing it.",
@@ -135,6 +137,9 @@ export const strings = {
       'Crée, modifie et supprime un lieu à la volée, sans republier la carte.',
     'iconMarker.title': 'Icône 3D positionnée',
     'iconMarker.description': 'Placer une image personnalisée à un endroit de la carte 3D',
+    'customTextLabel.title': 'Label texte personnalisé',
+    'customTextLabel.description':
+      'Placez votre propre texte sur la carte et modifiez son style en direct',
     'runtimeLocale.title': 'Langue à la volée',
     'runtimeLocale.description':
       "Change la langue affichée sur la carte en direct, sans recharger ni republier.",

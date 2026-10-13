@@ -162,8 +162,8 @@
         }
       }
 
-      // Shared by goto-poi and 3d-icon-marker: animates the camera onto a POI (and its
-      // floor), so indoor content attached to it is actually in view.
+      // Shared by goto-poi, 3d-icon-marker and custom-text-label: animates the camera
+      // onto a POI (and its floor), so indoor content attached to it is actually in view.
       const moveCameraToPoi = (poi) => {
         view.goToPOI(poi, {
           orientation: { pitch: 20 },
@@ -516,19 +516,23 @@
       // own -- its images/labels/lines/surfaces/markers arrays all start empty -- so
       // this demo makes it visible by attaching a Label at a position copied from an
       // existing "anchor" POI (there's no tap-to-place UI here), see resolveAnchorPoi.
-      // Shared by dynamic-poi-crud and 3d-icon-marker: resolves an "anchor" POI id to
-      // the POI itself plus a WGS84 position copied from it -- anchorPoi.labels[0] and
-      // .markers[0] are checked, in that order, since either is a normal way for a POI
-      // to carry a position. Returns { reason } instead of throwing on the two normal,
+      // Shared by dynamic-poi-crud, 3d-icon-marker and custom-text-label: resolves an
+      // "anchor" POI id to the POI itself plus a WGS84 position copied from it --
+      // anchorPoi.labels[0] and .markers[0] are checked, in that order, since either is
+      // a normal way for a POI to carry a position. Returns { reason } instead of throwing on the two normal,
       // non-crash failure outcomes: 'anchor_not_found' (no POI with that id) and
       // 'no_position' (the POI exists but has neither a label nor a marker, e.g. a
-      // surface-only POI).
-      const resolveAnchorPoi = (anchorId) => {
+      // surface-only POI). excludeLabel (optional, custom-text-label only) is a Label
+      // this demo itself attached to the anchor POI: it's skipped, so a re-place never
+      // copies the custom label's own (already offset) position when the anchor has no
+      // label of its own.
+      const resolveAnchorPoi = (anchorId, excludeLabel) => {
         const poi = venue.pois.find((p) => p.id === anchorId)
         if (!poi) {
           return { reason: 'anchor_not_found' }
         }
-        const position = poi.labels[0]?.position ?? poi.markers[0]?.position
+        const ownLabel = poi.labels.find((label) => label !== excludeLabel)
+        const position = ownLabel?.position ?? poi.markers[0]?.position
         if (!position) {
           return { reason: 'no_position' }
         }
@@ -672,6 +676,118 @@
         }
         venue.removeImage(tracked)
         iconMarkers.delete(imageId)
+      }
+
+      // custom-text-label feature: live SDK Label objects (venue.createLabel) only exist
+      // here, keyed by an id chosen by the app -- native only ever refers to them by
+      // that id over the bridge. See docs/features/custom-text-label.md.
+      const textLabels = new Map()
+
+      // ~4 m north-east of the anchor's own position, so the custom text doesn't sit on
+      // top of the map's own label for that POI.
+      const TEXT_LABEL_OFFSET_DEGREES = 0.00004
+
+      // Creates a Label owned by the anchor POI itself (no createPOI needed), at the
+      // position copied from it via resolveAnchorPoi, slightly offset. Always passes
+      // height explicitly: createLabel defaults height to width otherwise (a square box
+      // in which the text wraps and scales oddly). Replies with
+      // 'text_label_create_result' -- empty text, a missing POI or a POI without a
+      // position are normal outcomes, reported with ok: false + reason rather than
+      // thrown. moveCamera is false when the app only recreates the label to change its
+      // rotation (rotation can't be changed with updateLabel).
+      const createTextLabel = (labelId, anchorId, options, moveCamera) => {
+        if (!venue) {
+          return
+        }
+        const fail = (reason, message) => {
+          sendToNative({ type: 'text_label_create_result', data: { ok: false, labelId, anchorId, reason, message } })
+        }
+        const text = typeof options.text === 'string' ? options.text.trim() : ''
+        if (!text) {
+          // createLabel would throw "Cannot create Label, text is required".
+          fail('empty_text')
+          return
+        }
+        // Skip our own currently tracked label when copying the anchor's position.
+        const anchor = resolveAnchorPoi(anchorId, textLabels.get(labelId))
+        if (anchor.reason) {
+          fail(anchor.reason)
+          return
+        }
+        // Only one Label per id: replace any previous one rather than leaking it.
+        const previous = textLabels.get(labelId)
+        if (previous) {
+          venue.removeLabel(previous)
+          textLabels.delete(labelId)
+        }
+        const position = {
+          ...anchor.position,
+          latitude: anchor.position.latitude + TEXT_LABEL_OFFSET_DEGREES,
+          longitude: anchor.position.longitude + TEXT_LABEL_OFFSET_DEGREES,
+        }
+        try {
+          const created = venue.createLabel({
+            poi: anchor.poi,
+            position,
+            width: options.width,
+            height: options.height,
+            text,
+            color: options.color,
+            rotation: options.rotation,
+          })
+          textLabels.set(labelId, created)
+          // A Label is only rendered while its POI's floor is displayed, and the default
+          // whole-venue view doesn't show indoor floors: move the camera onto the anchor.
+          if (view && moveCamera !== false) {
+            moveCameraToPoi(anchor.poi)
+          }
+          sendToNative({ type: 'text_label_create_result', data: { ok: true, labelId, anchorId } })
+        } catch (error) {
+          fail('sdk_error', error instanceof Error ? error.name + ': ' + error.message : String(error))
+        }
+      }
+
+      // Live update of an already-placed Label: any of text / color / width+height.
+      // width and height are always sent together by the app -- updateLabel with width
+      // alone also sets height = width. rotation is deliberately not accepted here: it
+      // isn't part of LabelUpdateOptions (the app recreates the label instead).
+      // Fire-and-forget: a no-op if nothing is placed under that id.
+      const updateTextLabel = (labelId, update) => {
+        const tracked = textLabels.get(labelId)
+        if (!venue || !tracked) {
+          return
+        }
+        const options = {}
+        if (typeof update.text === 'string') {
+          const text = update.text.trim()
+          if (!text) {
+            return
+          }
+          options.text = text
+        }
+        if (update.color !== undefined) {
+          options.color = update.color
+        }
+        if (update.width !== undefined && update.height !== undefined) {
+          options.width = update.width
+          options.height = update.height
+        }
+        try {
+          venue.updateLabel(tracked, options)
+        } catch (error) {
+          console.error('updateLabel failed', error)
+        }
+      }
+
+      // Fire-and-forget: a no-op if nothing is placed under that id (removeLabel itself
+      // throws "Provided label is not registered" on a second call).
+      const removeTextLabel = (labelId) => {
+        const tracked = textLabels.get(labelId)
+        if (!venue || !tracked) {
+          return
+        }
+        venue.removeLabel(tracked)
+        textLabels.delete(labelId)
       }
 
       // runtime-locale feature: reports the venue's available locales
@@ -884,6 +1000,15 @@
               break
             case 'remove_icon_marker':
               removeIconMarker(evt.data.imageId)
+              break
+            case 'create_text_label':
+              createTextLabel(evt.data.labelId, evt.data.anchorId, evt.data.options, evt.data.moveCamera)
+              break
+            case 'update_text_label':
+              updateTextLabel(evt.data.labelId, evt.data.update)
+              break
+            case 'remove_text_label':
+              removeTextLabel(evt.data.labelId)
               break
             case 'get_locales':
               getLocales()

@@ -15,6 +15,7 @@ import VisioMapView, {
   IconMarkerCreateResult,
   LocaleInfo,
   PositionSimulationResolution,
+  TextLabelCreateResult,
   VenueLayoutInfo,
   VisioMapBridge,
 } from '../components/VisioMapView';
@@ -39,6 +40,7 @@ import PoiClickOverlay from '../features/PoiClickOverlay';
 import ResetViewOverlay from '../features/ResetViewOverlay';
 import RuntimeLocaleOverlay from '../features/RuntimeLocaleOverlay';
 import SimulatedPositionOverlay from '../features/SimulatedPositionOverlay';
+import TextLabelOverlay from '../features/TextLabelOverlay';
 import UIPartVisibilityOverlay from '../features/UIPartVisibilityOverlay';
 import { useLocale } from '../i18n/useLocale';
 import { RootStackParamList } from '../navigation/RootNavigator';
@@ -110,6 +112,7 @@ const FeatureScreen = ({ route, navigation }: Props) => {
     exploreMode: ExploreMode,
     geofencing: { zone: GeofenceZone | null; error: string | null },
     iconMarkerCreateResult: IconMarkerCreateResult | null,
+    textLabelCreateResult: TextLabelCreateResult | null,
   ) => {
     switch (slug) {
       case 'reset-view':
@@ -216,6 +219,15 @@ const FeatureScreen = ({ route, navigation }: Props) => {
             createResult={iconMarkerCreateResult}
           />
         );
+      case 'custom-text-label':
+        return (
+          <TextLabelOverlay
+            createTextLabel={bridge.createTextLabel}
+            updateTextLabel={bridge.updateTextLabel}
+            removeTextLabel={bridge.removeTextLabel}
+            createResult={textLabelCreateResult}
+          />
+        );
       case 'runtime-locale':
         return (
           <RuntimeLocaleOverlay
@@ -293,6 +305,7 @@ const FeatureScreen = ({ route, navigation }: Props) => {
         exploreMode,
         geofencing,
         iconMarkerCreateResult,
+        textLabelCreateResult,
       ) => (
         <>
           {slug === 'native-ui-replacement' ? (
@@ -325,6 +338,7 @@ const FeatureScreen = ({ route, navigation }: Props) => {
               exploreMode,
               geofencing,
               iconMarkerCreateResult,
+              textLabelCreateResult,
             )}
           </BottomSheet>
         </>

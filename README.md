@@ -65,6 +65,7 @@ Each feature below is a self-contained screen in the app, demonstrating one piec
 - **[Dynamic POI](docs/features/dynamic-poi-crud.md)** — create, edit and remove a place at runtime, without republishing the map.
 - **[3D icon marker](docs/features/3d-icon-marker.md)** — place a custom image at a spot on the 3D map, oriented fixed, flat or facing the camera.
 - **[Custom text label](docs/features/custom-text-label.md)** — place your own text on the map next to a place and restyle it live (text, color, size, rotation).
+- **[HTML overlay marker](docs/features/html-overlay-marker.md)** — pin a tappable HTML badge on the map that's never hidden by 3D, with its taps forwarded to React Native.
 - **[Runtime language](docs/features/runtime-locale.md)** — switch the map's displayed language at runtime, without reloading or republishing the map.
 - **[Explore mode](docs/features/explore-mode.md)** — switch between the SDK's 3 building-exploration modes, including the exploded "carousel" view.
 - **[Add locale](docs/features/add-locale.md)** — add a brand-new locale at runtime, never authored in VisioMapEditor, and prove it with a live translation round trip.

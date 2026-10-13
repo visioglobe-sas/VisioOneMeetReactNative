@@ -12,6 +12,8 @@ import VisioMapView, {
   DEFAULT_BASE_URL,
   DynamicPoiCreateResult,
   GeofenceZone,
+  HtmlMarkerCreateResult,
+  HtmlMarkerTap,
   IconMarkerCreateResult,
   LocaleInfo,
   PositionSimulationResolution,
@@ -32,6 +34,7 @@ import ExploreModeOverlay from '../features/ExploreModeOverlay';
 import FloorSelectorOverlay from '../features/FloorSelectorOverlay';
 import GeofencingOverlay from '../features/GeofencingOverlay';
 import GoToPoiOverlay from '../features/GoToPoiOverlay';
+import HtmlMarkerOverlay from '../features/HtmlMarkerOverlay';
 import IconMarkerOverlay from '../features/IconMarkerOverlay';
 import NativeUiReplacementOverlay from '../features/NativeUiReplacementOverlay';
 import NavigationExcludeModalitiesOverlay from '../features/NavigationExcludeModalitiesOverlay';
@@ -113,6 +116,7 @@ const FeatureScreen = ({ route, navigation }: Props) => {
     geofencing: { zone: GeofenceZone | null; error: string | null },
     iconMarkerCreateResult: IconMarkerCreateResult | null,
     textLabelCreateResult: TextLabelCreateResult | null,
+    htmlMarker: { createResult: HtmlMarkerCreateResult | null; tap: HtmlMarkerTap | null },
   ) => {
     switch (slug) {
       case 'reset-view':
@@ -228,6 +232,17 @@ const FeatureScreen = ({ route, navigation }: Props) => {
             createResult={textLabelCreateResult}
           />
         );
+      case 'html-overlay-marker':
+        return (
+          <HtmlMarkerOverlay
+            createHtmlMarker={bridge.createHtmlMarker}
+            updateHtmlMarkerText={bridge.updateHtmlMarkerText}
+            setHtmlMarkerVisible={bridge.setHtmlMarkerVisible}
+            removeHtmlMarker={bridge.removeHtmlMarker}
+            createResult={htmlMarker.createResult}
+            tap={htmlMarker.tap}
+          />
+        );
       case 'runtime-locale':
         return (
           <RuntimeLocaleOverlay
@@ -306,6 +321,7 @@ const FeatureScreen = ({ route, navigation }: Props) => {
         geofencing,
         iconMarkerCreateResult,
         textLabelCreateResult,
+        htmlMarker,
       ) => (
         <>
           {slug === 'native-ui-replacement' ? (
@@ -339,6 +355,7 @@ const FeatureScreen = ({ route, navigation }: Props) => {
               geofencing,
               iconMarkerCreateResult,
               textLabelCreateResult,
+              htmlMarker,
             )}
           </BottomSheet>
         </>

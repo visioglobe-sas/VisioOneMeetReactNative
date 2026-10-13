@@ -112,6 +112,30 @@ export interface TextLabelCreateResult {
   at: number;
 }
 
+// Result of the WebView resolving a 'create_html_marker' request -- see
+// VisioMapBridge.createHtmlMarker. `ok: false` covers empty text, the anchor id not
+// resolving to a POI, the anchor having no label/marker position to copy (all normal,
+// non-crash outcomes that leave any current badge untouched), or venue.createMarker
+// itself throwing ('sdk_error'). `at` is a fresh timestamp so repeating the same
+// outcome still updates state. See docs/features/html-overlay-marker.md.
+export interface HtmlMarkerCreateResult {
+  ok: boolean;
+  markerId: string;
+  anchorId: string;
+  reason?: 'empty_text' | 'anchor_not_found' | 'no_position' | 'sdk_error';
+  message?: string;
+  at: number;
+}
+
+// A tap on the HTML badge, forwarded from the element's own click listener in the
+// WebView page ('html_marker_tapped'). tapCount is counted on the WebView side and
+// resets to 0 on each successful create.
+export interface HtmlMarkerTap {
+  markerId: string;
+  tapCount: number;
+  at: number;
+}
+
 // Response to the 'get_locales' request -- venue.translator.allLocales, with 'default'
 // already filtered out on the WebView side (it's a byte-identical duplicate of 'fr' on
 // this repo's shared demo map, see getLocales in visioOneHtml.ts/visioOne.html and
@@ -187,6 +211,9 @@ interface VisioMapViewProps {
     iconMarkerCreateResult: IconMarkerCreateResult | null,
     // custom-text-label feature: outcome of the last 'create_text_label' request.
     textLabelCreateResult: TextLabelCreateResult | null,
+    // html-overlay-marker feature: outcome of the last 'create_html_marker' request,
+    // plus the last tap forwarded from the badge.
+    htmlMarker: { createResult: HtmlMarkerCreateResult | null; tap: HtmlMarkerTap | null },
   ) => React.ReactNode;
   // Fired from the WebView's onMessage handler (an event, not during render) so the
   // parent can safely react -- e.g. open its own controls -- without the "setState
@@ -228,6 +255,9 @@ const VisioMapView = ({ mapHash, baseURL, renderOverlay, onPoiClick }: VisioMapV
     React.useState<IconMarkerCreateResult | null>(null);
   const [textLabelCreateResult, setTextLabelCreateResult] =
     React.useState<TextLabelCreateResult | null>(null);
+  const [htmlMarkerCreateResult, setHtmlMarkerCreateResult] =
+    React.useState<HtmlMarkerCreateResult | null>(null);
+  const [htmlMarkerTap, setHtmlMarkerTap] = React.useState<HtmlMarkerTap | null>(null);
 
   const bridge = useVisioMap(mapHash ?? DEMO_MAP_HASH, baseURL);
   const { webRef, sendSetup, getCategories, getLocales } = bridge;
@@ -314,6 +344,10 @@ const VisioMapView = ({ mapHash, baseURL, renderOverlay, onPoiClick }: VisioMapV
       setIconMarkerCreateResult({ ...evt.data, at: Date.now() });
     } else if (evt.type === 'text_label_create_result') {
       setTextLabelCreateResult({ ...evt.data, at: Date.now() });
+    } else if (evt.type === 'html_marker_create_result') {
+      setHtmlMarkerCreateResult({ ...evt.data, at: Date.now() });
+    } else if (evt.type === 'html_marker_tapped') {
+      setHtmlMarkerTap({ ...evt.data, at: Date.now() });
     }
   };
 
@@ -363,6 +397,7 @@ const VisioMapView = ({ mapHash, baseURL, renderOverlay, onPoiClick }: VisioMapV
         { zone: geofenceZone, error: geofenceZoneError },
         iconMarkerCreateResult,
         textLabelCreateResult,
+        { createResult: htmlMarkerCreateResult, tap: htmlMarkerTap },
       )}
     </SafeAreaView>
   );

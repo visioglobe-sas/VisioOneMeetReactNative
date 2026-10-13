@@ -12,6 +12,7 @@ import VisioMapView, {
   DEFAULT_BASE_URL,
   DynamicPoiCreateResult,
   GeofenceZone,
+  IconMarkerCreateResult,
   LocaleInfo,
   PositionSimulationResolution,
   VenueLayoutInfo,
@@ -30,6 +31,7 @@ import ExploreModeOverlay from '../features/ExploreModeOverlay';
 import FloorSelectorOverlay from '../features/FloorSelectorOverlay';
 import GeofencingOverlay from '../features/GeofencingOverlay';
 import GoToPoiOverlay from '../features/GoToPoiOverlay';
+import IconMarkerOverlay from '../features/IconMarkerOverlay';
 import NativeUiReplacementOverlay from '../features/NativeUiReplacementOverlay';
 import NavigationExcludeModalitiesOverlay from '../features/NavigationExcludeModalitiesOverlay';
 import OccupancySimulatedOverlay from '../features/OccupancySimulatedOverlay';
@@ -107,6 +109,7 @@ const FeatureScreen = ({ route, navigation }: Props) => {
     addLocaleResult: AddLocaleResult | null,
     exploreMode: ExploreMode,
     geofencing: { zone: GeofenceZone | null; error: string | null },
+    iconMarkerCreateResult: IconMarkerCreateResult | null,
   ) => {
     switch (slug) {
       case 'reset-view':
@@ -204,6 +207,15 @@ const FeatureScreen = ({ route, navigation }: Props) => {
             createResult={dynamicPoiCreateResult}
           />
         );
+      case '3d-icon-marker':
+        return (
+          <IconMarkerOverlay
+            createIconMarker={bridge.createIconMarker}
+            updateIconMarkerOrientation={bridge.updateIconMarkerOrientation}
+            removeIconMarker={bridge.removeIconMarker}
+            createResult={iconMarkerCreateResult}
+          />
+        );
       case 'runtime-locale':
         return (
           <RuntimeLocaleOverlay
@@ -280,6 +292,7 @@ const FeatureScreen = ({ route, navigation }: Props) => {
         addLocaleResult,
         exploreMode,
         geofencing,
+        iconMarkerCreateResult,
       ) => (
         <>
           {slug === 'native-ui-replacement' ? (
@@ -311,6 +324,7 @@ const FeatureScreen = ({ route, navigation }: Props) => {
               addLocaleResult,
               exploreMode,
               geofencing,
+              iconMarkerCreateResult,
             )}
           </BottomSheet>
         </>

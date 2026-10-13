@@ -18,6 +18,7 @@ export type FeatureSlug =
   | 'custom-data'
   | 'category-highlight'
   | 'dynamic-poi-crud'
+  | '3d-icon-marker'
   | 'runtime-locale'
   | 'explore-mode'
   | 'add-locale'
@@ -115,6 +116,11 @@ export const featureRegistry: FeatureDefinition[] = [
     slug: 'dynamic-poi-crud',
     titleKey: 'dynamicPoiCrud.title',
     descriptionKey: 'dynamicPoiCrud.description',
+  },
+  {
+    slug: '3d-icon-marker',
+    titleKey: 'iconMarker.title',
+    descriptionKey: 'iconMarker.description',
   },
   {
     slug: 'runtime-locale',

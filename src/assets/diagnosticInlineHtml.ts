@@ -40,7 +40,7 @@ export const diagnosticInlineHtml = `<!DOCTYPE html>
         log('[unhandledrejection] ' + stringifyError(e.reason));
       });
 
-      const SDK_VERSION = '1.0.5';
+      const SDK_VERSION = '1.0.9';
       const HASH = 'kbae8e6c066cca4b02c2afac2bc963a643d87437a';
 
       log('INLINE HTML diagnostic starting (source={{ html }}, no require()).');
@@ -68,9 +68,9 @@ export const diagnosticInlineHtml = `<!DOCTYPE html>
           const visioOne = createVisioOne();
           log('visioOne.version = ' + visioOne.version);
           const container = document.getElementById('container');
-          log('Calling loadVenue({ hash: "' + HASH + '" }, container)...');
+          log('Calling loadVenue({ vg_maphash: "' + HASH + '" }, container)...');
           return visioOne
-            .loadVenue({ hash: HASH }, container)
+            .loadVenue({ vg_maphash: HASH }, container)
             .then((venue) => {
               log('loadVenue SUCCEEDED. venue keys: ' + Object.keys(venue).join(', '));
               return visioOne.createView(container, venue).then(() => {

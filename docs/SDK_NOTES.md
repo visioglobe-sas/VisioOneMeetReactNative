@@ -45,6 +45,7 @@ Le SDK VisioOne fusionne les paramètres de l'URL de la page dans les options de
 |---|---|---|
 | **1.0.3** | celui passé explicitement dans le code | `descriptor.json` → 200, carte chargée |
 | **1.0.5** | celui de l'URL (`?hash=` de Metro) | `descriptor.json` → 404, "Hash not found" |
+| **1.0.9** | celui passé explicitement dans le code (option renommée `vg_maphash`) | `descriptor.json` → 200, carte chargée — le `?hash=` de Metro n'est plus lu |
 
 Ce piège n'existe qu'en build **Debug connecté à Metro** : en Release/production, React Native ne sert pas les assets via un serveur avec query string (ils sont copiés directement dans le bundle applicatif), donc la collision n'a pas lieu — vérifié en générant un build Release et en confirmant l'absence de query string sur `location.href`.
 
@@ -60,7 +61,15 @@ Charger le HTML comme une chaîne (`source={{ html, baseUrl }}`) plutôt que via
 
 C'est ce dernier réglage qui est utilisé par défaut dans [`src/components/VisioMapView.tsx`](../src/components/VisioMapView.tsx).
 
-Ce contournement reste une solution côté application, pas structurelle — la solution durable serait un correctif du SDK (par ex. distinguer clairement les paramètres d'URL applicatifs de ceux propres à VisioOne). Si vous rencontrez ce comportement dans votre propre intégration, ce contournement s'applique indépendamment de la version du SDK.
+### Depuis le SDK 1.0.9 : collision levée par le renommage en `vg_maphash`
+
+Le SDK 1.0.9 renomme l'option `LoadOptions.hash` en `LoadOptions.vg_maphash` (changement cassant : un `hash` passé à `loadVenue` est désormais ignoré, et le chargement échoue avec `Hash not found`). Le paramètre d'URL lu par `mergeVenueOptionsWithDefaultAndURLParameters` est renommé de la même façon : le SDK ne lit plus que `?vg_maphash=` (et `?baseURL=`), plus `?hash=`.
+
+Conséquence pour ce problème : le `?hash=` ajouté par Metro n'est plus pris en compte par le SDK, la collision décrite ci-dessus n'a donc plus lieu à partir de 1.0.9. Vérifié en navigateur headless avec la page hôte de ce repo servie à une URL `…?platform=ios&hash=b52c3a3b3521fadf7f0e0299fdcc22fb` : le SDK a chargé `descriptor.json` pour le hash passé dans le code (200) et la carte s'est affichée. Le mécanisme de priorité « URL > code » existe toujours, mais sous le nom `vg_maphash` : la même page servie avec `?vg_maphash=<autre hash>` charge bien cet autre hash. Seul un paramètre d'URL nommé `vg_maphash` peut donc encore écraser le hash du code.
+
+Ce repo garde néanmoins le chargement inline (`source={{ html, baseUrl }}`) : il fonctionne quelle que soit la version du SDK, et le retour à `require(...)` n'a pas été re-testé sur device avec Metro.
+
+Ce contournement reste une solution côté application, pas structurelle. Si vous rencontrez ce comportement dans votre propre intégration avec un SDK antérieur à 1.0.9, ce contournement s'applique.
 
 ## Autre point corrigé dans cet exemple
 

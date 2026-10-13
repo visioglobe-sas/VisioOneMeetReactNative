@@ -2,10 +2,12 @@
 // passed via <WebView source={{ html, baseUrl }}> instead of source={require('./visioOne.html')}.
 // Why this matters: when the HTML is loaded via require(), Metro serves it through the dev
 // server in Debug builds and appends its own "?hash=..." cache-busting query param to the
-// page URL. VisioOne SDK >= 1.0.5 merges the page's own URL query parameters into loadVenue's
-// options, so that unrelated Metro-generated "hash" param silently overrides the real map
-// hash passed in code -- see docs/SDK_NOTES.md for the full writeup. Loading the HTML inline
-// with an explicit baseUrl avoids the Metro-served URL entirely.
+// page URL. VisioOne SDK 1.0.5 merged the page's own URL query parameters into loadVenue's
+// options, so that unrelated Metro-generated "hash" param silently overrode the real map
+// hash passed in code. Since SDK 1.0.9 the option and its URL parameter are named
+// "vg_maphash", so Metro's "?hash=" is no longer read -- see docs/SDK_NOTES.md for the full
+// writeup. Loading the HTML inline with an explicit baseUrl avoids the Metro-served URL
+// entirely, whatever the SDK version.
 //
 // Keep this file in sync with visioOne.html by hand if you change the SDK integration logic.
 export const visioOneHtml = `<!DOCTYPE html>
@@ -20,7 +22,7 @@ export const visioOneHtml = `<!DOCTYPE html>
       // Loading the SDK is async and can take a moment on a slow connection. Register
       // the React Native message listener before it resolves, otherwise the initial
       // "setup" message sent right after WebView load can be lost.
-      const visioOneReady = import('https://cdn.visioglobe.com/visioone/1.0.5/dist/visioone.js').then(
+      const visioOneReady = import('https://cdn.visioglobe.com/visioone/1.0.9/dist/visioone.js').then(
         ({ createVisioOne }) => createVisioOne()
       )
       let view = null
@@ -65,8 +67,8 @@ export const visioOneHtml = `<!DOCTYPE html>
           const visioOne = await visioOneReady
           const container = document.querySelector('#content')
           const loadOptions = trimmedBaseURL
-            ? { hash: venueHash, baseURL: trimmedBaseURL }
-            : { hash: venueHash }
+            ? { vg_maphash: venueHash, baseURL: trimmedBaseURL }
+            : { vg_maphash: venueHash }
           venue = await visioOne.loadVenue(loadOptions, container)
           await visioOne
             .createView(container, venue, {

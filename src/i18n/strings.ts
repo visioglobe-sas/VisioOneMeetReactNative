@@ -14,6 +14,9 @@ export const strings = {
     'navigationExcludeModalities.title': 'Avoid elevator',
     'navigationExcludeModalities.description':
       'Exclude elevator segments from a computed route, rerouting through stairs instead.',
+    'accessibleMode.title': 'Accessible route',
+    'accessibleMode.description':
+      'Compute a route that avoids stairs, rerouting through a lift/ramp instead.',
     'poiClick.title': 'Tap a place',
     'poiClick.description': "Show a tapped place's info in a panel.",
     'floorSelector.title': 'Floor selector',
@@ -89,6 +92,9 @@ export const strings = {
     'navigationExcludeModalities.title': "Éviter l'ascenseur",
     'navigationExcludeModalities.description':
       "Exclut les segments en ascenseur d'un itinéraire calculé, en repassant par les escaliers.",
+    'accessibleMode.title': 'Itinéraire accessible',
+    'accessibleMode.description':
+      "Calcule un itinéraire qui évite les escaliers, en repassant par un ascenseur ou une rampe.",
     'poiClick.title': 'Taper un lieu',
     'poiClick.description': "Affiche les infos d'un lieu tapé dans un panneau.",
     'floorSelector.title': "Sélection d'étage",

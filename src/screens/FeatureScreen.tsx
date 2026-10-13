@@ -18,6 +18,7 @@ import VisioMapView, {
   VisioMapBridge,
 } from '../components/VisioMapView';
 import { featureRegistry } from '../features/registry';
+import AccessibleModeOverlay from '../features/AccessibleModeOverlay';
 import AddLocaleOverlay from '../features/AddLocaleOverlay';
 import CategoryHighlightOverlay from '../features/CategoryHighlightOverlay';
 import ClickableSurfaceOverlay from '../features/ClickableSurfaceOverlay';
@@ -128,6 +129,8 @@ const FeatureScreen = ({ route, navigation }: Props) => {
         );
       case 'navigation-exclude-modalities':
         return <NavigationExcludeModalitiesOverlay startItinerary={bridge.startItinerary} />;
+      case 'accessible-mode':
+        return <AccessibleModeOverlay startItinerary={bridge.startItinerary} />;
       case 'poi-click':
         return <PoiClickOverlay pois={clickedPois} />;
       case 'floor-selector':

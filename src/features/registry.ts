@@ -7,6 +7,7 @@ export type FeatureSlug =
   | 'compute-navigation'
   | 'custom-navigation-trace'
   | 'navigation-exclude-modalities'
+  | 'accessible-mode'
   | 'poi-click'
   | 'floor-selector'
   | 'ui-part-visibility'
@@ -59,6 +60,11 @@ export const featureRegistry: FeatureDefinition[] = [
     slug: 'navigation-exclude-modalities',
     titleKey: 'navigationExcludeModalities.title',
     descriptionKey: 'navigationExcludeModalities.description',
+  },
+  {
+    slug: 'accessible-mode',
+    titleKey: 'accessibleMode.title',
+    descriptionKey: 'accessibleMode.description',
   },
   {
     slug: 'poi-click',

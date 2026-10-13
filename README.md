@@ -63,6 +63,7 @@ Each feature below is a self-contained screen in the app, demonstrating one piec
 - **[Custom data](docs/features/custom-data.md)** — read custom business data (price, hours, reference) attached to a place in VisioMapEditor.
 - **[Category highlight](docs/features/category-highlight.md)** — highlight every place belonging to a chosen category, e.g. all restaurants or all shops.
 - **[Dynamic POI](docs/features/dynamic-poi-crud.md)** — create, edit and remove a place at runtime, without republishing the map.
+- **[3D icon marker](docs/features/3d-icon-marker.md)** — place a custom image at a spot on the 3D map, oriented fixed, flat or facing the camera.
 - **[Runtime language](docs/features/runtime-locale.md)** — switch the map's displayed language at runtime, without reloading or republishing the map.
 - **[Explore mode](docs/features/explore-mode.md)** — switch between the SDK's 3 building-exploration modes, including the exploded "carousel" view.
 - **[Add locale](docs/features/add-locale.md)** — add a brand-new locale at runtime, never authored in VisioMapEditor, and prove it with a live translation round trip.

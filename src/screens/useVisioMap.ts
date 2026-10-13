@@ -36,6 +36,23 @@ export type UIPart = 'floorSelector' | 'navigation' | 'poiDetails' | 'search' | 
 // docs/features/explore-mode.md for what each of the 3 values actually does.
 export type ExploreMode = 'global' | 'building' | 'floor';
 
+// Mirrors the SDK's OrientationType exactly (Venue/OrientationType.ts in visioone):
+// 'fixed' = flat on the ground with a fixed heading, 'flat' = flat on the ground but
+// turning to face the camera, 'facing' = always camera-facing (the SDK default). See
+// docs/features/3d-icon-marker.md.
+export type ImageOrientationType = 'fixed' | 'flat' | 'facing';
+
+// Subset of the SDK's ImageCreateOptions that can cross the bridge -- `poi` and
+// `position` are resolved on the WebView side from an anchor POI id instead, since a
+// live POI object can't be serialized. width/height are in meters; url can be any image
+// URL, including a data: URL.
+export interface IconMarkerOptions {
+  width: number;
+  height?: number;
+  url: string;
+  orientationType: ImageOrientationType;
+}
+
 // Mirrors the plain object shape sent from the WebView on 'poi_click' -- see the
 // poiclick handler in visioOneHtml.ts/visioOne.html. Not the live SDK POI type:
 // only serializable fields survive the WebView postMessage boundary.
@@ -297,6 +314,26 @@ export const useVisioMap = (hash: string, baseURL?: string) => {
     sendMessage({ type: 'remove_dynamic_poi' });
   };
 
+  // 3d-icon-marker feature: venue.createImage owned by an existing "anchor" POI, at the
+  // position copied from it (same anchor-position resolution as createDynamicPoi). The
+  // live Image object only exists on the WebView side, keyed by `imageId`; the outcome
+  // comes back as 'icon_marker_create_result' (anchor not found / no position are
+  // normal, non-crash outcomes), see VisioMapView.tsx and docs/features/3d-icon-marker.md.
+  const createIconMarker = (imageId: string, anchorId: string, options: IconMarkerOptions) => {
+    sendMessage({ type: 'create_icon_marker', data: { imageId, anchorId, options } });
+  };
+
+  // venue.updateImage(image, { orientationType }) on the Image tracked under `imageId`
+  // -- fire-and-forget, a no-op on the WebView side if nothing is placed.
+  const updateIconMarkerOrientation = (imageId: string, orientationType: ImageOrientationType) => {
+    sendMessage({ type: 'update_icon_marker_orientation', data: { imageId, orientationType } });
+  };
+
+  // venue.removeImage(image) on the Image tracked under `imageId` -- fire-and-forget.
+  const removeIconMarker = (imageId: string) => {
+    sendMessage({ type: 'remove_icon_marker', data: { imageId } });
+  };
+
   // Requests the venue's available locales (venue.translator.allLocales) plus the
   // currently active one (venue.currentLocale) -- the response comes back
   // asynchronously as 'locales_result', see VisioMapView.tsx. Same request/response
@@ -366,6 +403,9 @@ export const useVisioMap = (hash: string, baseURL?: string) => {
     createDynamicPoi,
     updateDynamicPoiLabel,
     removeDynamicPoi,
+    createIconMarker,
+    updateIconMarkerOrientation,
+    removeIconMarker,
     getLocales,
     setLocale,
     addLocale,

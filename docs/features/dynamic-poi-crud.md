@@ -42,6 +42,20 @@ const removeDynamicPoi = () => {
 let dynamicPoi = null
 let dynamicLabel = null
 
+// Resolves an anchor POI id to the POI plus a WGS84 position copied from its first
+// label, or else its first marker (also used by the 3D icon marker feature).
+const resolveAnchorPoi = (anchorId) => {
+  const poi = venue.pois.find((p) => p.id === anchorId)
+  if (!poi) {
+    return { reason: 'anchor_not_found' }
+  }
+  const position = poi.labels[0]?.position ?? poi.markers[0]?.position
+  if (!position) {
+    return { reason: 'no_position' }
+  }
+  return { poi, position }
+}
+
 const createDynamicPoi = (newId, anchorId, labelText) => {
   if (!venue) {
     return
@@ -50,16 +64,12 @@ const createDynamicPoi = (newId, anchorId, labelText) => {
     sendToNative({ type: 'dynamic_poi_create_result', data: { ok: false, reason: 'already_tracked' } })
     return
   }
-  const anchorPoi = venue.pois.find((p) => p.id === anchorId)
-  if (!anchorPoi) {
-    sendToNative({ type: 'dynamic_poi_create_result', data: { ok: false, reason: 'anchor_not_found' } })
+  const anchor = resolveAnchorPoi(anchorId)
+  if (anchor.reason) {
+    sendToNative({ type: 'dynamic_poi_create_result', data: { ok: false, reason: anchor.reason } })
     return
   }
-  const position = anchorPoi.labels[0]?.position ?? anchorPoi.markers[0]?.position
-  if (!position) {
-    sendToNative({ type: 'dynamic_poi_create_result', data: { ok: false, reason: 'no_position' } })
-    return
-  }
+  const { position } = anchor
   let poi
   try {
     poi = venue.createPOI({ id: newId })
@@ -105,7 +115,7 @@ Creating needs a round trip, the same request/response idiom as [Custom data](cu
 - **`venue.updatePOI(poi, options)` can only ever change categories.** `POIUpdateOptions` has exactly one field, `categories: Category[]` — there is no way to move a POI, or to touch anything visual, through `updatePOI`. "Editing" a dynamic POI's visible content in this demo means calling `venue.updateLabel(label, { text })` on its attached Label instead, not `updatePOI`.
 - **`venue.removePOI(poi)` cascades to its visual elements.** Per the SDK's own doc comment, removing a POI that has a visual representation also removes that representation from the view — this demo does not separately call `removeLabel` on the Label it attached; removing the POI alone is enough.
 - **`createPOI` throws `POIAlreadyExistsError` on a duplicate id**, and that's the only failure mode the SDK documents for it. This demo catches it generically (by message, not by `instanceof`/error class) since the SDK is loaded as a minified CDN bundle here, which doesn't reliably preserve constructor names for that kind of check — see the `catch` block above.
-- **The new POI's position is copied from an existing "anchor" POI**, not typed in or tapped on the map (out of scope for this demo) — `anchorPoi.labels[0]?.position ?? anchorPoi.markers[0]?.position`. An anchor id that doesn't resolve to any POI (`reason: 'anchor_not_found'`) and one that resolves but has neither a label nor a marker to copy a position from (`reason: 'no_position'`, e.g. a surface-only POI) are reported as two distinct, non-error outcomes — same idiom as [Custom data](custom-data.md) distinguishing "POI not found" from "POI found but empty."
+- **The new POI's position is copied from an existing "anchor" POI**, not typed in or tapped on the map (out of scope for this demo) — `resolveAnchorPoi` above, i.e. `poi.labels[0]?.position ?? poi.markers[0]?.position`. An anchor id that doesn't resolve to any POI (`reason: 'anchor_not_found'`) and one that resolves but has neither a label nor a marker to copy a position from (`reason: 'no_position'`, e.g. a surface-only POI) are reported as two distinct, non-error outcomes — same idiom as [Custom data](custom-data.md) distinguishing "POI not found" from "POI found but empty."
 
 ## Learn more
 

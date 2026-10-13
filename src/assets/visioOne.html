@@ -162,16 +162,22 @@
         }
       }
 
+      // Shared by goto-poi and 3d-icon-marker: animates the camera onto a POI (and its
+      // floor), so indoor content attached to it is actually in view.
+      const moveCameraToPoi = (poi) => {
+        view.goToPOI(poi, {
+          orientation: { pitch: 20 },
+          padding: { top: 100, bottom: 100, right: 100, left: 100 },
+        })
+      }
+
       const goToPlace = (placeId) => {
         if (venue && view) {
           const poi = venue.pois.find((p) => p.id === placeId)
           poiInfo = poi
 
           if (poi) {
-            view.goToPOI(poi, {
-              orientation: { pitch: 20 },
-              padding: { top: 100, bottom: 100, right: 100, left: 100 },
-            })
+            moveCameraToPoi(poi)
 
             poi.surfaces.forEach((surface) => {
               venue.updateSurface(surface, { selectionColor: '#057DBC' })
@@ -509,10 +515,26 @@
       // A bare POI created via venue.createPOI() has no visual representation of its
       // own -- its images/labels/lines/surfaces/markers arrays all start empty -- so
       // this demo makes it visible by attaching a Label at a position copied from an
-      // existing "anchor" POI (there's no tap-to-place UI here). anchorPoi.labels[0]
-      // and .markers[0] are checked, in that order, since either is a normal way for a
-      // POI to carry a position; a POI with neither (e.g. surface-only) reports a
-      // distinct "no position to copy" outcome instead of crashing.
+      // existing "anchor" POI (there's no tap-to-place UI here), see resolveAnchorPoi.
+      // Shared by dynamic-poi-crud and 3d-icon-marker: resolves an "anchor" POI id to
+      // the POI itself plus a WGS84 position copied from it -- anchorPoi.labels[0] and
+      // .markers[0] are checked, in that order, since either is a normal way for a POI
+      // to carry a position. Returns { reason } instead of throwing on the two normal,
+      // non-crash failure outcomes: 'anchor_not_found' (no POI with that id) and
+      // 'no_position' (the POI exists but has neither a label nor a marker, e.g. a
+      // surface-only POI).
+      const resolveAnchorPoi = (anchorId) => {
+        const poi = venue.pois.find((p) => p.id === anchorId)
+        if (!poi) {
+          return { reason: 'anchor_not_found' }
+        }
+        const position = poi.labels[0]?.position ?? poi.markers[0]?.position
+        if (!position) {
+          return { reason: 'no_position' }
+        }
+        return { poi, position }
+      }
+
       const createDynamicPoi = (newId, anchorId, labelText) => {
         if (!venue) {
           return
@@ -523,16 +545,12 @@
           sendToNative({ type: 'dynamic_poi_create_result', data: { ok: false, reason: 'already_tracked' } })
           return
         }
-        const anchorPoi = venue.pois.find((p) => p.id === anchorId)
-        if (!anchorPoi) {
-          sendToNative({ type: 'dynamic_poi_create_result', data: { ok: false, reason: 'anchor_not_found' } })
+        const anchor = resolveAnchorPoi(anchorId)
+        if (anchor.reason) {
+          sendToNative({ type: 'dynamic_poi_create_result', data: { ok: false, reason: anchor.reason } })
           return
         }
-        const position = anchorPoi.labels[0]?.position ?? anchorPoi.markers[0]?.position
-        if (!position) {
-          sendToNative({ type: 'dynamic_poi_create_result', data: { ok: false, reason: 'no_position' } })
-          return
-        }
+        const { position } = anchor
         let poi
         try {
           // The SDK's own doc comment documents exactly one failure mode here:
@@ -578,6 +596,82 @@
         venue.removePOI(dynamicPoi)
         dynamicPoi = null
         dynamicLabel = null
+      }
+
+      // 3d-icon-marker feature: live SDK Image objects (venue.createImage) only exist
+      // here, keyed by an id chosen by the app -- native only ever refers to them by
+      // that id over the bridge. See docs/features/3d-icon-marker.md.
+      const iconMarkers = new Map()
+
+      // Creates an Image owned by the anchor POI itself (no createPOI needed), at the
+      // position copied from it via resolveAnchorPoi. width/height are in meters and
+      // url can be any image URL, including a data: URL. Replies with
+      // 'icon_marker_create_result' -- a missing POI or a POI without a position are
+      // normal outcomes, reported with ok: false + reason rather than thrown.
+      const createIconMarker = (imageId, anchorId, options) => {
+        if (!venue) {
+          return
+        }
+        const anchor = resolveAnchorPoi(anchorId)
+        if (anchor.reason) {
+          sendToNative({ type: 'icon_marker_create_result', data: { ok: false, imageId, anchorId, reason: anchor.reason } })
+          return
+        }
+        // Only one Image per id: replace any previous one rather than leaking it.
+        const previous = iconMarkers.get(imageId)
+        if (previous) {
+          venue.removeImage(previous)
+          iconMarkers.delete(imageId)
+        }
+        try {
+          const created = venue.createImage({
+            poi: anchor.poi,
+            position: anchor.position,
+            width: options.width,
+            height: options.height,
+            url: options.url,
+            orientationType: options.orientationType,
+          })
+          iconMarkers.set(imageId, created)
+          // The default whole-venue view doesn't show indoor floors, so the new Image
+          // would be invisible without moving the camera onto its anchor POI.
+          if (view) {
+            moveCameraToPoi(anchor.poi)
+          }
+          sendToNative({ type: 'icon_marker_create_result', data: { ok: true, imageId, anchorId } })
+        } catch (error) {
+          sendToNative({
+            type: 'icon_marker_create_result',
+            data: {
+              ok: false,
+              imageId,
+              anchorId,
+              reason: 'sdk_error',
+              message: error instanceof Error ? error.name + ': ' + error.message : String(error),
+            },
+          })
+        }
+      }
+
+      // Live update of an already-placed Image -- only orientationType is changed here,
+      // but venue.updateImage also accepts width/position/rotation/url/isVisible.
+      // Fire-and-forget: a no-op if nothing is placed under that id.
+      const updateIconMarkerOrientation = (imageId, orientationType) => {
+        const tracked = iconMarkers.get(imageId)
+        if (!venue || !tracked) {
+          return
+        }
+        venue.updateImage(tracked, { orientationType })
+      }
+
+      // Fire-and-forget: a no-op if nothing is placed under that id.
+      const removeIconMarker = (imageId) => {
+        const tracked = iconMarkers.get(imageId)
+        if (!venue || !tracked) {
+          return
+        }
+        venue.removeImage(tracked)
+        iconMarkers.delete(imageId)
       }
 
       // runtime-locale feature: reports the venue's available locales
@@ -781,6 +875,15 @@
               break
             case 'remove_dynamic_poi':
               removeDynamicPoi()
+              break
+            case 'create_icon_marker':
+              createIconMarker(evt.data.imageId, evt.data.anchorId, evt.data.options)
+              break
+            case 'update_icon_marker_orientation':
+              updateIconMarkerOrientation(evt.data.imageId, evt.data.orientationType)
+              break
+            case 'remove_icon_marker':
+              removeIconMarker(evt.data.imageId)
               break
             case 'get_locales':
               getLocales()

@@ -184,7 +184,7 @@ export const strings = {
     'customTheme.textAccentColor': "Couleur du texte d'accent",
     'customTheme.reset': 'Réinitialiser',
     'customTheme.hint':
-      "Touchez un lieu : le bouton Go de sa fiche utilise les couleurs d'accent.",
+      "Touchez un lieu : le bouton « Y aller » de sa fiche utilise les couleurs d'accent.",
   },
 };
 

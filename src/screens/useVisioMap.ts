@@ -385,6 +385,37 @@ export const useVisioMap = (hash: string, baseURL?: string) => {
     sendMessage({ type: 'remove_text_label', data: { labelId } });
   };
 
+  // html-overlay-marker feature: venue.createMarker with an HTML element (a badge
+  // showing `text`) owned by an existing "anchor" POI, at the position copied from it
+  // (same anchor-position resolution as createDynamicPoi / createIconMarker /
+  // createTextLabel), offset by ~4 m. The element is created by the WebView page, never
+  // crosses the bridge; the live Marker only exists on the WebView side, keyed by
+  // `markerId`. The outcome comes back as 'html_marker_create_result' (empty text /
+  // anchor not found / no position are normal, non-crash outcomes, and leave any
+  // current badge in place), and every tap on the badge as 'html_marker_tapped' -- see
+  // VisioMapView.tsx and docs/features/html-overlay-marker.md. Creating again under the
+  // same id replaces the previous badge.
+  const createHtmlMarker = (markerId: string, anchorId: string, text: string) => {
+    sendMessage({ type: 'create_html_marker', data: { markerId, anchorId, text } });
+  };
+
+  // Replaces the badge's text content (a plain DOM edit on marker.element, no SDK
+  // call) -- fire-and-forget, a no-op on the WebView side if nothing is placed.
+  const updateHtmlMarkerText = (markerId: string, text: string) => {
+    sendMessage({ type: 'update_html_marker_text', data: { markerId, text } });
+  };
+
+  // venue.updateMarker(marker, { isVisible }) -- fire-and-forget.
+  const setHtmlMarkerVisible = (markerId: string, isVisible: boolean) => {
+    sendMessage({ type: 'set_html_marker_visible', data: { markerId, isVisible } });
+  };
+
+  // venue.removeMarker(marker), which also detaches the element -- fire-and-forget, a
+  // no-op on the WebView side if nothing is placed.
+  const removeHtmlMarker = (markerId: string) => {
+    sendMessage({ type: 'remove_html_marker', data: { markerId } });
+  };
+
   // Requests the venue's available locales (venue.translator.allLocales) plus the
   // currently active one (venue.currentLocale) -- the response comes back
   // asynchronously as 'locales_result', see VisioMapView.tsx. Same request/response
@@ -460,6 +491,10 @@ export const useVisioMap = (hash: string, baseURL?: string) => {
     createTextLabel,
     updateTextLabel,
     removeTextLabel,
+    createHtmlMarker,
+    updateHtmlMarkerText,
+    setHtmlMarkerVisible,
+    removeHtmlMarker,
     getLocales,
     setLocale,
     addLocale,

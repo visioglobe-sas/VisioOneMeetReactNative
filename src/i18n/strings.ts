@@ -56,6 +56,9 @@ export const strings = {
     'iconMarker.description': 'Place a custom image at a spot on the 3D map',
     'customTextLabel.title': 'Custom text label',
     'customTextLabel.description': 'Place your own text on the map and restyle it live',
+    'htmlOverlayMarker.title': 'HTML overlay marker',
+    'htmlOverlayMarker.description':
+      "Pin a tappable HTML badge on the map that's never hidden by 3D",
     'runtimeLocale.title': 'Runtime language',
     'runtimeLocale.description':
       "Switch the map's displayed language live, without reloading or republishing it.",
@@ -140,6 +143,9 @@ export const strings = {
     'customTextLabel.title': 'Label texte personnalisé',
     'customTextLabel.description':
       'Placez votre propre texte sur la carte et modifiez son style en direct',
+    'htmlOverlayMarker.title': 'Marqueur HTML superposé',
+    'htmlOverlayMarker.description':
+      'Épinglez sur la carte un badge HTML cliquable, jamais masqué par la 3D',
     'runtimeLocale.title': 'Langue à la volée',
     'runtimeLocale.description':
       "Change la langue affichée sur la carte en direct, sans recharger ni republier.",

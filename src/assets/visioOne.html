@@ -516,7 +516,8 @@
       // own -- its images/labels/lines/surfaces/markers arrays all start empty -- so
       // this demo makes it visible by attaching a Label at a position copied from an
       // existing "anchor" POI (there's no tap-to-place UI here), see resolveAnchorPoi.
-      // Shared by dynamic-poi-crud, 3d-icon-marker and custom-text-label: resolves an
+      // Shared by dynamic-poi-crud, 3d-icon-marker, custom-text-label and
+      // html-overlay-marker: resolves an
       // "anchor" POI id to the POI itself plus a WGS84 position copied from it --
       // anchorPoi.labels[0] and .markers[0] are checked, in that order, since either is
       // a normal way for a POI to carry a position. Returns { reason } instead of throwing on the two normal,
@@ -525,14 +526,16 @@
       // surface-only POI). excludeLabel (optional, custom-text-label only) is a Label
       // this demo itself attached to the anchor POI: it's skipped, so a re-place never
       // copies the custom label's own (already offset) position when the anchor has no
-      // label of its own.
-      const resolveAnchorPoi = (anchorId, excludeLabel) => {
+      // label of its own. excludeMarker (optional, html-overlay-marker only) is the same
+      // for a Marker this demo attached to the anchor POI (it lands in poi.markers).
+      const resolveAnchorPoi = (anchorId, excludeLabel, excludeMarker) => {
         const poi = venue.pois.find((p) => p.id === anchorId)
         if (!poi) {
           return { reason: 'anchor_not_found' }
         }
         const ownLabel = poi.labels.find((label) => label !== excludeLabel)
-        const position = ownLabel?.position ?? poi.markers[0]?.position
+        const ownMarker = poi.markers.find((marker) => marker !== excludeMarker)
+        const position = ownLabel?.position ?? ownMarker?.position
         if (!position) {
           return { reason: 'no_position' }
         }
@@ -684,7 +687,7 @@
       const textLabels = new Map()
 
       // ~4 m north-east of the anchor's own position, so the custom text doesn't sit on
-      // top of the map's own label for that POI.
+      // top of the map's own label for that POI. Also used by html-overlay-marker.
       const TEXT_LABEL_OFFSET_DEGREES = 0.00004
 
       // Creates a Label owned by the anchor POI itself (no createPOI needed), at the
@@ -788,6 +791,120 @@
         }
         venue.removeLabel(tracked)
         textLabels.delete(labelId)
+      }
+
+      // html-overlay-marker feature: live SDK Marker objects (venue.createMarker) only
+      // exist here, keyed by an id chosen by the app -- native only ever refers to them
+      // by that id over the bridge. Each entry is { marker, tapCount }. See
+      // docs/features/html-overlay-marker.md.
+      const htmlMarkers = new Map()
+
+      // Inline style of the badge element. Deliberately no transform / translate /
+      // position / top / left: the SDK owns those on the marker element (it centers it
+      // on the position and moves it every frame).
+      const HTML_MARKER_STYLE =
+        'background:#0B6BCB;color:#FFFFFF;font:600 14px sans-serif;padding:6px 12px;' +
+        'border-radius:14px;white-space:nowrap;box-shadow:0 2px 6px rgba(0,0,0,.3);cursor:pointer'
+
+      // Creates an HTML marker owned by the anchor POI itself (no createPOI needed), at
+      // the position copied from it via resolveAnchorPoi, offset like custom-text-label
+      // so the badge doesn't cover the POI's own label. Validates everything BEFORE
+      // touching the current badge: a failed create leaves it in place. Replies with
+      // 'html_marker_create_result' -- empty text, a missing POI or a POI without a
+      // position are normal outcomes, reported with ok: false + reason rather than thrown.
+      // A tap on the badge is forwarded as 'html_marker_tapped' (tapCount resets to 0 on
+      // each successful create).
+      const createHtmlMarker = (markerId, anchorId, text) => {
+        if (!venue) {
+          return
+        }
+        const fail = (reason, message) => {
+          sendToNative({ type: 'html_marker_create_result', data: { ok: false, markerId, anchorId, reason, message } })
+        }
+        const badgeText = typeof text === 'string' ? text.trim() : ''
+        if (!badgeText) {
+          fail('empty_text')
+          return
+        }
+        const previous = htmlMarkers.get(markerId)
+        // Skip our own badge (appended to poi.markers) when copying the anchor's position.
+        const anchor = resolveAnchorPoi(anchorId, undefined, previous?.marker)
+        if (anchor.reason) {
+          fail(anchor.reason)
+          return
+        }
+        const position = {
+          ...anchor.position,
+          latitude: anchor.position.latitude + TEXT_LABEL_OFFSET_DEGREES,
+          longitude: anchor.position.longitude + TEXT_LABEL_OFFSET_DEGREES,
+        }
+        const element = document.createElement('div')
+        element.textContent = badgeText
+        element.setAttribute('style', HTML_MARKER_STYLE)
+        let marker
+        try {
+          // Only one marker per id: replace any previous one rather than leaking it.
+          if (previous) {
+            venue.removeMarker(previous.marker)
+            htmlMarkers.delete(markerId)
+          }
+          // element is required (createMarker throws "invalid element provided" without
+          // it). The SDK moves it into its own overlay container above the 3D canvas.
+          marker = venue.createMarker({ poi: anchor.poi, position, element })
+        } catch (error) {
+          fail('sdk_error', error instanceof Error ? error.name + ': ' + error.message : String(error))
+          return
+        }
+        // The SDK sets pointer-events: none on the element at creation (taps would fall
+        // through to the map) and never rewrites it afterwards: opt back in.
+        element.style.pointerEvents = 'auto'
+        const entry = { marker, tapCount: 0 }
+        element.addEventListener('click', (event) => {
+          // Keep the tap from also reaching the map (it would open the POI underneath).
+          event.stopPropagation()
+          entry.tapCount += 1
+          sendToNative({ type: 'html_marker_tapped', data: { markerId, tapCount: entry.tapCount } })
+        })
+        htmlMarkers.set(markerId, entry)
+        // A marker is only displayed while its POI's floor is displayed, and the default
+        // whole-venue view doesn't show indoor floors: move the camera onto the anchor.
+        if (view) {
+          moveCameraToPoi(anchor.poi)
+        }
+        sendToNative({ type: 'html_marker_create_result', data: { ok: true, markerId, anchorId } })
+      }
+
+      // The marker element is a live DOM node: changing its content is a plain DOM edit,
+      // no SDK call. Fire-and-forget: a no-op if nothing is placed or the text is empty.
+      const updateHtmlMarkerText = (markerId, text) => {
+        const tracked = htmlMarkers.get(markerId)
+        const badgeText = typeof text === 'string' ? text.trim() : ''
+        if (!tracked || !badgeText) {
+          return
+        }
+        tracked.marker.element.textContent = badgeText
+      }
+
+      // venue.updateMarker only accepts position and isVisible (isVisible: false sets
+      // display:none, the element stays in the DOM). Fire-and-forget.
+      const setHtmlMarkerVisible = (markerId, isVisible) => {
+        const tracked = htmlMarkers.get(markerId)
+        if (!venue || !tracked) {
+          return
+        }
+        venue.updateMarker(tracked.marker, { isVisible: isVisible === true })
+      }
+
+      // removeMarker also detaches the element from the DOM. Fire-and-forget: a no-op if
+      // nothing is placed (removeMarker itself throws "Provided marker is not registered"
+      // on a second call).
+      const removeHtmlMarker = (markerId) => {
+        const tracked = htmlMarkers.get(markerId)
+        if (!venue || !tracked) {
+          return
+        }
+        venue.removeMarker(tracked.marker)
+        htmlMarkers.delete(markerId)
       }
 
       // runtime-locale feature: reports the venue's available locales
@@ -1009,6 +1126,18 @@
               break
             case 'remove_text_label':
               removeTextLabel(evt.data.labelId)
+              break
+            case 'create_html_marker':
+              createHtmlMarker(evt.data.markerId, evt.data.anchorId, evt.data.text)
+              break
+            case 'update_html_marker_text':
+              updateHtmlMarkerText(evt.data.markerId, evt.data.text)
+              break
+            case 'set_html_marker_visible':
+              setHtmlMarkerVisible(evt.data.markerId, evt.data.isVisible)
+              break
+            case 'remove_html_marker':
+              removeHtmlMarker(evt.data.markerId)
               break
             case 'get_locales':
               getLocales()

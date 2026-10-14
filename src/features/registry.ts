@@ -20,6 +20,7 @@ export type FeatureSlug =
   | 'dynamic-poi-crud'
   | '3d-icon-marker'
   | 'custom-text-label'
+  | 'html-overlay-marker'
   | 'runtime-locale'
   | 'explore-mode'
   | 'add-locale'
@@ -127,6 +128,11 @@ export const featureRegistry: FeatureDefinition[] = [
     slug: 'custom-text-label',
     titleKey: 'customTextLabel.title',
     descriptionKey: 'customTextLabel.description',
+  },
+  {
+    slug: 'html-overlay-marker',
+    titleKey: 'htmlOverlayMarker.title',
+    descriptionKey: 'htmlOverlayMarker.description',
   },
   {
     slug: 'runtime-locale',

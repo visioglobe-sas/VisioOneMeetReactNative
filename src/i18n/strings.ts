@@ -82,6 +82,13 @@ export const strings = {
     'customBaseUrl.title': 'Custom map server',
     'customBaseUrl.description':
       "Point the SDK at a different map server than Visioglobe's default SaaS.",
+    'customTheme.title': 'Custom theme',
+    'customTheme.description': "Switch the 3D lighting theme and recolor the SDK's buttons live",
+    'customTheme.theme': 'Theme',
+    'customTheme.accentColor': 'Accent color',
+    'customTheme.textAccentColor': 'Accent text color',
+    'customTheme.reset': 'Reset',
+    'customTheme.hint': "Tap a place: its card's Go button uses the accent colors.",
   },
   fr: {
     'resetView.title': 'Réinitialiser la vue',
@@ -169,6 +176,15 @@ export const strings = {
     'customBaseUrl.title': 'Serveur de carte personnalisé',
     'customBaseUrl.description':
       "Pointe le SDK vers un autre serveur de cartes que le SaaS Visioglobe par défaut.",
+    'customTheme.title': 'Thème personnalisé',
+    'customTheme.description':
+      "Changez l'ambiance lumineuse 3D et recolorez les boutons du SDK en direct",
+    'customTheme.theme': 'Thème',
+    'customTheme.accentColor': "Couleur d'accent",
+    'customTheme.textAccentColor': "Couleur du texte d'accent",
+    'customTheme.reset': 'Réinitialiser',
+    'customTheme.hint':
+      "Touchez un lieu : le bouton Go de sa fiche utilise les couleurs d'accent.",
   },
 };
 

@@ -27,7 +27,12 @@
       // https://mapserver.visioglobe.com/ inside the SDK itself when omitted, so a blank
       // field here means "use the SDK's own default", not some hardcoded fallback of
       // this demo's own. See docs/features/custom-base-url.md.
-      const setup = async (hash, baseURL) => {
+      //
+      // enableShadows is the custom-theme feature's createView option, sent only by that
+      // screen: view.setTheme() only changes the scene lights, which are only rendered
+      // when shadows are enabled -- see docs/features/custom-theme.md. Every other screen
+      // leaves it undefined and keeps the SDK's own default (shadows off, cheaper).
+      const setup = async (hash, baseURL, enableShadows) => {
         const venueHash = typeof hash === 'string' ? hash.trim() : ''
         const trimmedBaseURL = typeof baseURL === 'string' ? baseURL.trim() : ''
         let visioOneLoadError = null
@@ -59,9 +64,13 @@
             : { vg_maphash: venueHash }
           venue = await visioOne.loadVenue(loadOptions, container)
           await visioOne
-            .createView(container, venue, {
-              cameraProjection: 'perspective',
-            })
+            .createView(
+              container,
+              venue,
+              enableShadows === true
+                ? { cameraProjection: 'perspective', enableShadows: true }
+                : { cameraProjection: 'perspective' }
+            )
             .then((v) => {
               // All UI parts start visible, matching the SDK's own default -- see
               // setUIPartVisible below for the app-driven toggle (ui-part-visibility feature).
@@ -126,6 +135,9 @@
               // The SDK's own default, see ExploreMode.ts in visioone -- 'global' at
               // this point since createView just resolved and nothing has changed it yet.
               currentExploreMode: view.currentExploreMode,
+              // custom-theme feature: the registered 3D scene theme ids (a plain string
+              // array, e.g. day / night / goldenHour), the only valid view.setTheme() args.
+              themes: Array.from(view.themes || []),
             },
           })
         } catch (error) {
@@ -1025,6 +1037,39 @@
         })
       }
 
+      // custom-theme feature: view.setTheme() throws for an id that isn't in
+      // view.themes, so the native side only ever offers ids read from the 'ready'
+      // message. There is no current-theme getter, the app tracks the selection itself.
+      const setTheme = (theme) => {
+        if (!view) {
+          return
+        }
+        try {
+          view.setTheme(theme)
+        } catch (error) {
+          console.error('setTheme failed', error)
+        }
+      }
+
+      // custom-theme feature: accentColor / textAccentColor are plain settable view
+      // properties, applied live to the SDK's own UI buttons. Both setters throw on a
+      // string that isn't a hex, rgba or hsl color.
+      const setAccentColors = (colors) => {
+        if (!view || !colors) {
+          return
+        }
+        try {
+          if (typeof colors.accentColor === 'string') {
+            view.accentColor = colors.accentColor
+          }
+          if (typeof colors.textAccentColor === 'string') {
+            view.textAccentColor = colors.textAccentColor
+          }
+        } catch (error) {
+          console.error('Setting accent colors failed', error)
+        }
+      }
+
       const onMessage = (event) => {
         try {
           const evt = typeof event.data === 'string' ? JSON.parse(event.data) : event.data
@@ -1036,7 +1081,7 @@
 
           switch (evt.type) {
             case 'setup':
-              setup(evt.data.hash, evt.data.baseURL)
+              setup(evt.data.hash, evt.data.baseURL, evt.data.enableShadows)
               break
             case 'reset_map':
               resetMap()
@@ -1153,6 +1198,12 @@
               break
             case 'set_geofence_alert':
               setGeofenceAlert(evt.data.placeId, evt.data.active)
+              break
+            case 'set_theme':
+              setTheme(evt.data.theme)
+              break
+            case 'set_accent_colors':
+              setAccentColors(evt.data)
               break
             default:
               console.error('Unknown message type:', evt.type)

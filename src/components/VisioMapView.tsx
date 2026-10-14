@@ -181,6 +181,11 @@ interface VisioMapViewProps {
   // and remount this whole component (and its WebView) rather than trying to reload
   // in place.
   baseURL?: string;
+  // custom-theme feature: createView's enableShadows option, for that screen only --
+  // view.setTheme() only changes the scene lights, which aren't rendered without it.
+  // Every other screen leaves it unset (SDK default, cheaper). See
+  // docs/features/custom-theme.md.
+  enableShadows?: boolean;
   renderOverlay?: (
     bridge: VisioMapBridge,
     status: Status,
@@ -214,6 +219,8 @@ interface VisioMapViewProps {
     // html-overlay-marker feature: outcome of the last 'create_html_marker' request,
     // plus the last tap forwarded from the badge.
     htmlMarker: { createResult: HtmlMarkerCreateResult | null; tap: HtmlMarkerTap | null },
+    // custom-theme feature: view.themes, forwarded from the WebView's 'ready' message.
+    themes: string[],
   ) => React.ReactNode;
   // Fired from the WebView's onMessage handler (an event, not during render) so the
   // parent can safely react -- e.g. open its own controls -- without the "setState
@@ -221,7 +228,13 @@ interface VisioMapViewProps {
   onPoiClick?: (pois: ClickedPoi[]) => void;
 }
 
-const VisioMapView = ({ mapHash, baseURL, renderOverlay, onPoiClick }: VisioMapViewProps) => {
+const VisioMapView = ({
+  mapHash,
+  baseURL,
+  enableShadows,
+  renderOverlay,
+  onPoiClick,
+}: VisioMapViewProps) => {
   const [status, setStatus] = React.useState<Status>('loading');
   const [errorMessage, setErrorMessage] = React.useState<string | null>(null);
   const [clickedPois, setClickedPois] = React.useState<ClickedPoi[]>([]);
@@ -258,8 +271,9 @@ const VisioMapView = ({ mapHash, baseURL, renderOverlay, onPoiClick }: VisioMapV
   const [htmlMarkerCreateResult, setHtmlMarkerCreateResult] =
     React.useState<HtmlMarkerCreateResult | null>(null);
   const [htmlMarkerTap, setHtmlMarkerTap] = React.useState<HtmlMarkerTap | null>(null);
+  const [themes, setThemes] = React.useState<string[]>([]);
 
-  const bridge = useVisioMap(mapHash ?? DEMO_MAP_HASH, baseURL);
+  const bridge = useVisioMap(mapHash ?? DEMO_MAP_HASH, baseURL, enableShadows);
   const { webRef, sendSetup, getCategories, getLocales } = bridge;
 
   const handleWebMessage = (event: WebViewMessageEvent) => {
@@ -275,6 +289,7 @@ const VisioMapView = ({ mapHash, baseURL, renderOverlay, onPoiClick }: VisioMapV
         currentFloorId: evt.data?.currentFloorId,
       });
       setExploreModeState(evt.data?.currentExploreMode ?? 'global');
+      setThemes(evt.data?.themes ?? []);
       // Fetches venue.categories once the venue is loaded -- see the
       // 'get_categories' / 'categories_result' round trip in
       // visioOneHtml.ts/visioOne.html and docs/features/category-highlight.md.
@@ -398,6 +413,7 @@ const VisioMapView = ({ mapHash, baseURL, renderOverlay, onPoiClick }: VisioMapV
         iconMarkerCreateResult,
         textLabelCreateResult,
         { createResult: htmlMarkerCreateResult, tap: htmlMarkerTap },
+        themes,
       )}
     </SafeAreaView>
   );

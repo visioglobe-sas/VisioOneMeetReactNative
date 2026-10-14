@@ -25,7 +25,8 @@ export type FeatureSlug =
   | 'explore-mode'
   | 'add-locale'
   | 'geofencing'
-  | 'custom-base-url';
+  | 'custom-base-url'
+  | 'custom-theme';
 
 export interface FeatureDefinition {
   slug: FeatureSlug;
@@ -158,5 +159,10 @@ export const featureRegistry: FeatureDefinition[] = [
     slug: 'custom-base-url',
     titleKey: 'customBaseUrl.title',
     descriptionKey: 'customBaseUrl.description',
+  },
+  {
+    slug: 'custom-theme',
+    titleKey: 'customTheme.title',
+    descriptionKey: 'customTheme.description',
   },
 ];

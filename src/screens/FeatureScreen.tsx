@@ -29,6 +29,10 @@ import ClickableSurfaceOverlay from '../features/ClickableSurfaceOverlay';
 import ComputeNavigationOverlay from '../features/ComputeNavigationOverlay';
 import CustomBaseUrlOverlay from '../features/CustomBaseUrlOverlay';
 import CustomDataOverlay from '../features/CustomDataOverlay';
+import CustomThemeOverlay, {
+  CustomThemeSelection,
+  DEFAULT_CUSTOM_THEME_SELECTION,
+} from '../features/CustomThemeOverlay';
 import DynamicPoiCrudOverlay from '../features/DynamicPoiCrudOverlay';
 import ExploreModeOverlay from '../features/ExploreModeOverlay';
 import FloorSelectorOverlay from '../features/FloorSelectorOverlay';
@@ -95,6 +99,12 @@ const FeatureScreen = ({ route, navigation }: Props) => {
   // customBaseUrl value instead. See docs/features/custom-base-url.md.
   const [customBaseUrl, setCustomBaseUrl] = React.useState(DEFAULT_BASE_URL);
   const [customBaseUrlReloadKey, setCustomBaseUrlReloadKey] = React.useState(0);
+  // custom-theme feature: kept here rather than in CustomThemeOverlay because the
+  // bottom sheet's content unmounts when it closes, and the user has to close it to tap
+  // a place and see the recolored card.
+  const [customThemeSelection, setCustomThemeSelection] = React.useState<CustomThemeSelection>(
+    DEFAULT_CUSTOM_THEME_SELECTION,
+  );
 
   React.useEffect(() => {
     if (feature) {
@@ -117,6 +127,7 @@ const FeatureScreen = ({ route, navigation }: Props) => {
     iconMarkerCreateResult: IconMarkerCreateResult | null,
     textLabelCreateResult: TextLabelCreateResult | null,
     htmlMarker: { createResult: HtmlMarkerCreateResult | null; tap: HtmlMarkerTap | null },
+    themes: string[],
   ) => {
     switch (slug) {
       case 'reset-view':
@@ -285,6 +296,16 @@ const FeatureScreen = ({ route, navigation }: Props) => {
             onReload={() => setCustomBaseUrlReloadKey((key) => key + 1)}
           />
         );
+      case 'custom-theme':
+        return (
+          <CustomThemeOverlay
+            themes={themes}
+            selection={customThemeSelection}
+            onSelectionChange={setCustomThemeSelection}
+            setTheme={bridge.setTheme}
+            setAccentColors={bridge.setAccentColors}
+          />
+        );
       default:
         return null;
     }
@@ -305,6 +326,9 @@ const FeatureScreen = ({ route, navigation }: Props) => {
       key={slug === 'custom-base-url' ? `custom-base-url-${customBaseUrlReloadKey}` : slug}
       mapHash={slug === 'custom-data' ? CUSTOM_DATA_MAP_HASH : undefined}
       baseURL={slug === 'custom-base-url' ? customBaseUrl : undefined}
+      // custom-theme: themes only change the scene lights, which are only rendered with
+      // shadows enabled -- on for this screen only, see docs/features/custom-theme.md.
+      enableShadows={slug === 'custom-theme' ? true : undefined}
       onPoiClick={handlePoiClick}
       renderOverlay={(
         bridge,
@@ -322,6 +346,7 @@ const FeatureScreen = ({ route, navigation }: Props) => {
         iconMarkerCreateResult,
         textLabelCreateResult,
         htmlMarker,
+        themes,
       ) => (
         <>
           {slug === 'native-ui-replacement' ? (
@@ -356,6 +381,7 @@ const FeatureScreen = ({ route, navigation }: Props) => {
               iconMarkerCreateResult,
               textLabelCreateResult,
               htmlMarker,
+              themes,
             )}
           </BottomSheet>
         </>

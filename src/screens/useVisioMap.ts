@@ -106,7 +106,11 @@ export interface VenueBuilding {
 // means "let the WebView page fall back to the SDK's own default"
 // (https://mapserver.visioglobe.com/), same as every other screen. See
 // docs/features/custom-base-url.md.
-export const useVisioMap = (hash: string, baseURL?: string) => {
+// enableShadows is the custom-theme feature's createView option -- only that screen
+// sets it (view themes only change the scene lights, which are only rendered with
+// shadows enabled), undefined keeps the SDK's own default everywhere else. See
+// docs/features/custom-theme.md.
+export const useVisioMap = (hash: string, baseURL?: string, enableShadows?: boolean) => {
   const webRef = useRef<WebView>(null);
 
   const sendMessage = (message: object) => {
@@ -120,7 +124,7 @@ export const useVisioMap = (hash: string, baseURL?: string) => {
     setTimeout(() => {
       sendMessage({
         type: 'setup',
-        data: { hash, baseURL },
+        data: { hash, baseURL, enableShadows },
       });
     }, 500);
   };
@@ -459,6 +463,19 @@ export const useVisioMap = (hash: string, baseURL?: string) => {
     sendMessage({ type: 'set_geofence_alert', data: { placeId, active } });
   };
 
+  // custom-theme feature: switches the 3D scene's lighting theme. `theme` must be one
+  // of view.themes (forwarded in the 'ready' message) -- setTheme throws on any other
+  // id. See docs/features/custom-theme.md.
+  const setTheme = (theme: string) => {
+    sendMessage({ type: 'set_theme', data: { theme } });
+  };
+
+  // custom-theme feature: view.accentColor / view.textAccentColor recolor the SDK's own
+  // UI buttons (e.g. the place card's "Go" button) live. Either field can be omitted.
+  const setAccentColors = (colors: { accentColor?: string; textAccentColor?: string }) => {
+    sendMessage({ type: 'set_accent_colors', data: colors });
+  };
+
   return {
     webRef,
     resetMap,
@@ -500,5 +517,7 @@ export const useVisioMap = (hash: string, baseURL?: string) => {
     addLocale,
     resolveGeofenceZone,
     setGeofenceAlert,
+    setTheme,
+    setAccentColors,
   };
 };

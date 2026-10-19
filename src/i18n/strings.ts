@@ -90,7 +90,7 @@ export const strings = {
     'customTheme.reset': 'Reset',
     'customTheme.hint': "Tap a place: its card's Go button uses the accent colors.",
     'accuracyCircleStyle.title': 'Accuracy circle style',
-    'accuracyCircleStyle.description': "Recolor the tracked position's dot and precision circle, live",
+    'accuracyCircleStyle.description': "Recolor the tracked position's precision circle, live",
     'accuracyCircleStyle.color': 'Color',
     'accuracyCircleStyle.colorDefault': 'Default',
     'accuracyCircleStyle.colorRed': 'Red',
@@ -197,7 +197,7 @@ export const strings = {
       "Touchez un lieu : le bouton « Y aller » de sa fiche utilise les couleurs d'accent.",
     'accuracyCircleStyle.title': 'Style du cercle de précision',
     'accuracyCircleStyle.description':
-      'Recolorer le point de position et son cercle de précision, en direct',
+      'Recolorer le cercle de précision de la position, en direct',
     'accuracyCircleStyle.color': 'Couleur',
     'accuracyCircleStyle.colorDefault': 'Par défaut',
     'accuracyCircleStyle.colorRed': 'Rouge',

@@ -40,7 +40,7 @@ export const diagnosticInlineHtml = `<!DOCTYPE html>
         log('[unhandledrejection] ' + stringifyError(e.reason));
       });
 
-      const SDK_VERSION = '1.0.9';
+      const SDK_VERSION = '1.1.0';
       const HASH = 'kbae8e6c066cca4b02c2afac2bc963a643d87437a';
 
       log('INLINE HTML diagnostic starting (source={{ html }}, no require()).');

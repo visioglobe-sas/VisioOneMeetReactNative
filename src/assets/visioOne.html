@@ -10,7 +10,7 @@
       // Loading the SDK is async and can take a moment on a slow connection. Register
       // the React Native message listener before it resolves, otherwise the initial
       // "setup" message sent right after WebView load can be lost.
-      const visioOneReady = import('https://cdn.visioglobe.com/visioone/1.0.9/dist/visioone.js').then(
+      const visioOneReady = import('https://cdn.visioglobe.com/visioone/1.1.0/dist/visioone.js').then(
         ({ createVisioOne }) => createVisioOne()
       )
       let view = null

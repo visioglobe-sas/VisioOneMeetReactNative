@@ -33,6 +33,16 @@ interface Props {
   // geofencing feature can revert its own "inside zone" alert.
   onPositionTick?: (position: Position) => void;
   onTrackingStopped?: () => void;
+  // Optional: only the accuracy-circle-style feature passes this. Fires once per Start,
+  // right before the first injectTrackedPosition of the run -- the SDK resets the
+  // tracker's color/opacity whenever tracking stops, so that feature re-applies its
+  // selected style here. See docs/features/accuracy-circle-style.md.
+  onTrackingStarted?: () => void;
+  // Optional pre-filled values (accuracy-circle-style uses them to start on two POIs
+  // known to work on the shared demo map and on a 6 m radius).
+  initialOriginId?: string;
+  initialDestinationId?: string;
+  initialRadius?: number;
 }
 
 const SimulatedPositionOverlay = ({
@@ -44,10 +54,14 @@ const SimulatedPositionOverlay = ({
   setCameraLockOnPosition,
   onPositionTick,
   onTrackingStopped,
+  onTrackingStarted,
+  initialOriginId = '',
+  initialDestinationId = '',
+  initialRadius = RADIUS_DEFAULT,
 }: Props) => {
-  const [originId, setOriginId] = React.useState('');
-  const [destinationId, setDestinationId] = React.useState('');
-  const [radius, setRadius] = React.useState(RADIUS_DEFAULT);
+  const [originId, setOriginId] = React.useState(initialOriginId);
+  const [destinationId, setDestinationId] = React.useState(initialDestinationId);
+  const [radius, setRadius] = React.useState(initialRadius);
   const [running, setRunning] = React.useState(false);
   // True from the moment Start is pressed until the WebView's async POI-lookup
   // response ('poi_positions_resolved' or 'position_simulation_error') comes back.
@@ -115,6 +129,7 @@ const SimulatedPositionOverlay = ({
       }
     };
 
+    onTrackingStarted?.();
     tick(); // place the marker at the origin immediately instead of waiting a full tick
     const timer = setInterval(tick, TICK_MS);
 

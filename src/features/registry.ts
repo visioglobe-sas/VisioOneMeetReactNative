@@ -14,6 +14,7 @@ export type FeatureSlug =
   | 'native-ui-replacement'
   | 'simulated-position'
   | 'camera-lock-on-position'
+  | 'accuracy-circle-style'
   | 'clickable-surface'
   | 'custom-data'
   | 'category-highlight'
@@ -99,6 +100,11 @@ export const featureRegistry: FeatureDefinition[] = [
     slug: 'camera-lock-on-position',
     titleKey: 'cameraLockOnPosition.title',
     descriptionKey: 'cameraLockOnPosition.description',
+  },
+  {
+    slug: 'accuracy-circle-style',
+    titleKey: 'accuracyCircleStyle.title',
+    descriptionKey: 'accuracyCircleStyle.description',
   },
   {
     slug: 'clickable-surface',

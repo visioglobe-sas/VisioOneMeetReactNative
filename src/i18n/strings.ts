@@ -89,6 +89,16 @@ export const strings = {
     'customTheme.textAccentColor': 'Accent text color',
     'customTheme.reset': 'Reset',
     'customTheme.hint': "Tap a place: its card's Go button uses the accent colors.",
+    'accuracyCircleStyle.title': 'Accuracy circle style',
+    'accuracyCircleStyle.description': "Recolor the tracked position's dot and precision circle, live",
+    'accuracyCircleStyle.color': 'Color',
+    'accuracyCircleStyle.colorDefault': 'Default',
+    'accuracyCircleStyle.colorRed': 'Red',
+    'accuracyCircleStyle.colorGreen': 'Green',
+    'accuracyCircleStyle.colorPurple': 'Purple',
+    'accuracyCircleStyle.opacity': 'Opacity',
+    'accuracyCircleStyle.hint':
+      'Color and opacity apply to both the dot and the circle, from the next position update.',
   },
   fr: {
     'resetView.title': 'Réinitialiser la vue',
@@ -185,6 +195,17 @@ export const strings = {
     'customTheme.reset': 'Réinitialiser',
     'customTheme.hint':
       "Touchez un lieu : le bouton « Y aller » de sa fiche utilise les couleurs d'accent.",
+    'accuracyCircleStyle.title': 'Style du cercle de précision',
+    'accuracyCircleStyle.description':
+      'Recolorer le point de position et son cercle de précision, en direct',
+    'accuracyCircleStyle.color': 'Couleur',
+    'accuracyCircleStyle.colorDefault': 'Par défaut',
+    'accuracyCircleStyle.colorRed': 'Rouge',
+    'accuracyCircleStyle.colorGreen': 'Vert',
+    'accuracyCircleStyle.colorPurple': 'Violet',
+    'accuracyCircleStyle.opacity': 'Opacité',
+    'accuracyCircleStyle.hint':
+      "La couleur et l'opacité s'appliquent au point et au cercle, dès la prochaine mise à jour de position.",
   },
 };
 

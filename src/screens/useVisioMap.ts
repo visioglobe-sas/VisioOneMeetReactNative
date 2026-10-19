@@ -255,6 +255,19 @@ export const useVisioMap = (hash: string, baseURL?: string, enableShadows?: bool
     });
   };
 
+  // accuracy-circle-style feature: view.updatePositionTrackerGraphicOptions({ color,
+  // opacity }) -- recolors both the tracked position's dot and its precision circle.
+  // The SDK only stores these options and applies them on the next injectTrackedPosition
+  // call, and resets them to its defaults whenever tracking stops (allowTracking = false),
+  // so the app re-sends its current selection on every Start. See
+  // docs/features/accuracy-circle-style.md.
+  const setPositionTrackerStyle = (color: string, opacity: number) => {
+    sendMessage({
+      type: 'set_position_tracker_style',
+      data: { color, opacity },
+    });
+  };
+
   // Makes every surface of the given POI clickable (or not): once isInteractive is
   // true, the SDK itself swaps the surface's displayed color on hover/tap using
   // hoverColor/selectionColor -- no click listener needed on the app side for that
@@ -493,6 +506,7 @@ export const useVisioMap = (hash: string, baseURL?: string, enableShadows?: bool
     injectTrackedPosition,
     stopPositionSimulation,
     setCameraLockOnPosition,
+    setPositionTrackerStyle,
     setSurfaceInteractive,
     refreshCustomData,
     getPoiCustomData,

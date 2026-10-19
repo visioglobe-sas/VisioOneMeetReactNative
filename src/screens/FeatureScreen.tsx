@@ -23,6 +23,10 @@ import VisioMapView, {
 } from '../components/VisioMapView';
 import { featureRegistry } from '../features/registry';
 import AccessibleModeOverlay from '../features/AccessibleModeOverlay';
+import AccuracyCircleStyleOverlay, {
+  DEFAULT_POSITION_TRACKER_STYLE,
+  PositionTrackerStyle,
+} from '../features/AccuracyCircleStyleOverlay';
 import AddLocaleOverlay from '../features/AddLocaleOverlay';
 import CategoryHighlightOverlay from '../features/CategoryHighlightOverlay';
 import ClickableSurfaceOverlay from '../features/ClickableSurfaceOverlay';
@@ -104,6 +108,11 @@ const FeatureScreen = ({ route, navigation }: Props) => {
   // a place and see the recolored card.
   const [customThemeSelection, setCustomThemeSelection] = React.useState<CustomThemeSelection>(
     DEFAULT_CUSTOM_THEME_SELECTION,
+  );
+  // accuracy-circle-style feature: same reason as customThemeSelection -- the selected
+  // color/opacity must survive the bottom sheet being closed and reopened.
+  const [positionTrackerStyle, setPositionTrackerStyleSelection] = React.useState<PositionTrackerStyle>(
+    DEFAULT_POSITION_TRACKER_STYLE,
   );
 
   React.useEffect(() => {
@@ -195,6 +204,21 @@ const FeatureScreen = ({ route, navigation }: Props) => {
             resolution={positionSimulation.resolution}
             error={positionSimulation.error}
             setCameraLockOnPosition={bridge.setCameraLockOnPosition}
+          />
+        );
+      case 'accuracy-circle-style':
+        // Same tracking UI as simulated-position (pre-filled POIs, 6 m radius) plus
+        // color/opacity controls -- see AccuracyCircleStyleOverlay.tsx.
+        return (
+          <AccuracyCircleStyleOverlay
+            resolvePois={bridge.resolvePositionSimulationPois}
+            injectTrackedPosition={bridge.injectTrackedPosition}
+            stopSimulation={bridge.stopPositionSimulation}
+            resolution={positionSimulation.resolution}
+            error={positionSimulation.error}
+            setPositionTrackerStyle={bridge.setPositionTrackerStyle}
+            style={positionTrackerStyle}
+            onStyleChange={setPositionTrackerStyleSelection}
           />
         );
       case 'clickable-surface':

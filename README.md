@@ -59,7 +59,7 @@ Each feature below is a self-contained screen in the app, demonstrating one piec
 - **[Native UI replacement](docs/features/native-ui-replacement.md)** — hide the SDK's own floor selector and drive floor changes entirely from the app's native picker.
 - **[Simulated position](docs/features/simulated-position.md)** — animate a simulated tracked position with an accuracy circle between two places.
 - **[Camera lock on position](docs/features/camera-lock-on-position.md)** — recenter and lock the camera onto a simulated tracked position, like a "recenter on me" toggle.
-- **[Accuracy circle style](docs/features/accuracy-circle-style.md)** — recolor the tracked position's dot and precision circle (color and opacity), live.
+- **[Accuracy circle style](docs/features/accuracy-circle-style.md)** — recolor the tracked position's precision circle (color and opacity), live.
 - **[Clickable surface](docs/features/clickable-surface.md)** — make a place's surface interactive, letting the SDK swap its color on hover/tap.
 - **[Custom data](docs/features/custom-data.md)** — read custom business data (price, hours, reference) attached to a place in VisioMapEditor.
 - **[Category highlight](docs/features/category-highlight.md)** — highlight every place belonging to a chosen category, e.g. all restaurants or all shops.

@@ -7,7 +7,7 @@ import { StringKey } from '../i18n/strings';
 import SimulatedPositionOverlay from './SimulatedPositionOverlay';
 
 // Two POIs on the shared demo map that resolve to a position and are far enough apart
-// to see the dot move.
+// to see the tracked position move.
 const DEFAULT_ORIGIN_ID = 'B4-UL00-ID0009';
 const DEFAULT_DESTINATION_ID = 'B4-UL00-ID0010';
 const DEFAULT_RADIUS = 6;

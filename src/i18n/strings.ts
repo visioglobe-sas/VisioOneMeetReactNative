@@ -98,7 +98,7 @@ export const strings = {
     'accuracyCircleStyle.colorPurple': 'Purple',
     'accuracyCircleStyle.opacity': 'Opacity',
     'accuracyCircleStyle.hint':
-      'Color and opacity apply to both the dot and the circle, from the next position update.',
+      'Color and opacity apply to the precision circle (not the center arrow), from the next position update.',
   },
   fr: {
     'resetView.title': 'Réinitialiser la vue',
@@ -205,7 +205,7 @@ export const strings = {
     'accuracyCircleStyle.colorPurple': 'Violet',
     'accuracyCircleStyle.opacity': 'Opacité',
     'accuracyCircleStyle.hint':
-      "La couleur et l'opacité s'appliquent au point et au cercle, dès la prochaine mise à jour de position.",
+      "La couleur et l'opacité s'appliquent au cercle de précision (pas à la flèche centrale), dès la prochaine mise à jour de position.",
   },
 };
 

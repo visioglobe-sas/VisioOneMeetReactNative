@@ -377,8 +377,8 @@
         }
       }
 
-      // accuracy-circle-style feature: color/opacity apply to both the tracked
-      // position's dot and its precision circle. The SDK only stores them -- they're
+      // accuracy-circle-style feature: color/opacity apply to the tracked position's
+      // precision circle (not the center arrow image). The SDK only stores them -- they're
       // applied on the next injectTrackedPosition call -- and resets them to its defaults
       // (#0094f0, 0.3) whenever allowTracking goes back to false, so React Native re-sends
       // the current selection on every Start. Throws on an invalid color or a

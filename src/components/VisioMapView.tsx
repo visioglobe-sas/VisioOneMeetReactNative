@@ -221,6 +221,10 @@ interface VisioMapViewProps {
     htmlMarker: { createResult: HtmlMarkerCreateResult | null; tap: HtmlMarkerTap | null },
     // custom-theme feature: view.themes, forwarded from the WebView's 'ready' message.
     themes: string[],
+    // camera-lock-on-position feature: mirror of view.lockCameraPositionOnTracking,
+    // forwarded from the SDK's trackingon/trackingoff/trackingchanged events -- see
+    // docs/features/camera-lock-on-position.md.
+    cameraLockOnPosition: boolean,
   ) => React.ReactNode;
   // Fired from the WebView's onMessage handler (an event, not during render) so the
   // parent can safely react -- e.g. open its own controls -- without the "setState
@@ -272,6 +276,9 @@ const VisioMapView = ({
     React.useState<HtmlMarkerCreateResult | null>(null);
   const [htmlMarkerTap, setHtmlMarkerTap] = React.useState<HtmlMarkerTap | null>(null);
   const [themes, setThemes] = React.useState<string[]>([]);
+  // The SDK's lock is false until tracking starts -- mirrored here until the first
+  // 'camera_lock_changed' message reports the real value.
+  const [cameraLockOnPosition, setCameraLockOnPosition] = React.useState(false);
 
   const bridge = useVisioMap(mapHash ?? DEMO_MAP_HASH, baseURL, enableShadows);
   const { webRef, sendSetup, getCategories, getLocales } = bridge;
@@ -363,6 +370,11 @@ const VisioMapView = ({
       setHtmlMarkerCreateResult({ ...evt.data, at: Date.now() });
     } else if (evt.type === 'html_marker_tapped') {
       setHtmlMarkerTap({ ...evt.data, at: Date.now() });
+    } else if (evt.type === 'camera_lock_changed') {
+      // Also fires when the SDK changes the lock by itself (allowTracking = true turns
+      // it on, a user pan turns it off, allowTracking = false turns it off) -- see the
+      // tracking listeners in visioOneHtml.ts/visioOne.html.
+      setCameraLockOnPosition(evt.data?.locked === true);
     }
   };
 
@@ -414,6 +426,7 @@ const VisioMapView = ({
         textLabelCreateResult,
         { createResult: htmlMarkerCreateResult, tap: htmlMarkerTap },
         themes,
+        cameraLockOnPosition,
       )}
     </SafeAreaView>
   );

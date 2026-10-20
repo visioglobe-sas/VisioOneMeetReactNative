@@ -137,6 +137,7 @@ const FeatureScreen = ({ route, navigation }: Props) => {
     textLabelCreateResult: TextLabelCreateResult | null,
     htmlMarker: { createResult: HtmlMarkerCreateResult | null; tap: HtmlMarkerTap | null },
     themes: string[],
+    cameraLockOnPosition: boolean,
   ) => {
     switch (slug) {
       case 'reset-view':
@@ -204,6 +205,7 @@ const FeatureScreen = ({ route, navigation }: Props) => {
             resolution={positionSimulation.resolution}
             error={positionSimulation.error}
             setCameraLockOnPosition={bridge.setCameraLockOnPosition}
+            cameraLockOnPosition={cameraLockOnPosition}
           />
         );
       case 'accuracy-circle-style':
@@ -371,6 +373,7 @@ const FeatureScreen = ({ route, navigation }: Props) => {
         textLabelCreateResult,
         htmlMarker,
         themes,
+        cameraLockOnPosition,
       ) => (
         <>
           {slug === 'native-ui-replacement' ? (
@@ -406,6 +409,7 @@ const FeatureScreen = ({ route, navigation }: Props) => {
               textLabelCreateResult,
               htmlMarker,
               themes,
+              cameraLockOnPosition,
             )}
           </BottomSheet>
         </>

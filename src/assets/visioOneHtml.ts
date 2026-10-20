@@ -122,6 +122,21 @@ export const visioOneHtml = `<!DOCTYPE html>
                   data: { currentExploreMode: event.currentExploreMode },
                 })
               })
+              // camera-lock-on-position feature: mirrors view.lockCameraPositionOnTracking
+              // to native instead of native keeping its own copy -- the SDK changes it by
+              // itself: setting allowTracking = true turns it on, allowTracking = false
+              // turns it off, and a user pan/zoom while tracking turns it off
+              // ('trackingchanged'). None of these events carry the value, so it's read
+              // from the view inside the handler.
+              const sendCameraLockState = () => {
+                sendToNative({
+                  type: 'camera_lock_changed',
+                  data: { locked: v.lockCameraPositionOnTracking === true },
+                })
+              }
+              v.addEventListener('trackingon', sendCameraLockState)
+              v.addEventListener('trackingoff', sendCameraLockState)
+              v.addEventListener('trackingchanged', sendCameraLockState)
               view = v
             })
           // Only plain serializable fields survive the WebView postMessage boundary (see
@@ -359,7 +374,10 @@ export const visioOneHtml = `<!DOCTYPE html>
 
       // Called on every tick of the native-side interpolation timer. injectTrackedPosition
       // requires allowTracking to already be true, or it throws -- set it once here rather
-      // than requiring a separate message from native.
+      // than requiring a separate message from native. Only on the false -> true
+      // transition: every allowTracking = true re-locks the camera on the position
+      // (lockCameraPositionOnTracking = true), which would undo a user's unlock/pan on
+      // the very next tick.
       const injectTrackedPosition = (position, precisionCircleRadius) => {
         if (!view) {
           return
@@ -379,10 +397,11 @@ export const visioOneHtml = `<!DOCTYPE html>
       }
 
       // camera-lock-on-position feature: binds/unbinds the camera's focus onto whatever
-      // position is currently being tracked. Only has a visible effect once
-      // view.allowTracking is true (see injectTrackedPosition above) -- setting this
-      // while allowTracking is still false is a harmless no-op per the SDK's own doc
-      // comment, unlike injectTrackedPosition, which throws in that situation.
+      // position is currently being tracked. Only has an effect once view.allowTracking
+      // is true (see injectTrackedPosition above) -- setting this while allowTracking is
+      // still false is a silent no-op, unlike injectTrackedPosition, which throws in that
+      // situation. The SDK answers with a 'trackingchanged' event, which is what updates
+      // the native toggle (see the listeners registered next to createView above).
       const setCameraLockOnPosition = (locked) => {
         if (view) {
           view.lockCameraPositionOnTracking = locked

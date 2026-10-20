@@ -389,6 +389,23 @@ export const visioOneHtml = `<!DOCTYPE html>
         }
       }
 
+      // accuracy-circle-style feature: color/opacity apply to the tracked position's
+      // precision circle (not the center arrow image). The SDK only stores them -- they're
+      // applied on the next injectTrackedPosition call -- and resets them to its defaults
+      // (#0094f0, 0.3) whenever allowTracking goes back to false, so React Native re-sends
+      // the current selection on every Start. Throws on an invalid color or a
+      // non-number opacity.
+      const setPositionTrackerStyle = (color, opacity) => {
+        if (!view) {
+          return
+        }
+        try {
+          view.updatePositionTrackerGraphicOptions({ color, opacity })
+        } catch (error) {
+          console.error('Updating position tracker graphic options failed', error)
+        }
+      }
+
       // clickable-surface feature: makes every surface of a POI interactive (or not).
       // Once isInteractive is true, the SDK itself swaps the surface's displayed color
       // on hover/tap using hoverColor/selectionColor -- no click listener is needed on
@@ -1138,6 +1155,9 @@ export const visioOneHtml = `<!DOCTYPE html>
               break
             case 'set_camera_lock_on_position':
               setCameraLockOnPosition(evt.data.locked)
+              break
+            case 'set_position_tracker_style':
+              setPositionTrackerStyle(evt.data.color, evt.data.opacity)
               break
             case 'set_surface_interactive':
               setSurfaceInteractive(evt.data.placeId, evt.data.interactive)

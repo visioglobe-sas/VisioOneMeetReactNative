@@ -61,15 +61,15 @@ Charger le HTML comme une chaîne (`source={{ html, baseUrl }}`) plutôt que via
 
 C'est ce dernier réglage qui est utilisé par défaut dans [`src/components/VisioMapView.tsx`](../src/components/VisioMapView.tsx).
 
-### Depuis le SDK 1.0.9 : collision levée par le renommage en `vg_maphash`
+### Depuis le SDK 1.0.6 : collision levée par le renommage en `vg_maphash`
 
-Le SDK 1.0.9 renomme l'option `LoadOptions.hash` en `LoadOptions.vg_maphash` (changement cassant : un `hash` passé à `loadVenue` est désormais ignoré, et le chargement échoue avec `Hash not found`). Le paramètre d'URL lu par `mergeVenueOptionsWithDefaultAndURLParameters` est renommé de la même façon : le SDK ne lit plus que `?vg_maphash=` (et `?baseURL=`), plus `?hash=`.
+Le SDK 1.0.6 renomme l'option `LoadOptions.hash` en `LoadOptions.vg_maphash` (changement cassant : un `hash` passé à `loadVenue` est désormais ignoré, et le chargement échoue avec `Hash not found`). Le paramètre d'URL lu par `mergeVenueOptionsWithDefaultAndURLParameters` est renommé de la même façon : le SDK ne lit plus que `?vg_maphash=` (et `?baseURL=`), plus `?hash=`.
 
-Conséquence pour ce problème : le `?hash=` ajouté par Metro n'est plus pris en compte par le SDK, la collision décrite ci-dessus n'a donc plus lieu à partir de 1.0.9. Vérifié en navigateur headless avec la page hôte de ce repo servie à une URL `…?platform=ios&hash=b52c3a3b3521fadf7f0e0299fdcc22fb` : le SDK a chargé `descriptor.json` pour le hash passé dans le code (200) et la carte s'est affichée. Le mécanisme de priorité « URL > code » existe toujours, mais sous le nom `vg_maphash` : la même page servie avec `?vg_maphash=<autre hash>` charge bien cet autre hash. Seul un paramètre d'URL nommé `vg_maphash` peut donc encore écraser le hash du code.
+Conséquence pour ce problème : le `?hash=` ajouté par Metro n'est plus pris en compte par le SDK, la collision décrite ci-dessus n'a donc plus lieu à partir de 1.0.6. Vérifié en 1.0.9 en navigateur headless avec la page hôte de ce repo servie à une URL `…?platform=ios&hash=b52c3a3b3521fadf7f0e0299fdcc22fb` : le SDK a chargé `descriptor.json` pour le hash passé dans le code (200) et la carte s'est affichée. Le mécanisme de priorité « URL > code » existe toujours, mais sous le nom `vg_maphash` : la même page servie avec `?vg_maphash=<autre hash>` charge bien cet autre hash. Seul un paramètre d'URL nommé `vg_maphash` peut donc encore écraser le hash du code.
 
 Ce repo garde néanmoins le chargement inline (`source={{ html, baseUrl }}`) : il fonctionne quelle que soit la version du SDK, et le retour à `require(...)` n'a pas été re-testé sur device avec Metro.
 
-Ce contournement reste une solution côté application, pas structurelle. Si vous rencontrez ce comportement dans votre propre intégration avec un SDK antérieur à 1.0.9, ce contournement s'applique.
+Ce contournement reste une solution côté application, pas structurelle. Si vous rencontrez ce comportement dans votre propre intégration avec un SDK antérieur à 1.0.6, ce contournement s'applique.
 
 ## Autre point corrigé dans cet exemple
 

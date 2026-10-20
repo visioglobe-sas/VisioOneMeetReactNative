@@ -4,7 +4,7 @@
 // server in Debug builds and appends its own "?hash=..." cache-busting query param to the
 // page URL. VisioOne SDK 1.0.5 merged the page's own URL query parameters into loadVenue's
 // options, so that unrelated Metro-generated "hash" param silently overrode the real map
-// hash passed in code. Since SDK 1.0.9 the option and its URL parameter are named
+// hash passed in code. Since SDK 1.0.6 the option and its URL parameter are named
 // "vg_maphash", so Metro's "?hash=" is no longer read -- see docs/SDK_NOTES.md for the full
 // writeup. Loading the HTML inline with an explicit baseUrl avoids the Metro-served URL
 // entirely, whatever the SDK version.

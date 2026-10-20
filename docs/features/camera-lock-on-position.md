@@ -1,44 +1,70 @@
-# Verrouillage caméra sur la position
+# Camera lock on position
 
 ## Description
 
-Bascule "recentrer sur moi", façon appli GPS : verrouille le focus de la caméra sur la position actuellement suivie par la SDK, via `view.lockCameraPositionOnTracking` (propriété booléenne de la classe `View`, SDK `visioone` — voir `View.ts` dans le repo `visioone`). Ce n'est pas une méthode ni un événement ponctuel : tant que la propriété est à `true`, la caméra suit chaque nouvelle position injectée ; la repasser à `false` rend le contrôle de la caméra à l'utilisateur sans toucher au suivi lui-même.
+A "recenter on me" toggle, like in a GPS app: while it's on, the camera follows the tracked position on every update; while it's off, the user moves the camera freely and tracking keeps going.
 
-Cette feature n'a d'effet visible que s'il y a une position suivie qui bouge : elle réutilise donc le mécanisme de [position simulée](./simulated-position.md) (deux POI Origin/Destination, aller-retour interpolé par un `setInterval` côté React Native) pour avoir quelque chose à verrouiller. La SDK a aussi une propriété sœur, `view.lockCameraOrientationOnTracking`, pour verrouiller l'**orientation** de la caméra (nécessite un flux d'orientation de l'appareil) — volontairement **hors scope** ici, seul le verrouillage de position est implémenté.
+It's built on one property of the view, `view.lockCameraPositionOnTracking` (boolean), plus the three view events the SDK dispatches whenever that state changes: `trackingon`, `trackingoff` and `trackingchanged`. The lock only means something while a position is being tracked, so this screen reuses the [simulated position](./simulated-position.md) mechanism (a position moving back and forth between two POIs through `view.injectTrackedPosition`) to have something to follow.
 
-## Step by step
+The sibling property `view.lockCameraOrientationOnTracking` (camera heading follows the device orientation) is not demonstrated here, since it needs a real device-orientation feed.
 
-1. **Nouveau message natif → WebView** : `set_camera_lock_on_position`, payload `{ locked: boolean }`, sur le même patron que `update_occupancy`/`inject_tracked_position`. Ajouté dans `useVisioMap.ts` :
-   ```ts
-   const setCameraLockOnPosition = (locked: boolean) => {
-     sendMessage({ type: 'set_camera_lock_on_position', data: { locked } });
-   };
-   ```
-   Handler côté WebView (`visioOneHtml.ts`/`visioOne.html`), volontairement "bête" — aucune garde nécessaire (voir "Points d'attention") :
-   ```js
-   const setCameraLockOnPosition = (locked) => {
-     if (view) {
-       view.lockCameraPositionOnTracking = locked
-     }
-   }
-   ```
-2. **UI** : plutôt que dupliquer tout le mécanisme de suivi (résolution des deux POI ID, timer d'interpolation, bouton Start/Stop, stepper de rayon), la feature réutilise `SimulatedPositionOverlay.tsx` via une nouvelle prop optionnelle `setCameraLockOnPosition`. Quand cette prop est fournie, un `Switch` "Recenter camera on position" apparaît sous le bouton Start/Stop ; quand elle est absente (cas de la feature `simulated-position` seule), le composant se comporte exactement comme avant. Le bouton bascule est **désactivé tant que le suivi n'est pas démarré** (`disabled={!running}`) — verrouiller la caméra sur rien n'a pas de sens.
-3. **Réinitialisation systématique à "off"** : le bascule ne doit jamais rester activé d'une simulation à l'autre. Il repasse à `false` (état local **et** message envoyé) dans trois cas :
-   - le bouton **Stop** est pressé,
-   - une erreur **"POI not found"** survient à la résolution,
-   - l'écran est **quitté** (démontage du composant).
-   Les deux premiers cas et le démontage sont couverts par le `cleanup` du même `useEffect` qui gère déjà le timer d'interpolation et l'appel à `stopSimulation()` (il tourne à chaque passage de `running` à `false`, y compris au démontage) ; le cas de l'erreur de résolution est couvert séparément dans l'effet qui surveille `awaitingResolution`, avant même que `running` ne soit jamais passé à `true`.
-4. **Menu** : entrée `camera-lock-on-position` ajoutée dans `src/features/registry.ts`, clés `cameraLockOnPosition.title`/`cameraLockOnPosition.description` (EN/FR) dans `src/i18n/strings.ts`. `FeatureScreen.tsx` rend le même `SimulatedPositionOverlay`, cette fois avec `setCameraLockOnPosition={bridge.setCameraLockOnPosition}` passé en plus.
+## SDK usage
 
-## Points d'attention
+Turning the lock on or off is a single message from React Native:
 
-- **`lockCameraPositionOnTracking` n'a d'effet visible qu'une fois `view.allowTracking = true`** — ce qui est déjà le cas dès que la simulation de position tourne (voir `injectTrackedPosition` dans `simulated-position.md`). L'activer alors que `allowTracking` est encore `false` est un **no-op silencieux** d'après la doc de la SDK elle-même : contrairement à `injectTrackedPosition`, qui lève une exception dans ce cas, aucune garde n'est donc nécessaire côté handler WebView.
-- **`lockCameraOrientationOnTracking` (verrouillage d'orientation) est hors scope** de cette feature — elle nécessiterait un vrai flux de capteur d'orientation de l'appareil, qu'aucun de ces repos de démo ne fournit actuellement.
-- **La SDK ne réinitialise pas elle-même ce booléen** quand `allowTracking` repasse à `false` (Stop) — c'est cette app qui force explicitement le message `set_camera_lock_on_position` à `false` à chaque arrêt, pour que redémarrer une simulation commence toujours déverrouillé (choix délibéré : opt-in à chaque fois, jamais un état qui traîne).
-- **Choisir deux POI vraiment éloignés** pour Origin/Destination : le déplacement de caméra n'est visible que si le trajet simulé couvre une distance suffisante — deux places de parking adjacentes ne donneront quasiment aucun mouvement de caméra perceptible.
-- **`visioOneHtml.ts` et `visioOne.html` doivent rester identiques** (à l'échappement de template-literal près) — les deux ont été édités dans ce commit pour le nouveau type de message `set_camera_lock_on_position`.
+```ts
+// useVisioMap.ts
+sendMessage({ type: 'set_camera_lock_on_position', data: { locked } }) // locked: boolean
+```
 
-## Pour aller plus loin
+```js
+// visioOneHtml.ts / visioOne.html (WebView message handler)
+case 'set_camera_lock_on_position':
+  view.lockCameraPositionOnTracking = evt.data.locked
+  break
+```
 
-- `docs/features/simulated-position.md` de ce repo pour le détail du mécanisme de suivi (résolution des POI, timer d'interpolation côté natif) réutilisé ici.
-- Version "verrouillage d'orientation" : voir le [`ROADMAP.md`](https://github.com/visioglobe-sas/VisioOneHub) du hub — `lockCameraOrientationOnTracking` nécessiterait un vrai flux d'orientation de l'appareil, hors scope tant qu'aucune source réelle n'est disponible dans ces repos de démo.
+The toggle doesn't keep its own copy of the value: it displays the SDK's state, because the SDK changes the lock by itself (see "Things to know"). Right after `createView`, the page subscribes once to the three tracking events and forwards the current value to React Native. The events carry no lock value, so it's read from the view inside the handler:
+
+```js
+// visioOneHtml.ts / visioOne.html, in the createView(...).then((v) => { ... }) callback
+const sendCameraLockState = () => {
+  sendToNative({
+    type: 'camera_lock_changed',
+    data: { locked: v.lockCameraPositionOnTracking === true },
+  })
+}
+v.addEventListener('trackingon', sendCameraLockState)
+v.addEventListener('trackingoff', sendCameraLockState)
+v.addEventListener('trackingchanged', sendCameraLockState)
+```
+
+On the React Native side, `camera_lock_changed` updates the state the toggle displays. Pressing the toggle only sends `set_camera_lock_on_position`; the SDK replies with `trackingchanged`, and the toggle follows.
+
+Tracking itself is turned on once, right before the first injected position, and never again on later updates:
+
+```js
+// visioOneHtml.ts / visioOne.html
+const injectTrackedPosition = (position, precisionCircleRadius) => {
+  if (!view.allowTracking) {
+    view.allowTracking = true
+  }
+  view.injectTrackedPosition({ position, precisionCircleRadius })
+}
+```
+
+(`visioOneHtml.ts` and `visioOne.html` hold the same page and are kept in sync by hand.)
+
+## Things to know
+
+- **`view.allowTracking = true` turns the lock on by itself.** Each time it's set to `true`, the SDK sets `lockCameraPositionOnTracking` (and `lockCameraOrientationOnTracking`) to `true` and dispatches `trackingon`. So right after tracking starts, the camera follows the position even if your app never touched the lock.
+- **Don't set `allowTracking = true` on every position update.** Because of the previous point, setting it again re-locks the camera each time, which undoes a user's unlock or pan on the next update. Only set it on the `false` -> `true` transition (`if (!view.allowTracking) view.allowTracking = true`).
+- **A user pan turns the lock off.** When the user drags the map while the camera is locked, the SDK sets `lockCameraPositionOnTracking` to `false` and dispatches `trackingchanged`. Your app's own call never runs in that case, so a UI that only remembers what it last set gets out of sync.
+- **`view.allowTracking = false` turns the lock off too** (both locks go back to `false` and `trackingoff` is dispatched). You don't need to reset the lock yourself when tracking stops.
+- **Use `trackingon` / `trackingoff` / `trackingchanged` to keep a UI in sync**, and read `view.lockCameraPositionOnTracking` inside the handler. None of these events carries the new value.
+- **Setting the lock while `allowTracking` is `false` does nothing**: it doesn't throw (unlike `injectTrackedPosition`), it doesn't change the value, and it doesn't dispatch `trackingchanged`. Turn tracking on first.
+- Turning the lock off also cancels the camera animation in progress toward the tracked position.
+
+## Learn more
+
+- [`simulated-position`](./simulated-position.md): how the tracked position is fed with `view.injectTrackedPosition`, and how `allowTracking = false` removes it.

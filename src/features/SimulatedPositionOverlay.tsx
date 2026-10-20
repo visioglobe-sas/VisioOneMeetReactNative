@@ -25,6 +25,12 @@ interface Props {
   // makes the "Recenter camera on position" toggle below appear at all -- the plain
   // simulated-position feature renders the same component without it.
   setCameraLockOnPosition?: VisioMapBridge['setCameraLockOnPosition'];
+  // Mirror of the SDK's view.lockCameraPositionOnTracking (camera-lock-on-position
+  // only), pushed from the WebView on every trackingon/trackingoff/trackingchanged
+  // event. The toggle shows this value rather than an app-side copy, because the SDK
+  // changes the lock by itself: on when tracking starts, off on a user pan, off when
+  // tracking stops.
+  cameraLockOnPosition?: boolean;
   // Optional: only the geofencing feature passes these, to piggyback its point-in-
   // polygon check onto this component's own tick loop instead of polling separately
   // (the SDK has no trackedpositionchanged event to hook into). onPositionTick fires
@@ -52,6 +58,7 @@ const SimulatedPositionOverlay = ({
   resolution,
   error,
   setCameraLockOnPosition,
+  cameraLockOnPosition = false,
   onPositionTick,
   onTrackingStopped,
   onTrackingStarted,
@@ -66,11 +73,6 @@ const SimulatedPositionOverlay = ({
   // True from the moment Start is pressed until the WebView's async POI-lookup
   // response ('poi_positions_resolved' or 'position_simulation_error') comes back.
   const [awaitingResolution, setAwaitingResolution] = React.useState(false);
-  // camera-lock-on-position feature only (setCameraLockOnPosition undefined otherwise).
-  // Deliberately reset to false -- never persisted -- whenever tracking stops (Stop
-  // pressed, a POI-not-found error, or the effect's cleanup on unmount below), so
-  // restarting the simulation always begins unlocked, a fresh opt-in every time.
-  const [cameraLockOn, setCameraLockOn] = React.useState(false);
 
   // Read by the interpolation loop below without being a dependency of it -- so moving
   // the slider/stepper while the simulation is running changes the radius used on the
@@ -90,13 +92,8 @@ const SimulatedPositionOverlay = ({
       setRunning(true);
     } else if (error) {
       setAwaitingResolution(false);
-      // Simulation never actually started -- make sure a stale lock from a previous
-      // run doesn't linger (see the reset in the running effect's cleanup below, which
-      // normally handles this; this covers the case where resolution fails outright).
-      setCameraLockOn(false);
-      setCameraLockOnPosition?.(false);
     }
-  }, [resolution, error, awaitingResolution, setCameraLockOnPosition]);
+  }, [resolution, error, awaitingResolution]);
 
   React.useEffect(() => {
     if (!running || !resolution) {
@@ -136,12 +133,9 @@ const SimulatedPositionOverlay = ({
     return () => {
       clearInterval(timer);
       // No dedicated stop call on the SDK -- this is what removes the marker/circle.
+      // It also turns the camera lock off on the SDK side, which reports it back
+      // through cameraLockOnPosition -- no app-side reset needed.
       stopSimulation();
-      // Runs on Stop being pressed (running -> false, this effect re-runs) and on
-      // unmount (leaving the screen) alike -- both are "the simulation stopped", so
-      // both reset the lock, a deliberate fresh opt-in on every restart.
-      setCameraLockOn(false);
-      setCameraLockOnPosition?.(false);
       onTrackingStopped?.();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -165,8 +159,9 @@ const SimulatedPositionOverlay = ({
     setRadius((prev) => Math.min(RADIUS_MAX, Math.max(RADIUS_MIN, prev + delta)));
   };
 
+  // Only asks the SDK -- the Switch then follows the 'trackingchanged' event the SDK
+  // dispatches back (see cameraLockOnPosition above).
   const handleCameraLockToggle = (locked: boolean) => {
-    setCameraLockOn(locked);
     setCameraLockOnPosition?.(locked);
   };
 
@@ -229,7 +224,7 @@ const SimulatedPositionOverlay = ({
       {setCameraLockOnPosition ? (
         <View style={styles.lockRow}>
           <Text style={styles.label}>Recenter camera on position</Text>
-          <Switch value={cameraLockOn} onValueChange={handleCameraLockToggle} disabled={!running} />
+          <Switch value={cameraLockOnPosition} onValueChange={handleCameraLockToggle} disabled={!running} />
         </View>
       ) : null}
     </View>

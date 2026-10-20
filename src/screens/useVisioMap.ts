@@ -244,10 +244,11 @@ export const useVisioMap = (hash: string, baseURL?: string, enableShadows?: bool
   };
 
   // Binds/unbinds the camera's focus onto whatever position is currently being tracked
-  // (camera-lock-on-position feature) -- view.lockCameraPositionOnTracking. Only has a
-  // visible effect once view.allowTracking is true (see injectTrackedPosition above);
-  // unlike injectTrackedPosition, setting this while allowTracking is still false is a
-  // harmless no-op per the SDK's own doc comment, not an exception.
+  // (camera-lock-on-position feature) -- view.lockCameraPositionOnTracking. Only has an
+  // effect once view.allowTracking is true (see injectTrackedPosition above); unlike
+  // injectTrackedPosition, setting this while allowTracking is still false is a silent
+  // no-op, not an exception. The resulting state comes back as a 'camera_lock_changed'
+  // message (SDK 'trackingchanged' event), which is what the UI displays.
   const setCameraLockOnPosition = (locked: boolean) => {
     sendMessage({
       type: 'set_camera_lock_on_position',

@@ -1229,7 +1229,10 @@ export const visioOneHtml = `<!DOCTYPE html>
         window.ReactNativeWebView?.postMessage(JSON.stringify(event))
       }
 
+      // react-native-webview dispatches postMessage on window on iOS, but on document
+      // (non-bubbling) on Android: listen on both or Android never receives commands.
       window.addEventListener('message', onMessage)
+      document.addEventListener('message', onMessage)
     </script>
 
     <style>

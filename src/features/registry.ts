@@ -27,7 +27,8 @@ export type FeatureSlug =
   | 'add-locale'
   | 'geofencing'
   | 'custom-base-url'
-  | 'custom-theme';
+  | 'custom-theme'
+  | 'camera-projection-toggle';
 
 export interface FeatureDefinition {
   slug: FeatureSlug;
@@ -170,5 +171,10 @@ export const featureRegistry: FeatureDefinition[] = [
     slug: 'custom-theme',
     titleKey: 'customTheme.title',
     descriptionKey: 'customTheme.description',
+  },
+  {
+    slug: 'camera-projection-toggle',
+    titleKey: 'cameraProjection.title',
+    descriptionKey: 'cameraProjection.description',
   },
 ];

@@ -110,7 +110,18 @@ export interface VenueBuilding {
 // sets it (view themes only change the scene lights, which are only rendered with
 // shadows enabled), undefined keeps the SDK's own default everywhere else. See
 // docs/features/custom-theme.md.
-export const useVisioMap = (hash: string, baseURL?: string, enableShadows?: boolean) => {
+// cameraProjection is the camera-projection-toggle feature's createView option -- it
+// can only be set when the view is created (view.cameraProjection is read-only), so the
+// screen remounts the WebView to switch it. undefined keeps the SDK's own default
+// ('perspective') everywhere else. See docs/features/camera-projection-toggle.md.
+export type CameraProjection = 'perspective' | 'orthographic';
+
+export const useVisioMap = (
+  hash: string,
+  baseURL?: string,
+  enableShadows?: boolean,
+  cameraProjection?: CameraProjection,
+) => {
   const webRef = useRef<WebView>(null);
 
   const sendMessage = (message: object) => {
@@ -124,7 +135,7 @@ export const useVisioMap = (hash: string, baseURL?: string, enableShadows?: bool
     setTimeout(() => {
       sendMessage({
         type: 'setup',
-        data: { hash, baseURL, enableShadows },
+        data: { hash, baseURL, enableShadows, cameraProjection },
       });
     }, 500);
   };

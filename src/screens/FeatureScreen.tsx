@@ -11,22 +11,16 @@ import VisioMapView, {
   CustomDataRefreshOutcome,
   DEFAULT_BASE_URL,
   DynamicPoiCreateResult,
-  GeofenceZone,
   HtmlMarkerCreateResult,
   HtmlMarkerTap,
   IconMarkerCreateResult,
   LocaleInfo,
-  PositionSimulationResolution,
   TextLabelCreateResult,
   VenueLayoutInfo,
   VisioMapBridge,
 } from '../components/VisioMapView';
 import { featureRegistry } from '../features/registry';
 import AccessibleModeOverlay from '../features/AccessibleModeOverlay';
-import AccuracyCircleStyleOverlay, {
-  DEFAULT_POSITION_TRACKER_STYLE,
-  PositionTrackerStyle,
-} from '../features/AccuracyCircleStyleOverlay';
 import AddLocaleOverlay from '../features/AddLocaleOverlay';
 import CategoryHighlightOverlay from '../features/CategoryHighlightOverlay';
 import ClickableSurfaceOverlay from '../features/ClickableSurfaceOverlay';
@@ -40,7 +34,6 @@ import CustomThemeOverlay, {
 import DynamicPoiCrudOverlay from '../features/DynamicPoiCrudOverlay';
 import ExploreModeOverlay from '../features/ExploreModeOverlay';
 import FloorSelectorOverlay from '../features/FloorSelectorOverlay';
-import GeofencingOverlay from '../features/GeofencingOverlay';
 import GoToPoiOverlay from '../features/GoToPoiOverlay';
 import HtmlMarkerOverlay from '../features/HtmlMarkerOverlay';
 import IconMarkerOverlay from '../features/IconMarkerOverlay';
@@ -50,8 +43,8 @@ import OccupancySimulatedOverlay from '../features/OccupancySimulatedOverlay';
 import PoiClickOverlay from '../features/PoiClickOverlay';
 import ResetViewOverlay from '../features/ResetViewOverlay';
 import RuntimeLocaleOverlay from '../features/RuntimeLocaleOverlay';
-import SimulatedPositionOverlay from '../features/SimulatedPositionOverlay';
 import TextLabelOverlay from '../features/TextLabelOverlay';
+import TrackingFeatureHost, { isTrackingFeatureSlug } from '../features/TrackingFeatureHost';
 import UIPartVisibilityOverlay from '../features/UIPartVisibilityOverlay';
 import { useLocale } from '../i18n/useLocale';
 import { RootStackParamList } from '../navigation/RootNavigator';
@@ -109,11 +102,6 @@ const FeatureScreen = ({ route, navigation }: Props) => {
   const [customThemeSelection, setCustomThemeSelection] = React.useState<CustomThemeSelection>(
     DEFAULT_CUSTOM_THEME_SELECTION,
   );
-  // accuracy-circle-style feature: same reason as customThemeSelection -- the selected
-  // color/opacity must survive the bottom sheet being closed and reopened.
-  const [positionTrackerStyle, setPositionTrackerStyleSelection] = React.useState<PositionTrackerStyle>(
-    DEFAULT_POSITION_TRACKER_STYLE,
-  );
 
   React.useEffect(() => {
     if (feature) {
@@ -125,19 +113,16 @@ const FeatureScreen = ({ route, navigation }: Props) => {
     bridge: VisioMapBridge,
     clickedPois: ClickedPoi[],
     venueLayout: VenueLayoutInfo,
-    positionSimulation: { resolution: PositionSimulationResolution | null; error: string | null },
     customData: { refresh: CustomDataRefreshOutcome | null; lookup: CustomDataLookupResult | null },
     categories: CategoryOption[],
     dynamicPoiCreateResult: DynamicPoiCreateResult | null,
     locale: { info: LocaleInfo; error: string | null },
     addLocaleResult: AddLocaleResult | null,
     exploreMode: ExploreMode,
-    geofencing: { zone: GeofenceZone | null; error: string | null },
     iconMarkerCreateResult: IconMarkerCreateResult | null,
     textLabelCreateResult: TextLabelCreateResult | null,
     htmlMarker: { createResult: HtmlMarkerCreateResult | null; tap: HtmlMarkerTap | null },
     themes: string[],
-    cameraLockOnPosition: boolean,
   ) => {
     switch (slug) {
       case 'reset-view':
@@ -181,46 +166,6 @@ const FeatureScreen = ({ route, navigation }: Props) => {
             goToFloor={bridge.goToFloor}
             goToBuilding={bridge.goToBuilding}
             setUIPartVisible={bridge.setUIPartVisible}
-          />
-        );
-      case 'simulated-position':
-        return (
-          <SimulatedPositionOverlay
-            resolvePois={bridge.resolvePositionSimulationPois}
-            injectTrackedPosition={bridge.injectTrackedPosition}
-            stopSimulation={bridge.stopPositionSimulation}
-            resolution={positionSimulation.resolution}
-            error={positionSimulation.error}
-          />
-        );
-      case 'camera-lock-on-position':
-        // Same tracking UI as simulated-position (a moving tracked position is needed
-        // to see the camera lock's effect at all) plus the extra toggle, enabled by
-        // passing setCameraLockOnPosition -- see SimulatedPositionOverlay.tsx.
-        return (
-          <SimulatedPositionOverlay
-            resolvePois={bridge.resolvePositionSimulationPois}
-            injectTrackedPosition={bridge.injectTrackedPosition}
-            stopSimulation={bridge.stopPositionSimulation}
-            resolution={positionSimulation.resolution}
-            error={positionSimulation.error}
-            setCameraLockOnPosition={bridge.setCameraLockOnPosition}
-            cameraLockOnPosition={cameraLockOnPosition}
-          />
-        );
-      case 'accuracy-circle-style':
-        // Same tracking UI as simulated-position (pre-filled POIs, 6 m radius) plus
-        // color/opacity controls -- see AccuracyCircleStyleOverlay.tsx.
-        return (
-          <AccuracyCircleStyleOverlay
-            resolvePois={bridge.resolvePositionSimulationPois}
-            injectTrackedPosition={bridge.injectTrackedPosition}
-            stopSimulation={bridge.stopPositionSimulation}
-            resolution={positionSimulation.resolution}
-            error={positionSimulation.error}
-            setPositionTrackerStyle={bridge.setPositionTrackerStyle}
-            style={positionTrackerStyle}
-            onStyleChange={setPositionTrackerStyleSelection}
           />
         );
       case 'clickable-surface':
@@ -298,20 +243,6 @@ const FeatureScreen = ({ route, navigation }: Props) => {
             localeInfo={locale.info}
             localeError={locale.error}
             setLocale={bridge.setLocale}
-          />
-        );
-      case 'geofencing':
-        return (
-          <GeofencingOverlay
-            resolvePois={bridge.resolvePositionSimulationPois}
-            injectTrackedPosition={bridge.injectTrackedPosition}
-            stopSimulation={bridge.stopPositionSimulation}
-            resolution={positionSimulation.resolution}
-            error={positionSimulation.error}
-            resolveZone={bridge.resolveGeofenceZone}
-            setGeofenceAlert={bridge.setGeofenceAlert}
-            zone={geofencing.zone}
-            zoneError={geofencing.error}
           />
         );
       case 'custom-base-url':
@@ -392,26 +323,38 @@ const FeatureScreen = ({ route, navigation }: Props) => {
               <Text style={styles.fabIcon}>⚙</Text>
             </TouchableOpacity>
           )}
-          <BottomSheet visible={controlsVisible} onClose={() => setControlsVisible(false)}>
-            {renderFeatureContent(
-              bridge,
-              clickedPois,
-              venueLayout,
-              positionSimulation,
-              customData,
-              categories,
-              dynamicPoiCreateResult,
-              locale,
-              addLocaleResult,
-              exploreMode,
-              geofencing,
-              iconMarkerCreateResult,
-              textLabelCreateResult,
-              htmlMarker,
-              themes,
-              cameraLockOnPosition,
-            )}
-          </BottomSheet>
+          {isTrackingFeatureSlug(slug) ? (
+            // Tracking screens: the simulation (and its tick loop) must outlive the
+            // bottom sheet, whose content unmounts on close -- the host owns it at
+            // screen level and renders the sheet itself. See TrackingFeatureHost.tsx.
+            <TrackingFeatureHost
+              slug={slug}
+              bridge={bridge}
+              positionSimulation={positionSimulation}
+              geofencing={geofencing}
+              cameraLockOnPosition={cameraLockOnPosition}
+              visible={controlsVisible}
+              onClose={() => setControlsVisible(false)}
+            />
+          ) : (
+            <BottomSheet visible={controlsVisible} onClose={() => setControlsVisible(false)}>
+              {renderFeatureContent(
+                bridge,
+                clickedPois,
+                venueLayout,
+                customData,
+                categories,
+                dynamicPoiCreateResult,
+                locale,
+                addLocaleResult,
+                exploreMode,
+                iconMarkerCreateResult,
+                textLabelCreateResult,
+                htmlMarker,
+                themes,
+              )}
+            </BottomSheet>
+          )}
         </>
       )}
     />

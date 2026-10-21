@@ -1,26 +1,16 @@
 import * as React from 'react';
 import { StyleSheet, Switch, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
-import { PositionSimulationResolution, VisioMapBridge } from '../components/VisioMapView';
-import { Position } from '../screens/useVisioMap';
+import { VisioMapBridge } from '../components/VisioMapView';
+import { RADIUS_MAX, RADIUS_MIN, SimulatedPositionSession } from './useSimulatedPositionSession';
 
-// Stand-in for a real positioning feed: linearly interpolates between two resolved POI
-// positions and ping-pongs back and forth on a timer, calling injectTrackedPosition on
-// every tick. See docs/features/simulated-position.md. Same idiom as occupancy-simulated's
-// color-cycling setInterval -- the timer lives on the native side, not in the WebView.
-const TICK_MS = 150;
-const STEP_PER_TICK = 0.02; // fraction of the origin->destination leg advanced per tick
-const RADIUS_MIN = 1;
-const RADIUS_MAX = 20;
-const RADIUS_DEFAULT = 5;
 const RADIUS_STEP = 1;
 
+// Purely presentational: the simulation state and its tick loop live in
+// useSimulatedPositionSession, owned by the feature screen, so they survive this
+// panel being closed and reopened -- see docs/features/simulated-position.md.
 interface Props {
-  resolvePois: VisioMapBridge['resolvePositionSimulationPois'];
-  injectTrackedPosition: VisioMapBridge['injectTrackedPosition'];
-  stopSimulation: VisioMapBridge['stopPositionSimulation'];
-  resolution: PositionSimulationResolution | null;
-  error: string | null;
+  session: SimulatedPositionSession;
   // Optional: only the camera-lock-on-position feature passes this, which is what
   // makes the "Recenter camera on position" toggle below appear at all -- the plain
   // simulated-position feature renders the same component without it.
@@ -31,133 +21,26 @@ interface Props {
   // changes the lock by itself: on when tracking starts, off on a user pan, off when
   // tracking stops.
   cameraLockOnPosition?: boolean;
-  // Optional: only the geofencing feature passes these, to piggyback its point-in-
-  // polygon check onto this component's own tick loop instead of polling separately
-  // (the SDK has no trackedpositionchanged event to hook into). onPositionTick fires
-  // with the freshly-interpolated position on every tick while running; onTrackingStopped
-  // fires once when the loop stops (Stop pressed, or the screen is left), so the
-  // geofencing feature can revert its own "inside zone" alert.
-  onPositionTick?: (position: Position) => void;
-  onTrackingStopped?: () => void;
-  // Optional: only the accuracy-circle-style feature passes this. Fires once per Start,
-  // right before the first injectTrackedPosition of the run -- the SDK resets the
-  // tracker's color/opacity whenever tracking stops, so that feature re-applies its
-  // selected style here. See docs/features/accuracy-circle-style.md.
-  onTrackingStarted?: () => void;
-  // Optional pre-filled values (accuracy-circle-style uses them to start on two POIs
-  // known to work on the shared demo map and on a 6 m radius).
-  initialOriginId?: string;
-  initialDestinationId?: string;
-  initialRadius?: number;
 }
 
 const SimulatedPositionOverlay = ({
-  resolvePois,
-  injectTrackedPosition,
-  stopSimulation,
-  resolution,
-  error,
+  session,
   setCameraLockOnPosition,
   cameraLockOnPosition = false,
-  onPositionTick,
-  onTrackingStopped,
-  onTrackingStarted,
-  initialOriginId = '',
-  initialDestinationId = '',
-  initialRadius = RADIUS_DEFAULT,
 }: Props) => {
-  const [originId, setOriginId] = React.useState(initialOriginId);
-  const [destinationId, setDestinationId] = React.useState(initialDestinationId);
-  const [radius, setRadius] = React.useState(initialRadius);
-  const [running, setRunning] = React.useState(false);
-  // True from the moment Start is pressed until the WebView's async POI-lookup
-  // response ('poi_positions_resolved' or 'position_simulation_error') comes back.
-  const [awaitingResolution, setAwaitingResolution] = React.useState(false);
-
-  // Read by the interpolation loop below without being a dependency of it -- so moving
-  // the slider/stepper while the simulation is running changes the radius used on the
-  // next tick without restarting the loop (and by extension, without ever resetting
-  // the ping-pong progress).
-  const radiusRef = React.useRef(radius);
-  React.useEffect(() => {
-    radiusRef.current = radius;
-  }, [radius]);
-
-  React.useEffect(() => {
-    if (!awaitingResolution) {
-      return;
-    }
-    if (resolution) {
-      setAwaitingResolution(false);
-      setRunning(true);
-    } else if (error) {
-      setAwaitingResolution(false);
-    }
-  }, [resolution, error, awaitingResolution]);
-
-  React.useEffect(() => {
-    if (!running || !resolution) {
-      return;
-    }
-
-    const { origin, destination } = resolution;
-    let progress = 0;
-    let direction = 1;
-
-    const tick = () => {
-      const hasAltitude = origin.altitude != null && destination.altitude != null;
-      const position = {
-        latitude: origin.latitude + (destination.latitude - origin.latitude) * progress,
-        longitude: origin.longitude + (destination.longitude - origin.longitude) * progress,
-        altitude: hasAltitude
-          ? origin.altitude! + (destination.altitude! - origin.altitude!) * progress
-          : undefined,
-      };
-      injectTrackedPosition(position, radiusRef.current);
-      onPositionTick?.(position);
-
-      progress += direction * STEP_PER_TICK;
-      if (progress >= 1) {
-        progress = 1;
-        direction = -1;
-      } else if (progress <= 0) {
-        progress = 0;
-        direction = 1;
-      }
-    };
-
-    onTrackingStarted?.();
-    tick(); // place the marker at the origin immediately instead of waiting a full tick
-    const timer = setInterval(tick, TICK_MS);
-
-    return () => {
-      clearInterval(timer);
-      // No dedicated stop call on the SDK -- this is what removes the marker/circle.
-      // It also turns the camera lock off on the SDK side, which reports it back
-      // through cameraLockOnPosition -- no app-side reset needed.
-      stopSimulation();
-      onTrackingStopped?.();
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [running, resolution]);
-
-  const handleStart = () => {
-    const origin = originId.trim();
-    const destination = destinationId.trim();
-    if (!origin || !destination) {
-      return;
-    }
-    setAwaitingResolution(true);
-    resolvePois(origin, destination);
-  };
-
-  const handleStop = () => {
-    setRunning(false);
-  };
-
-  const adjustRadius = (delta: number) => {
-    setRadius((prev) => Math.min(RADIUS_MAX, Math.max(RADIUS_MIN, prev + delta)));
-  };
+  const {
+    originId,
+    setOriginId,
+    destinationId,
+    setDestinationId,
+    radius,
+    adjustRadius,
+    running,
+    awaitingResolution,
+    error,
+    start,
+    stop,
+  } = session;
 
   // Only asks the SDK -- the Switch then follows the 'trackingchanged' event the SDK
   // dispatches back (see cameraLockOnPosition above).
@@ -211,7 +94,7 @@ const SimulatedPositionOverlay = ({
       <TouchableOpacity
         style={running ? styles.buttonSecondary : styles.button}
         disabled={running ? false : startDisabled}
-        onPress={running ? handleStop : handleStart}>
+        onPress={running ? stop : start}>
         <Text style={styles.buttonText}>
           {running
             ? 'Stop position simulation'

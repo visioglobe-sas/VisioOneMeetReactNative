@@ -280,7 +280,19 @@ const VisioMapView = ({
   // 'camera_lock_changed' message reports the real value.
   const [cameraLockOnPosition, setCameraLockOnPosition] = React.useState(false);
 
-  const bridge = useVisioMap(mapHash ?? DEMO_MAP_HASH, baseURL, enableShadows);
+  const rawBridge = useVisioMap(mapHash ?? DEMO_MAP_HASH, baseURL, enableShadows);
+  // Clears the previous answer (resolution or error) as soon as a new POI-resolution
+  // request is sent, so the tracking screens never mistake a stale answer for the
+  // response to the request they just made (a new Start would otherwise run on the
+  // previous origin/destination, or a retry after an error would be dropped).
+  const bridge: VisioMapBridge = {
+    ...rawBridge,
+    resolvePositionSimulationPois: (originId: string, destinationId: string) => {
+      setPositionSimulationResolution(null);
+      setPositionSimulationError(null);
+      rawBridge.resolvePositionSimulationPois(originId, destinationId);
+    },
+  };
   const { webRef, sendSetup, getCategories, getLocales } = bridge;
 
   const handleWebMessage = (event: WebViewMessageEvent) => {

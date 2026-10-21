@@ -1,9 +1,10 @@
 import * as React from 'react';
 import { StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
-import { GeofenceZone, PositionSimulationResolution, VisioMapBridge } from '../components/VisioMapView';
+import { GeofenceZone, VisioMapBridge } from '../components/VisioMapView';
 import { Position } from '../screens/useVisioMap';
 import SimulatedPositionOverlay from './SimulatedPositionOverlay';
+import { SimulatedPositionSession } from './useSimulatedPositionSession';
 
 // Ray-casting point-in-polygon test, lat/lng treated as planar x/y -- accurate enough
 // at building scale. Not an SDK method: the SDK has no geofencing/point-in-polygon
@@ -25,34 +26,27 @@ const isPointInPolygon = (point: Position, polygon: Position[]): boolean => {
   return inside;
 };
 
-interface Props {
-  resolvePois: VisioMapBridge['resolvePositionSimulationPois'];
-  injectTrackedPosition: VisioMapBridge['injectTrackedPosition'];
-  stopSimulation: VisioMapBridge['stopPositionSimulation'];
-  resolution: PositionSimulationResolution | null;
-  error: string | null;
-  resolveZone: VisioMapBridge['resolveGeofenceZone'];
-  setGeofenceAlert: VisioMapBridge['setGeofenceAlert'];
-  zone: GeofenceZone | null;
-  zoneError: string | null;
+// Screen-level geofencing state (zone field, inside/outside flag, tick handlers),
+// owned by the feature screen alongside useSimulatedPositionSession rather than by the
+// bottom sheet's content -- so the zone check keeps running, and the panel shows the
+// current state, while the sheet is closed. Its onPositionTick/onTrackingStopped are
+// passed to useSimulatedPositionSession, piggybacking on that single tick loop.
+export interface GeofenceTracker {
+  zonePlaceId: string;
+  setZonePlaceId: (value: string) => void;
+  inside: boolean;
+  onPositionTick: (position: Position) => void;
+  onTrackingStopped: () => void;
 }
 
-const GeofencingOverlay = ({
-  resolvePois,
-  injectTrackedPosition,
-  stopSimulation,
-  resolution,
-  error,
-  resolveZone,
-  setGeofenceAlert,
-  zone,
-  zoneError,
-}: Props) => {
+export const useGeofenceTracker = (
+  zone: GeofenceZone | null,
+  setGeofenceAlert: VisioMapBridge['setGeofenceAlert'],
+): GeofenceTracker => {
   const [zonePlaceId, setZonePlaceId] = React.useState('');
   const [inside, setInside] = React.useState(false);
 
-  // Read/written by the tick callback below without being a render dependency -- same
-  // reasoning as SimulatedPositionOverlay's own radiusRef.
+  // Read/written by the tick callback below without being a render dependency.
   const zoneRef = React.useRef(zone);
   zoneRef.current = zone;
   const insideRef = React.useRef(false);
@@ -63,15 +57,7 @@ const GeofencingOverlay = ({
     setInside(false);
   }, [zone]);
 
-  const handleLoadZone = () => {
-    const id = zonePlaceId.trim();
-    if (!id) {
-      return;
-    }
-    resolveZone(id);
-  };
-
-  const handlePositionTick = (position: Position) => {
+  const onPositionTick = (position: Position) => {
     const currentZone = zoneRef.current;
     if (!currentZone) {
       return;
@@ -84,12 +70,34 @@ const GeofencingOverlay = ({
     }
   };
 
-  const handleTrackingStopped = () => {
+  const onTrackingStopped = () => {
     if (insideRef.current && zoneRef.current) {
       setGeofenceAlert(zoneRef.current.placeId, false);
     }
     insideRef.current = false;
     setInside(false);
+  };
+
+  return { zonePlaceId, setZonePlaceId, inside, onPositionTick, onTrackingStopped };
+};
+
+interface Props {
+  session: SimulatedPositionSession;
+  tracker: GeofenceTracker;
+  resolveZone: VisioMapBridge['resolveGeofenceZone'];
+  zone: GeofenceZone | null;
+  zoneError: string | null;
+}
+
+const GeofencingOverlay = ({ session, tracker, resolveZone, zone, zoneError }: Props) => {
+  const { zonePlaceId, setZonePlaceId, inside } = tracker;
+
+  const handleLoadZone = () => {
+    const id = zonePlaceId.trim();
+    if (!id) {
+      return;
+    }
+    resolveZone(id);
   };
 
   return (
@@ -113,15 +121,7 @@ const GeofencingOverlay = ({
         {zone ? (inside ? 'Inside zone' : 'Outside zone') : 'No zone loaded'}
       </Text>
 
-      <SimulatedPositionOverlay
-        resolvePois={resolvePois}
-        injectTrackedPosition={injectTrackedPosition}
-        stopSimulation={stopSimulation}
-        resolution={resolution}
-        error={error}
-        onPositionTick={handlePositionTick}
-        onTrackingStopped={handleTrackingStopped}
-      />
+      <SimulatedPositionOverlay session={session} />
     </View>
   );
 };

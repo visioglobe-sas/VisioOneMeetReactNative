@@ -1,16 +1,18 @@
 import * as React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
-import { PositionSimulationResolution, VisioMapBridge } from '../components/VisioMapView';
+import { VisioMapBridge } from '../components/VisioMapView';
 import { useLocale } from '../i18n/useLocale';
 import { StringKey } from '../i18n/strings';
 import SimulatedPositionOverlay from './SimulatedPositionOverlay';
+import { SimulatedPositionSession } from './useSimulatedPositionSession';
 
+// Pre-filled values for the session (owned by the screen, see TrackingFeatureHost).
 // Two POIs on the shared demo map that resolve to a position and are far enough apart
 // to see the tracked position move.
-const DEFAULT_ORIGIN_ID = 'B4-UL00-ID0009';
-const DEFAULT_DESTINATION_ID = 'B4-UL00-ID0010';
-const DEFAULT_RADIUS = 6;
+export const DEFAULT_ORIGIN_ID = 'B4-UL00-ID0009';
+export const DEFAULT_DESTINATION_ID = 'B4-UL00-ID0010';
+export const DEFAULT_RADIUS = 6;
 
 const COLOR_PRESETS: { value: string; labelKey: StringKey }[] = [
   { value: '#0094f0', labelKey: 'accuracyCircleStyle.colorDefault' },
@@ -36,12 +38,12 @@ export const DEFAULT_POSITION_TRACKER_STYLE: PositionTrackerStyle = {
   opacity: 0.3,
 };
 
+// The tracking session (fields, loop) is owned by the feature screen -- see
+// useSimulatedPositionSession. The screen also re-applies the selected style on every
+// Start through the session's onTrackingStarted (the SDK resets color/opacity to its
+// defaults whenever tracking stops).
 interface Props {
-  resolvePois: VisioMapBridge['resolvePositionSimulationPois'];
-  injectTrackedPosition: VisioMapBridge['injectTrackedPosition'];
-  stopSimulation: VisioMapBridge['stopPositionSimulation'];
-  resolution: PositionSimulationResolution | null;
-  error: string | null;
+  session: SimulatedPositionSession;
   setPositionTrackerStyle: VisioMapBridge['setPositionTrackerStyle'];
   // Owned by the parent screen so it survives the bottom sheet being closed/reopened
   // (there's no getter for the current graphic options on the SDK side).
@@ -49,33 +51,13 @@ interface Props {
   onStyleChange: (style: PositionTrackerStyle) => void;
 }
 
-const AccuracyCircleStyleOverlay = ({
-  resolvePois,
-  injectTrackedPosition,
-  stopSimulation,
-  resolution,
-  error,
-  setPositionTrackerStyle,
-  style,
-  onStyleChange,
-}: Props) => {
+const AccuracyCircleStyleOverlay = ({ session, setPositionTrackerStyle, style, onStyleChange }: Props) => {
   const { t } = useLocale();
   const opacityTenths = Math.round(style.opacity * 10);
-
-  // Read by the tracking-start callback, which is captured once per run by
-  // SimulatedPositionOverlay's interval effect.
-  const styleRef = React.useRef(style);
-  styleRef.current = style;
 
   const applyStyle = (next: PositionTrackerStyle) => {
     setPositionTrackerStyle(next.color, next.opacity);
     onStyleChange(next);
-  };
-
-  // The SDK resets color/opacity to its defaults on every stop, so re-apply the
-  // selection on every start, right before the first injected position.
-  const handleTrackingStarted = () => {
-    setPositionTrackerStyle(styleRef.current.color, styleRef.current.opacity);
   };
 
   const adjustOpacity = (delta: number) => {
@@ -85,17 +67,7 @@ const AccuracyCircleStyleOverlay = ({
 
   return (
     <View style={styles.column}>
-      <SimulatedPositionOverlay
-        resolvePois={resolvePois}
-        injectTrackedPosition={injectTrackedPosition}
-        stopSimulation={stopSimulation}
-        resolution={resolution}
-        error={error}
-        onTrackingStarted={handleTrackingStarted}
-        initialOriginId={DEFAULT_ORIGIN_ID}
-        initialDestinationId={DEFAULT_DESTINATION_ID}
-        initialRadius={DEFAULT_RADIUS}
-      />
+      <SimulatedPositionOverlay session={session} />
 
       <Text style={styles.label}>{t('accuracyCircleStyle.color')}</Text>
       <View style={styles.chips}>

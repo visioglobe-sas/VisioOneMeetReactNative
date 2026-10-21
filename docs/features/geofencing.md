@@ -60,14 +60,14 @@ const setGeofenceAlert = (placeId, active) => {
 
 `resolve_geofence_zone` goes in once, when the "Zone POI ID" field is submitted; `geofence_zone_resolved` (`{ placeId, surfaces: Position[][] }`) or `geofence_zone_error` comes back. Every surface's boundary is returned — not just the first — since a POI can carry more than one `Surface`.
 
-The containment check itself happens entirely on the native side, piggybacked onto `simulated-position`'s existing ~150ms tick loop (`SimulatedPositionOverlay.tsx` now accepts an optional `onPositionTick` callback for exactly this) — no separate polling loop, since the SDK has no `trackedpositionchanged` event to react to instead. On every tick, `GeofencingOverlay.tsx` runs a ray-casting test between the freshly-interpolated position and each of the zone's polygons; on a state transition it calls `setGeofenceAlert(placeId, isInside)`.
+The containment check itself happens entirely on the native side, piggybacked onto `simulated-position`'s existing ~150ms tick loop (`useSimulatedPositionSession.ts` accepts an optional `onPositionTick` callback for exactly this) — no separate polling loop, since the SDK has no `trackedpositionchanged` event to react to instead. On every tick, `useGeofenceTracker` (`GeofencingOverlay.tsx`) runs a ray-casting test between the freshly-interpolated position and each of the zone's polygons; on a state transition it calls `setGeofenceAlert(placeId, isInside)`.
 
 ## Things to know
 
 - **No SDK geofencing primitive exists.** `Surface.positions` gives zone geometry and `injectTrackedPosition` gives a position, both already in WGS84 — but nothing in the SDK checks one against the other. The point-in-polygon test (`isPointInPolygon`, ray-casting, lat/lng treated as planar x/y — accurate enough at building scale) is plain app code.
 - **A "zone" is just an existing POI's surface**, not a first-class concept. Any POI ID that resolves to a POI with at least one `Surface` works as a zone; a point/marker-only POI (`poi.surfaces` empty) is reported as a normal, non-crash error ("Zone POI has no surface geometry"), same idiom as a not-found ID.
 - **`'initial'` reverts the color**, not `undefined` or omitting the key — same `SurfaceUpdateOptions` sentinel `clickable-surface`/`category-highlight` already rely on to restore a surface's bundle-defined color.
-- **Reuses, doesn't duplicate, `simulated-position`'s tracking loop.** No second `setInterval`/timer was added — `onPositionTick` fires from the same tick that already calls `injectTrackedPosition`. `onTrackingStopped` fires once when that loop stops (Stop pressed, or the screen unmounts) so a lingering "inside zone" alert gets reverted even if the position never explicitly re-exits the polygon.
+- **Reuses, doesn't duplicate, `simulated-position`'s tracking loop.** No second `setInterval`/timer was added — `onPositionTick` fires from the same tick that already calls `injectTrackedPosition`. `onTrackingStopped` fires once when that loop stops (Stop pressed, or the screen is left — closing the control panel doesn't stop it, so the zone check keeps running while the map is visible) so a lingering "inside zone" alert gets reverted even if the position never explicitly re-exits the polygon.
 
 ## Learn more
 

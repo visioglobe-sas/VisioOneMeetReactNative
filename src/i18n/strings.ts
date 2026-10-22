@@ -104,6 +104,10 @@ export const strings = {
     'cameraShowcase.statusPaused': 'Paused — resumes after {seconds} s without touch',
     'cameraShowcase.statusStopped': 'Stopped',
     'cameraShowcase.hint': 'Touching the map pauses the tour; it resumes on its own after 10 s.',
+    'authToken.title': 'Protected map (token)',
+    'authToken.description': 'Code sample: load a map protected by an authorization token',
+    'authToken.screenText':
+      'This feature is a code sample only: this demo has no protected map to load. See src/features/AuthTokenSample.tsx (React Native side), src/assets/visioOneHtml.ts (WebView side) and docs/features/auth-token.md, then replace the placeholder map hash and token with your own values.',
     'accuracyCircleStyle.title': 'Accuracy circle style',
     'accuracyCircleStyle.description': "Recolor the tracked position's precision circle, live",
     'accuracyCircleStyle.color': 'Color',
@@ -226,6 +230,11 @@ export const strings = {
     'cameraShowcase.statusPaused': 'En pause — reprend après {seconds} s sans toucher',
     'cameraShowcase.statusStopped': 'Arrêtée',
     'cameraShowcase.hint': 'Toucher la carte met la visite en pause ; elle reprend seule après 10 s.',
+    'authToken.title': 'Carte protégée (jeton)',
+    'authToken.description':
+      "Exemple de code : charger une carte protégée par un jeton d'autorisation",
+    'authToken.screenText':
+      "Cette fonctionnalité est uniquement un exemple de code : cette démo n'a pas de carte protégée à charger. Voir src/features/AuthTokenSample.tsx (côté React Native), src/assets/visioOneHtml.ts (côté WebView) et docs/features/auth-token.md, puis remplacer le hash de carte et le jeton fictifs par vos propres valeurs.",
     'accuracyCircleStyle.title': 'Style du cercle de précision',
     'accuracyCircleStyle.description':
       'Recolorer le cercle de précision de la position, en direct',

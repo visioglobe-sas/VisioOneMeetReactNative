@@ -221,6 +221,14 @@ interface VisioMapViewProps {
   // hence a fresh loadVenue + createView), same as custom-base-url. See
   // docs/features/camera-projection-toggle.md.
   cameraProjection?: CameraProjection;
+  // auth-token feature: LoadOptions.authorizationToken, for a map hosted on the
+  // protected map server (pass that server as baseURL and its protected hash as
+  // mapHash). Unset everywhere else. See docs/features/auth-token.md.
+  authorizationToken?: string;
+  // auth-token feature: fired when loadVenue rejects with the SDK's UnauthorizedError
+  // (token invalid, expired or missing), distinct from any other load error -- e.g. to
+  // fetch a fresh token from your backend and remount the map.
+  onUnauthorized?: (message: string) => void;
   renderOverlay?: (
     bridge: VisioMapBridge,
     status: Status,
@@ -277,6 +285,8 @@ const VisioMapView = ({
   baseURL,
   enableShadows,
   cameraProjection,
+  authorizationToken,
+  onUnauthorized,
   renderOverlay,
   onPoiClick,
 }: VisioMapViewProps) => {
@@ -331,6 +341,7 @@ const VisioMapView = ({
     baseURL,
     enableShadows,
     cameraProjection,
+    authorizationToken,
   );
   // Clears the previous answer (resolution or error) as soon as a new POI-resolution
   // request is sent, so the tracking screens never mistake a stale answer for the
@@ -372,6 +383,10 @@ const VisioMapView = ({
     } else if (evt.type === 'error') {
       setStatus('error');
       setErrorMessage(String(evt.data));
+    } else if (evt.type === 'unauthorized') {
+      setStatus('error');
+      setErrorMessage(`Authorization token invalid, expired or missing (${String(evt.data)})`);
+      onUnauthorized?.(String(evt.data));
     } else if (evt.type === 'poi_click') {
       setClickedPois(evt.data.pois);
       onPoiClick?.(evt.data.pois);

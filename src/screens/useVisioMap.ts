@@ -114,6 +114,9 @@ export interface VenueBuilding {
 // can only be set when the view is created (view.cameraProjection is read-only), so the
 // screen remounts the WebView to switch it. undefined keeps the SDK's own default
 // ('perspective') everywhere else. See docs/features/camera-projection-toggle.md.
+// authorizationToken is the auth-token feature's LoadOptions.authorizationToken (a JWT
+// from your own backend, for a map on the protected map server) -- undefined everywhere
+// else (public map, no Authorization header). See docs/features/auth-token.md.
 export type CameraProjection = 'perspective' | 'orthographic';
 
 export const useVisioMap = (
@@ -121,6 +124,7 @@ export const useVisioMap = (
   baseURL?: string,
   enableShadows?: boolean,
   cameraProjection?: CameraProjection,
+  authorizationToken?: string,
 ) => {
   const webRef = useRef<WebView>(null);
 
@@ -135,7 +139,7 @@ export const useVisioMap = (
     setTimeout(() => {
       sendMessage({
         type: 'setup',
-        data: { hash, baseURL, enableShadows, cameraProjection },
+        data: { hash, baseURL, enableShadows, cameraProjection, authorizationToken },
       });
     }, 500);
   };
@@ -515,8 +519,16 @@ export const useVisioMap = (
     sendMessage({ type: 'stop_camera_carousel' });
   };
 
+  // auth-token feature: hands a fresh token to the already-loaded venue
+  // (venue.setAuthorizationToken in the WebView page), used for every later map
+  // request -- call it before the current token expires. See docs/features/auth-token.md.
+  const setAuthorizationToken = (token: string) => {
+    sendMessage({ type: 'set_authorization_token', data: { token } });
+  };
+
   return {
     webRef,
+    setAuthorizationToken,
     resetMap,
     goToPlace,
     goToFloor,

@@ -22,6 +22,7 @@ import VisioMapView, {
 } from '../components/VisioMapView';
 import { featureRegistry } from '../features/registry';
 import AccessibleModeOverlay from '../features/AccessibleModeOverlay';
+import AuthTokenInfo from '../features/AuthTokenInfo';
 import AddLocaleOverlay from '../features/AddLocaleOverlay';
 import CameraProjectionOverlay from '../features/CameraProjectionOverlay';
 import CameraShowcaseOverlay from '../features/CameraShowcaseOverlay';
@@ -117,6 +118,13 @@ const FeatureScreen = ({ route, navigation }: Props) => {
       navigation.setOptions({ title: t(feature.titleKey) });
     }
   }, [feature, navigation, t]);
+
+  // auth-token feature: code sample only -- this demo has no protected map, so the
+  // screen is a text page pointing to src/features/AuthTokenSample.tsx and never
+  // attempts a load. See docs/features/auth-token.md.
+  if (slug === 'auth-token') {
+    return <AuthTokenInfo />;
+  }
 
   const renderFeatureContent = (
     bridge: VisioMapBridge,

@@ -39,7 +39,14 @@
       // switching projection means a fresh page (fresh loadVenue + createView), driven by
       // the React Native side remounting the WebView. Anything else falls back to the
       // SDK's own default, 'perspective'. See docs/features/camera-projection-toggle.md.
-      const setup = async (hash, baseURL, enableShadows, cameraProjection) => {
+      //
+      // authorizationToken is the auth-token feature's LoadOptions.authorizationToken:
+      // a JWT issued by YOUR backend, sent by the SDK as "Authorization: Bearer <token>"
+      // on every map request. Only meaningful together with the protected map server as
+      // baseURL (https://mapserver-auth.visioglobe.com/) and a protected map hash. Every
+      // other screen leaves it undefined (public map, no header). See
+      // docs/features/auth-token.md.
+      const setup = async (hash, baseURL, enableShadows, cameraProjection, authorizationToken) => {
         const venueHash = typeof hash === 'string' ? hash.trim() : ''
         const trimmedBaseURL = typeof baseURL === 'string' ? baseURL.trim() : ''
         let visioOneLoadError = null
@@ -69,6 +76,9 @@
           const loadOptions = trimmedBaseURL
             ? { vg_maphash: venueHash, baseURL: trimmedBaseURL }
             : { vg_maphash: venueHash }
+          if (typeof authorizationToken === 'string' && authorizationToken !== '') {
+            loadOptions.authorizationToken = authorizationToken
+          }
           venue = await visioOne.loadVenue(loadOptions, container)
           const viewOptions = {
             cameraProjection: cameraProjection === 'orthographic' ? 'orthographic' : 'perspective',
@@ -167,6 +177,14 @@
             },
           })
         } catch (error) {
+          // auth-token feature: an invalid, expired or missing token is reported
+          // distinctly from any other load failure, so the app can e.g. fetch a fresh
+          // token from its backend and retry.
+          if (isUnauthorizedError(error)) {
+            console.error('VisioOne: authorization token invalid, expired or missing', error)
+            sendToNative({ type: 'unauthorized', data: error.message })
+            return
+          }
           const cause = visioOneLoadError || error
           console.error('Unable to initialize VisioOne', error)
           sendToNative({
@@ -175,6 +193,32 @@
           })
         } finally {
           console.warn = originalConsoleWarn
+        }
+      }
+
+      // auth-token feature. The CDN build only exports createVisioOne/VisioOne, not the
+      // SDK's error classes, so UnauthorizedError can't be checked with instanceof here.
+      // Its error.name is the generic "Error" (the class doesn't override it): the class
+      // name identifies it, with the SDK's message as a fallback in case a build ever
+      // mangles class names. (With the npm package, prefer
+      // "error instanceof UnauthorizedError".)
+      const isUnauthorizedError = (error) =>
+        error?.constructor?.name === 'UnauthorizedError' ||
+        error?.message === 'This venue needs an Authorization token to be loaded'
+
+      // auth-token feature: tokens are short-lived (at most 1 hour on the protected
+      // server). Call this with a fresh token from your backend BEFORE the current one
+      // expires: it replaces the Authorization header for every later map request of
+      // this venue -- no reload needed. See docs/features/auth-token.md.
+      const setAuthorizationToken = (token) => {
+        if (!venue) {
+          console.warn('setAuthorizationToken: no venue loaded yet')
+          return
+        }
+        try {
+          venue.setAuthorizationToken(token)
+        } catch (error) {
+          console.error('setAuthorizationToken failed', error)
         }
       }
 
@@ -1298,8 +1342,12 @@
                 evt.data.hash,
                 evt.data.baseURL,
                 evt.data.enableShadows,
-                evt.data.cameraProjection
+                evt.data.cameraProjection,
+                evt.data.authorizationToken
               )
+              break
+            case 'set_authorization_token':
+              setAuthorizationToken(evt.data.token)
               break
             case 'reset_map':
               resetMap()

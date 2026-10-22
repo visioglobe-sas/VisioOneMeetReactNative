@@ -29,7 +29,8 @@ export type FeatureSlug =
   | 'custom-base-url'
   | 'custom-theme'
   | 'camera-projection-toggle'
-  | 'camera-showcase-carousel';
+  | 'camera-showcase-carousel'
+  | 'auth-token';
 
 export interface FeatureDefinition {
   slug: FeatureSlug;
@@ -182,5 +183,10 @@ export const featureRegistry: FeatureDefinition[] = [
     slug: 'camera-showcase-carousel',
     titleKey: 'cameraShowcase.title',
     descriptionKey: 'cameraShowcase.description',
+  },
+  {
+    slug: 'auth-token',
+    titleKey: 'authToken.title',
+    descriptionKey: 'authToken.description',
   },
 ];

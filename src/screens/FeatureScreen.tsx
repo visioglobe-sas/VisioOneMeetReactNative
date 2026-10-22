@@ -20,6 +20,7 @@ import VisioMapView, {
   VenueLayoutInfo,
   VisioMapBridge,
 } from '../components/VisioMapView';
+import { CUSTOM_DATA_MAP_HASH } from '../demoMap';
 import { featureRegistry } from '../features/registry';
 import AccessibleModeOverlay from '../features/AccessibleModeOverlay';
 import AuthTokenInfo from '../features/AuthTokenInfo';
@@ -56,13 +57,11 @@ import { CameraProjection, ClickedPoi, ExploreMode } from './useVisioMap';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Feature'>;
 
-// custom-data feature: the shared DEMO_MAP_HASH (VisioMapView.tsx) has no CustomData
-// published, so it would only ever demonstrate the empty state. This is a different,
-// already-published map confirmed (via the mapserver API) to carry real CustomData
-// -- see docs/features/custom-data.md for the known POI ids with real data. Passed
-// as VisioMapView's mapHash prop only for this one slug; every other screen keeps
-// getting the shared demo map by not passing the prop.
-const CUSTOM_DATA_MAP_HASH = 'kd9426d8cb3f1c532f22b5bcbd325c280bd351feb';
+// custom-data feature: the shared DEMO_MAP_HASH has no CustomData published, so it
+// would only ever demonstrate the empty state. CUSTOM_DATA_MAP_HASH (demoMap.ts) is a
+// different, already-published map confirmed to carry real CustomData -- see
+// docs/features/custom-data.md. Passed as VisioMapView's mapHash prop only for this
+// one slug; every other screen keeps getting the shared demo map by not passing it.
 
 // native-ui-replacement feature: hides the SDK's own floor-selector widget
 // (view.setUIPartVisible('floorSelector', false), same bridge call as

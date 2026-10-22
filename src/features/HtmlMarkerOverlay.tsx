@@ -2,6 +2,8 @@ import * as React from 'react';
 import { StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
 import { HtmlMarkerCreateResult, HtmlMarkerTap, VisioMapBridge } from '../components/VisioMapView';
+import { ANCHOR_POI_ID } from '../demoMap';
+import { useLocale } from '../i18n/useLocale';
 
 interface Props {
   createHtmlMarker: VisioMapBridge['createHtmlMarker'];
@@ -11,11 +13,6 @@ interface Props {
   createResult: HtmlMarkerCreateResult | null;
   tap: HtmlMarkerTap | null;
 }
-
-// A POI of the shared demo map (a restaurant, ground floor of building B4) known to
-// carry a usable (label) position to copy.
-const DEFAULT_ANCHOR_POI_ID = 'B4-UL00-ID0009';
-const DEFAULT_TEXT = 'Open now · 12:00–14:00';
 
 // Only one badge is placed at a time in this demo, always under this id -- the live
 // SDK Marker object (and its DOM element) is tracked on the WebView side, keyed by it.
@@ -47,8 +44,9 @@ const HtmlMarkerOverlay = ({
   createResult,
   tap,
 }: Props) => {
-  const [anchorId, setAnchorId] = React.useState(DEFAULT_ANCHOR_POI_ID);
-  const [text, setText] = React.useState(DEFAULT_TEXT);
+  const { t } = useLocale();
+  const [anchorId, setAnchorId] = React.useState(ANCHOR_POI_ID);
+  const [text, setText] = React.useState(() => t('htmlOverlayMarker.defaultText'));
   // Anchor id of the badge currently on the map, null when nothing is placed.
   const [placedOn, setPlacedOn] = React.useState<string | null>(null);
   const [isVisible, setIsVisible] = React.useState(true);

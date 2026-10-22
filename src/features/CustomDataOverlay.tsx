@@ -6,6 +6,7 @@ import {
   CustomDataRefreshOutcome,
   VisioMapBridge,
 } from '../components/VisioMapView';
+import { CUSTOM_DATA_KNOWN_POI_IDS, CUSTOM_DATA_POI_ID } from '../demoMap';
 
 interface Props {
   refreshCustomData: VisioMapBridge['refreshCustomData'];
@@ -14,15 +15,14 @@ interface Props {
   lookup: CustomDataLookupResult | null;
 }
 
-// This screen loads a dedicated map (see FeatureScreen.tsx's CUSTOM_DATA_MAP_HASH)
-// confirmed to carry real, published CustomData on these 3 POIs -- unlike the app's
-// shared demo map, which has none. Quick-select chips below let a lookup be
+// This screen loads a dedicated map (CUSTOM_DATA_MAP_HASH in demoMap.ts) confirmed to
+// carry real, published CustomData on the CUSTOM_DATA_KNOWN_POI_IDS POIs -- unlike the
+// app's shared demo map, which has none. Quick-select chips below let a lookup be
 // triggered with a single tap instead of typing an id by hand. See
 // docs/features/custom-data.md.
-const KNOWN_POI_IDS = ['B1', 'B3-UL00-ID0065', 'B3-UL00-ID0064'];
 
 const CustomDataOverlay = ({ refreshCustomData, getPoiCustomData, refresh, lookup }: Props) => {
-  const [placeId, setPlaceId] = React.useState('');
+  const [placeId, setPlaceId] = React.useState(CUSTOM_DATA_POI_ID);
   // True from the moment a button is pressed until the matching WebView response
   // ('custom_data_refreshed'/'custom_data_refresh_error' or 'poi_custom_data_result')
   // comes back -- same idiom as SimulatedPositionOverlay's awaitingResolution.
@@ -58,7 +58,7 @@ const CustomDataOverlay = ({ refreshCustomData, getPoiCustomData, refresh, looku
   };
 
   // Fills the field and immediately triggers the lookup, so a real, non-empty
-  // result is one tap away -- see KNOWN_POI_IDS above.
+  // result is one tap away -- see CUSTOM_DATA_KNOWN_POI_IDS in demoMap.ts.
   const handleQuickSelect = (id: string) => {
     setPlaceId(id);
     handleLookup(id);
@@ -69,7 +69,7 @@ const CustomDataOverlay = ({ refreshCustomData, getPoiCustomData, refresh, looku
   return (
     <View style={styles.column}>
       <View style={styles.chipsRow}>
-        {KNOWN_POI_IDS.map((id) => (
+        {CUSTOM_DATA_KNOWN_POI_IDS.map((id) => (
           <TouchableOpacity
             key={id}
             style={[styles.chip, placeId === id ? styles.chipSelected : null]}

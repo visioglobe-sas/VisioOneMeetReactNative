@@ -7,11 +7,8 @@ import { StringKey } from '../i18n/strings';
 import SimulatedPositionOverlay from './SimulatedPositionOverlay';
 import { SimulatedPositionSession } from './useSimulatedPositionSession';
 
-// Pre-filled values for the session (owned by the screen, see TrackingFeatureHost).
-// Two POIs on the shared demo map that resolve to a position and are far enough apart
-// to see the tracked position move.
-export const DEFAULT_ORIGIN_ID = 'B4-UL00-ID0009';
-export const DEFAULT_DESTINATION_ID = 'B4-UL00-ID0010';
+// Pre-filled radius for the session (owned by the screen, see TrackingFeatureHost); the
+// origin/destination POIs come from demoMap.ts like on the other tracking screens.
 export const DEFAULT_RADIUS = 6;
 
 const COLOR_PRESETS: { value: string; labelKey: StringKey }[] = [

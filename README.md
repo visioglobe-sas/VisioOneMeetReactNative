@@ -16,7 +16,7 @@ npm install
 
 ### Configure your own map
 
-This repo ships pointed at a Visioglobe demo venue. To load your own map, get a venue hash from [my.visioglobe.com](https://my.visioglobe.com) and replace `DEMO_MAP_HASH` in [`src/components/VisioMapView.tsx`](src/components/VisioMapView.tsx).
+This repo ships pointed at a Visioglobe demo venue. To load your own map, get a venue hash from [my.visioglobe.com](https://my.visioglobe.com) and replace `DEMO_MAP_HASH` in [`src/demoMap.ts`](src/demoMap.ts). That file also holds every demo POI id the feature screens are prefilled with (go-to target, itinerary origin/destination, tracking path, anchors, carousel stops...): replace them with ids from your own map.
 
 ### Run
 
@@ -82,6 +82,7 @@ Each feature below is a self-contained screen in the app, demonstrating one piec
 ```
 App.tsx                                    # entry point, optionally switches to a diagnostic mode
 src/
+├── demoMap.ts                             # demo map hash + POI ids used as prefilled values
 ├── navigation/
 │   └── RootNavigator.tsx                  # Home ↔ Feature screen stack
 ├── screens/

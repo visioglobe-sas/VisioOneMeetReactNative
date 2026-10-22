@@ -2,6 +2,7 @@ import * as React from 'react';
 import { StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
 import { VisioMapBridge } from '../components/VisioMapView';
+import { GOTO_POI_ID } from '../demoMap';
 
 interface Props {
   goToPlace: VisioMapBridge['goToPlace'];
@@ -9,7 +10,7 @@ interface Props {
 }
 
 const GoToPoiOverlay = ({ goToPlace, clearPlace }: Props) => {
-  const [placeId, setPlaceId] = React.useState('');
+  const [placeId, setPlaceId] = React.useState(GOTO_POI_ID);
 
   return (
     <View style={styles.row}>

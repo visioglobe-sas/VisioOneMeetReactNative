@@ -2,6 +2,7 @@ import * as React from 'react';
 import { StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
 import { VisioMapBridge } from '../components/VisioMapView';
+import { OCCUPANCY_POI_ID } from '../demoMap';
 
 // Stand-in for a real occupancy sensor feed: cycles a POI's surface through these
 // colors on a timer. See docs/features/occupancy-simulated.md.
@@ -13,7 +14,7 @@ interface Props {
 }
 
 const OccupancySimulatedOverlay = ({ updateOccupancy }: Props) => {
-  const [placeId, setPlaceId] = React.useState('');
+  const [placeId, setPlaceId] = React.useState(OCCUPANCY_POI_ID);
   const [simulateOccupancy, setSimulateOccupancy] = React.useState(false);
 
   React.useEffect(() => {

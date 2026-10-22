@@ -2,6 +2,8 @@ import { useRef } from 'react';
 
 import { WebView } from 'react-native-webview';
 
+import { CAROUSEL_STOP_IDS } from '../demoMap';
+
 export interface OccupancyUpdate {
   planId: string;
   color?: string;
@@ -512,7 +514,8 @@ export const useVisioMap = (
   // 'camera_carousel_status' -- see VisioMapView.tsx and
   // docs/features/camera-showcase-carousel.md.
   const startCameraCarousel = () => {
-    sendMessage({ type: 'start_camera_carousel' });
+    // The stop list lives in demoMap.ts and travels with the start message.
+    sendMessage({ type: 'start_camera_carousel', data: { stopIds: CAROUSEL_STOP_IDS } });
   };
 
   const stopCameraCarousel = () => {

@@ -2,6 +2,7 @@ import * as React from 'react';
 import { StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
 import { GeofenceZone, VisioMapBridge } from '../components/VisioMapView';
+import { GEOFENCE_ZONE_ID } from '../demoMap';
 import { Position } from '../screens/useVisioMap';
 import SimulatedPositionOverlay from './SimulatedPositionOverlay';
 import { SimulatedPositionSession } from './useSimulatedPositionSession';
@@ -43,7 +44,7 @@ export const useGeofenceTracker = (
   zone: GeofenceZone | null,
   setGeofenceAlert: VisioMapBridge['setGeofenceAlert'],
 ): GeofenceTracker => {
-  const [zonePlaceId, setZonePlaceId] = React.useState('');
+  const [zonePlaceId, setZonePlaceId] = React.useState(GEOFENCE_ZONE_ID);
   const [inside, setInside] = React.useState(false);
 
   // Read/written by the tick callback below without being a render dependency.

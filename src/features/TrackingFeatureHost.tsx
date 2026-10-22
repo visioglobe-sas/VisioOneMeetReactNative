@@ -2,9 +2,8 @@ import * as React from 'react';
 
 import BottomSheet from '../components/BottomSheet';
 import { GeofenceZone, PositionSimulationResolution, VisioMapBridge } from '../components/VisioMapView';
+import { TRACKING_FROM, TRACKING_TO } from '../demoMap';
 import AccuracyCircleStyleOverlay, {
-  DEFAULT_DESTINATION_ID,
-  DEFAULT_ORIGIN_ID,
   DEFAULT_POSITION_TRACKER_STYLE,
   DEFAULT_RADIUS,
   PositionTrackerStyle,
@@ -75,8 +74,9 @@ const TrackingFeatureHost = ({
     onTrackingStarted: isAccuracyCircleStyle
       ? () => bridge.setPositionTrackerStyle(trackerStyleRef.current.color, trackerStyleRef.current.opacity)
       : undefined,
-    initialOriginId: isAccuracyCircleStyle ? DEFAULT_ORIGIN_ID : undefined,
-    initialDestinationId: isAccuracyCircleStyle ? DEFAULT_DESTINATION_ID : undefined,
+    // Same pre-filled pair on the 4 tracking screens (see demoMap.ts).
+    initialOriginId: TRACKING_FROM,
+    initialDestinationId: TRACKING_TO,
     initialRadius: isAccuracyCircleStyle ? DEFAULT_RADIUS : undefined,
   });
 

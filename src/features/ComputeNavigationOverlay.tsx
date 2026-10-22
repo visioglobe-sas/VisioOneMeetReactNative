@@ -2,6 +2,7 @@ import * as React from 'react';
 import { StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
 import { VisioMapBridge } from '../components/VisioMapView';
+import { ITINERARY_FROM, ITINERARY_TO } from '../demoMap';
 import { NavigationTraceStyle } from '../screens/useVisioMap';
 
 // custom-navigation-trace feature: a fixed catalogue of NavigationTraceUpdateOptions
@@ -53,8 +54,8 @@ interface Props {
 }
 
 const ComputeNavigationOverlay = ({ startItinerary, updateNavigationTrace }: Props) => {
-  const [origin, setOrigin] = React.useState('');
-  const [destination, setDestination] = React.useState('');
+  const [origin, setOrigin] = React.useState(ITINERARY_FROM);
+  const [destination, setDestination] = React.useState(ITINERARY_TO);
   // custom-navigation-trace feature only -- remembers the last-tapped preset so the
   // *next* computed itinerary is styled with it too, not just whatever trace is
   // currently on screen.

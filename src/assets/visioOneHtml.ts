@@ -1180,7 +1180,9 @@ export const visioOneHtml = `<!DOCTYPE html>
       // (which unmounts the WebView) ends it. React Native only sends start/stop and
       // mirrors the state reported back in 'camera_carousel_status'. See
       // docs/features/camera-showcase-carousel.md.
-      const CAROUSEL_STOP_IDS = ['B4-UL00-ID0009', 'B1-LL01-ID0152', 'B3-UL00-ID0064', 'B4-UL03-ID0015']
+      // Stop POI ids, sent by React Native with 'start_camera_carousel' (see
+      // CAROUSEL_STOP_IDS in src/demoMap.ts).
+      let carouselStopIds = []
       const CAROUSEL_DWELL_MS = 3000
       const CAROUSEL_RESUME_AFTER_MS = 10000
       // 'running' | 'paused' | 'stopped'
@@ -1199,8 +1201,8 @@ export const visioOneHtml = `<!DOCTYPE html>
           data: {
             state: carouselState,
             stopIndex: carouselStopIndex,
-            stopCount: CAROUSEL_STOP_IDS.length,
-            poiId: carouselStopIndex >= 0 ? CAROUSEL_STOP_IDS[carouselStopIndex] : null,
+            stopCount: carouselStopIds.length,
+            poiId: carouselStopIndex >= 0 ? carouselStopIds[carouselStopIndex] : null,
             resumeAfterMs: CAROUSEL_RESUME_AFTER_MS,
           },
         })
@@ -1238,7 +1240,7 @@ export const visioOneHtml = `<!DOCTYPE html>
         const isCurrentRun = () => runId === carouselRunId && carouselState === 'running'
         let index = startIndex
         while (isCurrentRun()) {
-          const poi = venue.pois.find((p) => p.id === CAROUSEL_STOP_IDS[index])
+          const poi = venue.pois.find((p) => p.id === carouselStopIds[index])
           carouselStopIndex = index
           sendCarouselStatus()
           if (poi) {
@@ -1270,15 +1272,15 @@ export const visioOneHtml = `<!DOCTYPE html>
               return
             }
           } else {
-            console.warn('camera-showcase-carousel: POI not found', CAROUSEL_STOP_IDS[index])
+            console.warn('camera-showcase-carousel: POI not found', carouselStopIds[index])
           }
           await new Promise((resolve) => setTimeout(resolve, CAROUSEL_DWELL_MS))
-          index = (index + 1) % CAROUSEL_STOP_IDS.length
+          index = (index + 1) % carouselStopIds.length
         }
       }
 
       const startCarousel = (startIndex = 0) => {
-        if (!view || !venue) {
+        if (!view || !venue || carouselStopIds.length === 0) {
           return
         }
         if (!carouselTouchListening) {
@@ -1319,7 +1321,7 @@ export const visioOneHtml = `<!DOCTYPE html>
         carouselResumeTimer = setTimeout(() => {
           carouselResumeTimer = null
           if (carouselState === 'paused') {
-            startCarousel((carouselStopIndex + 1) % CAROUSEL_STOP_IDS.length)
+            startCarousel((carouselStopIndex + 1) % carouselStopIds.length)
           }
         }, CAROUSEL_RESUME_AFTER_MS)
       }
@@ -1487,6 +1489,7 @@ export const visioOneHtml = `<!DOCTYPE html>
               setAccentColors(evt.data)
               break
             case 'start_camera_carousel':
+              carouselStopIds = (evt.data && evt.data.stopIds) || []
               startCarousel(0)
               break
             case 'stop_camera_carousel':

@@ -4,6 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { WebView, WebViewMessageEvent } from 'react-native-webview';
 
 import { visioOneHtml } from '../assets/visioOneHtml';
+import { DEMO_MAP_HASH } from '../demoMap';
 import {
   CameraProjection,
   ClickedPoi,
@@ -13,9 +14,6 @@ import {
   VenueBuilding,
 } from '../screens/useVisioMap';
 
-// Replace with a hash of your own venue from https://my.visioglobe.com
-// This one points at a Visioglobe demo venue.
-const DEMO_MAP_HASH = 'kbae8e6c066cca4b02c2afac2bc963a643d87437a';
 
 // The SDK's own default LoadOptions.baseURL, mirrored here so the custom-base-url
 // feature can pre-fill its field with the real value instead of a placeholder -- see

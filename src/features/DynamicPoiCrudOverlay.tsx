@@ -2,6 +2,8 @@ import * as React from 'react';
 import { StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
 import { DynamicPoiCreateResult, VisioMapBridge } from '../components/VisioMapView';
+import { ANCHOR_POI_ID, DYNAMIC_POI_NEW_ID } from '../demoMap';
+import { useLocale } from '../i18n/useLocale';
 
 interface Props {
   createDynamicPoi: VisioMapBridge['createDynamicPoi'];
@@ -40,9 +42,10 @@ const DynamicPoiCrudOverlay = ({
   removeDynamicPoi,
   createResult,
 }: Props) => {
-  const [newId, setNewId] = React.useState('');
-  const [anchorId, setAnchorId] = React.useState('');
-  const [labelText, setLabelText] = React.useState('');
+  const { t } = useLocale();
+  const [newId, setNewId] = React.useState(DYNAMIC_POI_NEW_ID);
+  const [anchorId, setAnchorId] = React.useState(ANCHOR_POI_ID);
+  const [labelText, setLabelText] = React.useState(() => t('dynamicPoiCrud.defaultLabel'));
   const [trackedPoi, setTrackedPoi] = React.useState<TrackedPoi | null>(null);
   const [awaitingCreate, setAwaitingCreate] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);

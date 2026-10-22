@@ -1157,11 +1157,13 @@
         }
       }
 
-      // Stops a running SDK camera animation where it is. animation.cancel() is no good
-      // here: it jumps the camera to the animation's final state. Starting another
-      // animation does interrupt the running one in place (its promise resolves with
+      // Stops a running SDK camera animation where it is. Starting another animation
+      // interrupts the running one in place (its promise resolves with
       // isCanceled === true), so this starts a zero-length goToViewpoint on the camera's
-      // current target, with heading/pitch left untouched ('initial').
+      // current target, with heading/pitch left untouched ('initial'). (animation.cancel()
+      // would also stop the camera where it is; its public typing wrongly says it puts
+      // the target in its final state, but the SDK core implementation and live
+      // measurements say otherwise.)
       const freezeCamera = () => {
         if (!view) {
           return
@@ -1201,7 +1203,7 @@
             const poiAnimation = view.goToPOI(poi, {
               duration: 2500,
               easing: 'easeInOutQuad',
-              orientation: { heading: index * 90, pitch: 45 },
+              orientation: { heading: index * 90, pitch: 30 },
             })
             await poiAnimation
             if (!isCurrentRun()) {
@@ -1272,7 +1274,7 @@
       }
 
       // Stop: no further hop is scheduled. The hop in flight, if any, is left to finish
-      // on its own (no cancel(), which would jump the camera to its destination).
+      // on its own (no cancel(), which would stop the camera mid-flight).
       const stopCarousel = () => {
         clearCarouselResumeTimer()
         carouselRunId += 1

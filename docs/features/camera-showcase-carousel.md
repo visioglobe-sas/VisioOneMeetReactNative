@@ -26,7 +26,7 @@ interface AnimationPromise extends Promise<void> {
 }
 ```
 
-Each hop is `goToFloor` on the place's floor, then `goToPOI` with a heading that turns by 90° per stop and a 45° pitch, then a 3 s dwell. Touching the map pauses the tour immediately so the user's gesture wins; it resumes on its own from the next stop after 10 s without touch.
+Each hop is `goToFloor` on the place's floor, then `goToPOI` with a heading that turns by 90° per stop and a 30° pitch, then a 3 s dwell. Touching the map pauses the tour immediately so the user's gesture wins; it resumes on its own from the next stop after 10 s without touch.
 
 The demo tours 4 places of the demo venue, across 3 buildings: `B4-UL00-ID0009`, `B1-LL01-ID0152`, `B3-UL00-ID0064`, `B4-UL03-ID0015`.
 
@@ -71,7 +71,7 @@ const runCarouselLoop = async (runId, startIndex) => {
       const poiAnimation = view.goToPOI(poi, {
         duration: 2500,
         easing: 'easeInOutQuad',
-        orientation: { heading: index * 90, pitch: 45 },
+        orientation: { heading: index * 90, pitch: 30 },
       })
       await poiAnimation
       if (!isCurrentRun()) return
@@ -95,8 +95,8 @@ container.addEventListener('pointerup', () => pauseCarousel(true), { capture: tr
 `pauseCarousel` invalidates the running loop, stops the camera **where it is** and schedules the resume from the next stop:
 
 ```js
-// animation.cancel() would jump the camera to the destination. Starting another
-// animation interrupts the running one in place instead.
+// Starting another animation interrupts the running one in place.
+// (animation.cancel() would stop the camera in place too.)
 view.goToViewpoint(
   { positions: [view.camera.target] },
   { duration: 0, orientation: { heading: 'initial', pitch: 'initial' } }
@@ -111,10 +111,11 @@ Stop clears the resume timer and invalidates the loop. It deliberately does not 
 
 ## Things to know
 
-- **`animation.cancel()` jumps to the end.** It resolves the promise immediately with `isCanceled === true`, but it puts the camera in the animation's final state. It does not freeze the camera in place, so don't use it to stop a tour.
+- **`animation.cancel()` stops the camera where it is.** It resolves the promise immediately with `isCanceled === true` and leaves the camera in the state it is in at the moment of the call. The public typing of `cancel()` says it "puts the animation target in its final state": that wording is wrong. The SDK core implementation (1.1.0) documents and implements the opposite, and live measurements (Android `WebView`, iOS `WKWebView`) confirm it. The demo pauses with a zero-length `goToViewpoint` instead (see above); both stop the camera in place.
 - **A new camera animation interrupts the running one, in place.** The running animation's promise resolves with `isCanceled === true` and the camera continues from where it was, without jumping to the old destination. The demo uses this to freeze the camera on touch: a zero-length `goToViewpoint` on `view.camera.target`, with `heading`/`pitch` set to `'initial'`. Measured on a touch in the middle of a `goToPOI`: the camera stayed where it was, about 30 m from the destination. It only settled by a few meters and about 2° of heading within the next 100 ms.
 - **Check `isCanceled` after every `await`.** Any later camera animation cancels the current one, whoever started it. A loop that ignores `isCanceled` would keep fighting whatever moved the camera.
 - **User drags don't interrupt SDK animations, and there is no "camera moved by user" event.** A drag during a `goTo*` animation does not stop it: the animation runs to the end and the user fights the camera. Detect touches yourself, for example with a `pointerdown` listener on the map container in the capture phase, as above.
+- **Known SDK issue (1.1.0): the camera can break after a drag on an underground floor.** Observed on another platform: after `goToPOI` with `orientation: { heading: 90 or 180, pitch: 45 }` on the underground POI `B1-LL01-ID0152` (floor `B1-LL1`, camera at its 10 m minimum altitude), one or two user drags turned `view.camera.heading` into `NaN` and `pitch` into `0`, and the map rendered black until the view was reloaded. It is not systematically reproducible; pitch 30 did not trigger it in the attempts made, so the demo uses `pitch: 30`.
 - **Call `goToFloor` before `goToPOI`** when the place is on another floor. The SDK documentation makes the caller responsible for that. In SDK 1.1.0, `goToPOI` alone did switch the floor in a test, but the demo follows the documented order. One hop takes about 0.8 s (`goToFloor`) + 2.5 s (`goToPOI`) with the durations above.
 - **`orientation` sets the camera's final heading and pitch, in degrees.** Here the heading turns 90° per stop. `view.camera.heading` reads it back normalized to (-180, 180], so a requested 270° reads back as -90°. `'initial'` leaves a value untouched.
 - **`goToPOI` decides the zoom.** The final camera distance depends on the place's size. A small place can bring the camera down to the camera's minimum altitude (10 m by default, `view.camera.minimumAltitude`). Use `padding` or a different place if a stop is too close.

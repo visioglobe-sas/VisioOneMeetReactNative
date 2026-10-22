@@ -89,6 +89,13 @@ export const strings = {
     'customTheme.textAccentColor': 'Accent text color',
     'customTheme.reset': 'Reset',
     'customTheme.hint': "Tap a place: its card's Go button uses the accent colors.",
+    'cameraProjection.title': 'Camera projection',
+    'cameraProjection.description':
+      'Switch between a 3D perspective view and a flat orthographic view',
+    'cameraProjection.perspective': 'Perspective',
+    'cameraProjection.orthographic': 'Orthographic',
+    'cameraProjection.hint':
+      'Switching reloads the map (the projection can only be set when the view is created).',
     'accuracyCircleStyle.title': 'Accuracy circle style',
     'accuracyCircleStyle.description': "Recolor the tracked position's precision circle, live",
     'accuracyCircleStyle.color': 'Color',
@@ -195,6 +202,13 @@ export const strings = {
     'customTheme.reset': 'Réinitialiser',
     'customTheme.hint':
       "Touchez un lieu : le bouton « Y aller » de sa fiche utilise les couleurs d'accent.",
+    'cameraProjection.title': 'Projection de la caméra',
+    'cameraProjection.description':
+      'Basculer entre une vue 3D en perspective et une vue à plat orthographique',
+    'cameraProjection.perspective': 'Perspective',
+    'cameraProjection.orthographic': 'Orthographique',
+    'cameraProjection.hint':
+      "Changer de projection recharge la carte (la projection ne se choisit qu'à la création de la vue).",
     'accuracyCircleStyle.title': 'Style du cercle de précision',
     'accuracyCircleStyle.description':
       'Recolorer le cercle de précision de la position, en direct',

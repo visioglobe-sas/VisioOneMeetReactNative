@@ -73,6 +73,7 @@ Each feature below is a self-contained screen in the app, demonstrating one piec
 - **[Geofencing](docs/features/geofencing.md)** — flag a place as a zone and alert when a simulated tracked position enters or leaves it.
 - **[Custom map server](docs/features/custom-base-url.md)** — point the SDK at a different map server than Visioglobe's default SaaS.
 - **[Custom theme](docs/features/custom-theme.md)** — switch the 3D lighting theme and recolor the SDK's own buttons live.
+- **[Camera projection](docs/features/camera-projection-toggle.md)** — switch between a 3D perspective view and a flat orthographic view (recreates the map, the projection is a view-creation option).
 
 ## Project structure
 

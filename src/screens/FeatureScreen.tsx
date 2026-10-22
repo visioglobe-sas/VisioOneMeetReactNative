@@ -22,6 +22,7 @@ import VisioMapView, {
 import { featureRegistry } from '../features/registry';
 import AccessibleModeOverlay from '../features/AccessibleModeOverlay';
 import AddLocaleOverlay from '../features/AddLocaleOverlay';
+import CameraProjectionOverlay from '../features/CameraProjectionOverlay';
 import CategoryHighlightOverlay from '../features/CategoryHighlightOverlay';
 import ClickableSurfaceOverlay from '../features/ClickableSurfaceOverlay';
 import ComputeNavigationOverlay from '../features/ComputeNavigationOverlay';
@@ -48,7 +49,7 @@ import TrackingFeatureHost, { isTrackingFeatureSlug } from '../features/Tracking
 import UIPartVisibilityOverlay from '../features/UIPartVisibilityOverlay';
 import { useLocale } from '../i18n/useLocale';
 import { RootStackParamList } from '../navigation/RootNavigator';
-import { ClickedPoi, ExploreMode } from './useVisioMap';
+import { CameraProjection, ClickedPoi, ExploreMode } from './useVisioMap';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Feature'>;
 
@@ -102,6 +103,12 @@ const FeatureScreen = ({ route, navigation }: Props) => {
   const [customThemeSelection, setCustomThemeSelection] = React.useState<CustomThemeSelection>(
     DEFAULT_CUSTOM_THEME_SELECTION,
   );
+  // camera-projection-toggle feature: cameraProjection is a createView option only
+  // (view.cameraProjection is read-only, no runtime switch), so selecting the other
+  // projection changes VisioMapView's `key` below -- a full WebView remount, i.e. a
+  // fresh loadVenue + createView({ cameraProjection }) -- same idiom as custom-base-url.
+  // See docs/features/camera-projection-toggle.md.
+  const [cameraProjection, setCameraProjection] = React.useState<CameraProjection>('perspective');
 
   React.useEffect(() => {
     if (feature) {
@@ -123,6 +130,8 @@ const FeatureScreen = ({ route, navigation }: Props) => {
     textLabelCreateResult: TextLabelCreateResult | null,
     htmlMarker: { createResult: HtmlMarkerCreateResult | null; tap: HtmlMarkerTap | null },
     themes: string[],
+    status: 'loading' | 'ready' | 'error',
+    reportedCameraProjection: CameraProjection | null,
   ) => {
     switch (slug) {
       case 'reset-view':
@@ -263,6 +272,15 @@ const FeatureScreen = ({ route, navigation }: Props) => {
             setAccentColors={bridge.setAccentColors}
           />
         );
+      case 'camera-projection-toggle':
+        return (
+          <CameraProjectionOverlay
+            reportedProjection={reportedCameraProjection}
+            requestedProjection={cameraProjection}
+            loading={status === 'loading'}
+            onSelect={setCameraProjection}
+          />
+        );
       default:
         return null;
     }
@@ -280,12 +298,19 @@ const FeatureScreen = ({ route, navigation }: Props) => {
 
   return (
     <VisioMapView
-      key={slug === 'custom-base-url' ? `custom-base-url-${customBaseUrlReloadKey}` : slug}
+      key={
+        slug === 'custom-base-url'
+          ? `custom-base-url-${customBaseUrlReloadKey}`
+          : slug === 'camera-projection-toggle'
+            ? `camera-projection-toggle-${cameraProjection}`
+            : slug
+      }
       mapHash={slug === 'custom-data' ? CUSTOM_DATA_MAP_HASH : undefined}
       baseURL={slug === 'custom-base-url' ? customBaseUrl : undefined}
       // custom-theme: themes only change the scene lights, which are only rendered with
       // shadows enabled -- on for this screen only, see docs/features/custom-theme.md.
       enableShadows={slug === 'custom-theme' ? true : undefined}
+      cameraProjection={slug === 'camera-projection-toggle' ? cameraProjection : undefined}
       onPoiClick={handlePoiClick}
       renderOverlay={(
         bridge,
@@ -305,6 +330,7 @@ const FeatureScreen = ({ route, navigation }: Props) => {
         htmlMarker,
         themes,
         cameraLockOnPosition,
+        reportedCameraProjection,
       ) => (
         <>
           {slug === 'native-ui-replacement' ? (
@@ -352,6 +378,8 @@ const FeatureScreen = ({ route, navigation }: Props) => {
                 textLabelCreateResult,
                 htmlMarker,
                 themes,
+                status,
+                reportedCameraProjection,
               )}
             </BottomSheet>
           )}

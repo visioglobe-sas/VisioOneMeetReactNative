@@ -4,7 +4,14 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { WebView, WebViewMessageEvent } from 'react-native-webview';
 
 import { visioOneHtml } from '../assets/visioOneHtml';
-import { ClickedPoi, ExploreMode, Position, useVisioMap, VenueBuilding } from '../screens/useVisioMap';
+import {
+  CameraProjection,
+  ClickedPoi,
+  ExploreMode,
+  Position,
+  useVisioMap,
+  VenueBuilding,
+} from '../screens/useVisioMap';
 
 // Replace with a hash of your own venue from https://my.visioglobe.com
 // This one points at a Visioglobe demo venue.
@@ -186,6 +193,12 @@ interface VisioMapViewProps {
   // Every other screen leaves it unset (SDK default, cheaper). See
   // docs/features/custom-theme.md.
   enableShadows?: boolean;
+  // camera-projection-toggle feature: createView's cameraProjection option, for that
+  // screen only. Creation-time only (view.cameraProjection is read-only), so
+  // FeatureScreen switches it by changing VisioMapView's `key` (full WebView remount,
+  // hence a fresh loadVenue + createView), same as custom-base-url. See
+  // docs/features/camera-projection-toggle.md.
+  cameraProjection?: CameraProjection;
   renderOverlay?: (
     bridge: VisioMapBridge,
     status: Status,
@@ -225,6 +238,9 @@ interface VisioMapViewProps {
     // forwarded from the SDK's trackingon/trackingoff/trackingchanged events -- see
     // docs/features/camera-lock-on-position.md.
     cameraLockOnPosition: boolean,
+    // camera-projection-toggle feature: view.cameraProjection as reported by the
+    // WebView's 'ready' message -- null until the view exists.
+    cameraProjection: CameraProjection | null,
   ) => React.ReactNode;
   // Fired from the WebView's onMessage handler (an event, not during render) so the
   // parent can safely react -- e.g. open its own controls -- without the "setState
@@ -236,6 +252,7 @@ const VisioMapView = ({
   mapHash,
   baseURL,
   enableShadows,
+  cameraProjection,
   renderOverlay,
   onPoiClick,
 }: VisioMapViewProps) => {
@@ -279,8 +296,15 @@ const VisioMapView = ({
   // The SDK's lock is false until tracking starts -- mirrored here until the first
   // 'camera_lock_changed' message reports the real value.
   const [cameraLockOnPosition, setCameraLockOnPosition] = React.useState(false);
+  const [reportedCameraProjection, setReportedCameraProjection] =
+    React.useState<CameraProjection | null>(null);
 
-  const rawBridge = useVisioMap(mapHash ?? DEMO_MAP_HASH, baseURL, enableShadows);
+  const rawBridge = useVisioMap(
+    mapHash ?? DEMO_MAP_HASH,
+    baseURL,
+    enableShadows,
+    cameraProjection,
+  );
   // Clears the previous answer (resolution or error) as soon as a new POI-resolution
   // request is sent, so the tracking screens never mistake a stale answer for the
   // response to the request they just made (a new Start would otherwise run on the
@@ -309,6 +333,7 @@ const VisioMapView = ({
       });
       setExploreModeState(evt.data?.currentExploreMode ?? 'global');
       setThemes(evt.data?.themes ?? []);
+      setReportedCameraProjection(evt.data?.cameraProjection ?? null);
       // Fetches venue.categories once the venue is loaded -- see the
       // 'get_categories' / 'categories_result' round trip in
       // visioOneHtml.ts/visioOne.html and docs/features/category-highlight.md.
@@ -439,6 +464,7 @@ const VisioMapView = ({
         { createResult: htmlMarkerCreateResult, tap: htmlMarkerTap },
         themes,
         cameraLockOnPosition,
+        reportedCameraProjection,
       )}
     </SafeAreaView>
   );

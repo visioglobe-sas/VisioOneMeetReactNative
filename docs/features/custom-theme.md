@@ -20,13 +20,11 @@ sendMessage({ type: 'setup', data: { hash, baseURL, enableShadows } })
 
 ```js
 // visioOneHtml.ts / visioOne.html
-await visioOne.createView(
-  container,
-  venue,
-  enableShadows === true
-    ? { cameraProjection: 'perspective', enableShadows: true }
-    : { cameraProjection: 'perspective' }
-)
+const viewOptions = { cameraProjection: 'perspective' } // see camera-projection-toggle.md
+if (enableShadows === true) {
+  viewOptions.enableShadows = true
+}
+await visioOne.createView(container, venue, viewOptions)
 ```
 
 The available theme ids are read from the view once it's created and forwarded to React Native with the `ready` message (`view.themes` is a plain string array):

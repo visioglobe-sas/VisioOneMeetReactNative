@@ -74,6 +74,7 @@ Each feature below is a self-contained screen in the app, demonstrating one piec
 - **[Custom map server](docs/features/custom-base-url.md)** — point the SDK at a different map server than Visioglobe's default SaaS.
 - **[Custom theme](docs/features/custom-theme.md)** — switch the 3D lighting theme and recolor the SDK's own buttons live.
 - **[Camera projection](docs/features/camera-projection-toggle.md)** — switch between a 3D perspective view and a flat orthographic view (recreates the map, the projection is a view-creation option).
+- **[Camera showcase](docs/features/camera-showcase-carousel.md)** — automatic camera tour of the map for kiosks and lobby screens, paused by a touch and resumed after 10 s idle.
 
 ## Project structure
 

@@ -173,6 +173,28 @@ export interface GeofenceZone {
   surfaces: Position[][];
 }
 
+// camera-showcase-carousel feature: the tour's state as reported by the WebView page
+// ('camera_carousel_status'), whatever changed it -- the Start/Stop buttons, a touch on
+// the map (pause) or the page's own idle timer (resume). stopIndex is 0-based, -1 when
+// stopped.
+export type CameraCarouselState = 'running' | 'paused' | 'stopped';
+
+export interface CameraCarouselStatus {
+  state: CameraCarouselState;
+  stopIndex: number;
+  stopCount: number;
+  poiId: string | null;
+  resumeAfterMs: number;
+}
+
+const INITIAL_CAMERA_CAROUSEL_STATUS: CameraCarouselStatus = {
+  state: 'stopped',
+  stopIndex: -1,
+  stopCount: 0,
+  poiId: null,
+  resumeAfterMs: 0,
+};
+
 interface VisioMapViewProps {
   // Overrides the shared DEMO_MAP_HASH for this screen only -- e.g. the custom-data
   // feature points at a dedicated, already-published map that actually carries
@@ -241,6 +263,8 @@ interface VisioMapViewProps {
     // camera-projection-toggle feature: view.cameraProjection as reported by the
     // WebView's 'ready' message -- null until the view exists.
     cameraProjection: CameraProjection | null,
+    // camera-showcase-carousel feature: mirror of the WebView page's tour state.
+    cameraCarousel: CameraCarouselStatus,
   ) => React.ReactNode;
   // Fired from the WebView's onMessage handler (an event, not during render) so the
   // parent can safely react -- e.g. open its own controls -- without the "setState
@@ -298,6 +322,9 @@ const VisioMapView = ({
   const [cameraLockOnPosition, setCameraLockOnPosition] = React.useState(false);
   const [reportedCameraProjection, setReportedCameraProjection] =
     React.useState<CameraProjection | null>(null);
+  const [cameraCarousel, setCameraCarousel] = React.useState<CameraCarouselStatus>(
+    INITIAL_CAMERA_CAROUSEL_STATUS,
+  );
 
   const rawBridge = useVisioMap(
     mapHash ?? DEMO_MAP_HASH,
@@ -412,6 +439,8 @@ const VisioMapView = ({
       // it on, a user pan turns it off, allowTracking = false turns it off) -- see the
       // tracking listeners in visioOneHtml.ts/visioOne.html.
       setCameraLockOnPosition(evt.data?.locked === true);
+    } else if (evt.type === 'camera_carousel_status') {
+      setCameraCarousel(evt.data);
     }
   };
 
@@ -465,6 +494,7 @@ const VisioMapView = ({
         themes,
         cameraLockOnPosition,
         reportedCameraProjection,
+        cameraCarousel,
       )}
     </SafeAreaView>
   );

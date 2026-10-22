@@ -28,7 +28,8 @@ export type FeatureSlug =
   | 'geofencing'
   | 'custom-base-url'
   | 'custom-theme'
-  | 'camera-projection-toggle';
+  | 'camera-projection-toggle'
+  | 'camera-showcase-carousel';
 
 export interface FeatureDefinition {
   slug: FeatureSlug;
@@ -176,5 +177,10 @@ export const featureRegistry: FeatureDefinition[] = [
     slug: 'camera-projection-toggle',
     titleKey: 'cameraProjection.title',
     descriptionKey: 'cameraProjection.description',
+  },
+  {
+    slug: 'camera-showcase-carousel',
+    titleKey: 'cameraShowcase.title',
+    descriptionKey: 'cameraShowcase.description',
   },
 ];

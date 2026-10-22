@@ -96,6 +96,14 @@ export const strings = {
     'cameraProjection.orthographic': 'Orthographic',
     'cameraProjection.hint':
       'Switching reloads the map (the projection can only be set when the view is created).',
+    'cameraShowcase.title': 'Camera showcase',
+    'cameraShowcase.description': 'Automatic camera tour of the map, for kiosks and lobby screens',
+    'cameraShowcase.start': 'Start',
+    'cameraShowcase.stop': 'Stop',
+    'cameraShowcase.statusRunning': 'Running — stop {index}/{count}: {poi}',
+    'cameraShowcase.statusPaused': 'Paused — resumes after {seconds} s without touch',
+    'cameraShowcase.statusStopped': 'Stopped',
+    'cameraShowcase.hint': 'Touching the map pauses the tour; it resumes on its own after 10 s.',
     'accuracyCircleStyle.title': 'Accuracy circle style',
     'accuracyCircleStyle.description': "Recolor the tracked position's precision circle, live",
     'accuracyCircleStyle.color': 'Color',
@@ -209,6 +217,15 @@ export const strings = {
     'cameraProjection.orthographic': 'Orthographique',
     'cameraProjection.hint':
       "Changer de projection recharge la carte (la projection ne se choisit qu'à la création de la vue).",
+    'cameraShowcase.title': 'Vitrine caméra',
+    'cameraShowcase.description':
+      "Visite caméra automatique de la carte, pour bornes et écrans d'accueil",
+    'cameraShowcase.start': 'Démarrer',
+    'cameraShowcase.stop': 'Arrêter',
+    'cameraShowcase.statusRunning': 'En cours — étape {index}/{count} : {poi}',
+    'cameraShowcase.statusPaused': 'En pause — reprend après {seconds} s sans toucher',
+    'cameraShowcase.statusStopped': 'Arrêtée',
+    'cameraShowcase.hint': 'Toucher la carte met la visite en pause ; elle reprend seule après 10 s.',
     'accuracyCircleStyle.title': 'Style du cercle de précision',
     'accuracyCircleStyle.description':
       'Recolorer le cercle de précision de la position, en direct',

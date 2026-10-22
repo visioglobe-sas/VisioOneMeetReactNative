@@ -6,6 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import BottomSheet from '../components/BottomSheet';
 import VisioMapView, {
   AddLocaleResult,
+  CameraCarouselStatus,
   CategoryOption,
   CustomDataLookupResult,
   CustomDataRefreshOutcome,
@@ -23,6 +24,7 @@ import { featureRegistry } from '../features/registry';
 import AccessibleModeOverlay from '../features/AccessibleModeOverlay';
 import AddLocaleOverlay from '../features/AddLocaleOverlay';
 import CameraProjectionOverlay from '../features/CameraProjectionOverlay';
+import CameraShowcaseOverlay from '../features/CameraShowcaseOverlay';
 import CategoryHighlightOverlay from '../features/CategoryHighlightOverlay';
 import ClickableSurfaceOverlay from '../features/ClickableSurfaceOverlay';
 import ComputeNavigationOverlay from '../features/ComputeNavigationOverlay';
@@ -132,6 +134,7 @@ const FeatureScreen = ({ route, navigation }: Props) => {
     themes: string[],
     status: 'loading' | 'ready' | 'error',
     reportedCameraProjection: CameraProjection | null,
+    cameraCarousel: CameraCarouselStatus,
   ) => {
     switch (slug) {
       case 'reset-view':
@@ -281,6 +284,17 @@ const FeatureScreen = ({ route, navigation }: Props) => {
             onSelect={setCameraProjection}
           />
         );
+      case 'camera-showcase-carousel':
+        // The tour loop runs in the WebView page (survives this panel closing); the
+        // panel only sends start/stop and displays the status the page reports.
+        return (
+          <CameraShowcaseOverlay
+            status={cameraCarousel}
+            ready={status === 'ready'}
+            onStart={bridge.startCameraCarousel}
+            onStop={bridge.stopCameraCarousel}
+          />
+        );
       default:
         return null;
     }
@@ -331,6 +345,7 @@ const FeatureScreen = ({ route, navigation }: Props) => {
         themes,
         cameraLockOnPosition,
         reportedCameraProjection,
+        cameraCarousel,
       ) => (
         <>
           {slug === 'native-ui-replacement' ? (
@@ -380,6 +395,7 @@ const FeatureScreen = ({ route, navigation }: Props) => {
                 themes,
                 status,
                 reportedCameraProjection,
+                cameraCarousel,
               )}
             </BottomSheet>
           )}

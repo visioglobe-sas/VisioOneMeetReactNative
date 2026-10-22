@@ -502,6 +502,19 @@ export const useVisioMap = (
     sendMessage({ type: 'set_accent_colors', data: colors });
   };
 
+  // camera-showcase-carousel feature: starts/stops the automatic camera tour. The loop
+  // itself (goToFloor + goToPOI per stop, dwell, pause on touch, resume after idle)
+  // runs inside the WebView page, which reports every state change back as
+  // 'camera_carousel_status' -- see VisioMapView.tsx and
+  // docs/features/camera-showcase-carousel.md.
+  const startCameraCarousel = () => {
+    sendMessage({ type: 'start_camera_carousel' });
+  };
+
+  const stopCameraCarousel = () => {
+    sendMessage({ type: 'stop_camera_carousel' });
+  };
+
   return {
     webRef,
     resetMap,
@@ -546,5 +559,7 @@ export const useVisioMap = (
     setGeofenceAlert,
     setTheme,
     setAccentColors,
+    startCameraCarousel,
+    stopCameraCarousel,
   };
 };

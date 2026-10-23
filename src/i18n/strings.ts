@@ -52,11 +52,14 @@ export const strings = {
     'dynamicPoiCrud.title': 'Dynamic POI',
     'dynamicPoiCrud.description':
       'Create, edit and remove a place at runtime, without republishing the map.',
+    'dynamicPoiCrud.defaultLabel': 'Demo POI',
     'iconMarker.title': '3D icon marker',
     'iconMarker.description': 'Place a custom image at a spot on the 3D map',
     'customTextLabel.title': 'Custom text label',
+    'customTextLabel.defaultText': 'Lunch 12:00–14:00',
     'customTextLabel.description': 'Place your own text on the map and restyle it live',
     'htmlOverlayMarker.title': 'HTML overlay marker',
+    'htmlOverlayMarker.defaultText': 'Open now · 12:00–14:00',
     'htmlOverlayMarker.description':
       "Pin a tappable HTML badge on the map that's never hidden by 3D",
     'runtimeLocale.title': 'Runtime language',
@@ -174,12 +177,15 @@ export const strings = {
     'dynamicPoiCrud.title': 'POI dynamique',
     'dynamicPoiCrud.description':
       'Crée, modifie et supprime un lieu à la volée, sans republier la carte.',
+    'dynamicPoiCrud.defaultLabel': 'POI de démo',
     'iconMarker.title': 'Icône 3D positionnée',
     'iconMarker.description': 'Placer une image personnalisée à un endroit de la carte 3D',
     'customTextLabel.title': 'Label texte personnalisé',
+    'customTextLabel.defaultText': 'Déjeuner 12:00–14:00',
     'customTextLabel.description':
       'Placez votre propre texte sur la carte et modifiez son style en direct',
     'htmlOverlayMarker.title': 'Marqueur HTML superposé',
+    'htmlOverlayMarker.defaultText': 'Ouvert · 12:00–14:00',
     'htmlOverlayMarker.description':
       'Épinglez sur la carte un badge HTML cliquable, jamais masqué par la 3D',
     'runtimeLocale.title': 'Langue à la volée',

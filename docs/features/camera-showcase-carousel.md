@@ -28,15 +28,15 @@ interface AnimationPromise extends Promise<void> {
 
 Each hop is `goToFloor` on the place's floor, then `goToPOI` with a heading that turns by 90° per stop and a 30° pitch, then a 3 s dwell. Touching the map pauses the tour immediately so the user's gesture wins; it resumes on its own from the next stop after 10 s without touch.
 
-The demo tours 4 places of the demo venue, across 3 buildings: `B4-UL00-ID0009`, `B1-LL01-ID0152`, `B3-UL00-ID0064`, `B4-UL03-ID0015`.
+The demo tours 4 places of the demo venue, across 3 buildings: `B4-UL00-ID0009`, `B1-LL01-ID0152`, `B3-UL00-ID0064`, `B4-UL03-ID0015`. The list is `CAROUSEL_STOP_IDS` in `src/demoMap.ts`, sent to the page with the start message.
 
 ## SDK usage
 
 The whole loop runs inside the WebView page, next to the `view` it animates. React Native only starts and stops it:
 
 ```ts
-// useVisioMap.ts
-sendMessage({ type: 'start_camera_carousel' });
+// useVisioMap.ts -- CAROUSEL_STOP_IDS comes from src/demoMap.ts
+sendMessage({ type: 'start_camera_carousel', data: { stopIds: CAROUSEL_STOP_IDS } });
 sendMessage({ type: 'stop_camera_carousel' });
 ```
 
@@ -59,7 +59,7 @@ const runCarouselLoop = async (runId, startIndex) => {
   const isCurrentRun = () => runId === carouselRunId && carouselState === 'running'
   let index = startIndex
   while (isCurrentRun()) {
-    const poi = venue.pois.find((p) => p.id === CAROUSEL_STOP_IDS[index])
+    const poi = venue.pois.find((p) => p.id === carouselStopIds[index])
     carouselStopIndex = index
     sendCarouselStatus()
     if (poi) {
@@ -78,7 +78,7 @@ const runCarouselLoop = async (runId, startIndex) => {
       if (poiAnimation.isCanceled) { pauseCarousel(false); return }
     }
     await new Promise((resolve) => setTimeout(resolve, 3000)) // dwell
-    index = (index + 1) % CAROUSEL_STOP_IDS.length
+    index = (index + 1) % carouselStopIds.length
   }
 }
 ```
@@ -102,7 +102,7 @@ view.goToViewpoint(
   { duration: 0, orientation: { heading: 'initial', pitch: 'initial' } }
 )
 carouselResumeTimer = setTimeout(
-  () => startCarousel((carouselStopIndex + 1) % CAROUSEL_STOP_IDS.length),
+  () => startCarousel((carouselStopIndex + 1) % carouselStopIds.length),
   10000
 )
 ```

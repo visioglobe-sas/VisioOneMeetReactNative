@@ -2,6 +2,7 @@ import * as React from 'react';
 import { StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
 import { IconMarkerCreateResult, VisioMapBridge } from '../components/VisioMapView';
+import { ANCHOR_POI_ID } from '../demoMap';
 import { ImageOrientationType } from '../screens/useVisioMap';
 
 interface Props {
@@ -15,9 +16,6 @@ interface Props {
 // url accepts data: URLs as well as regular web URLs.
 const ICON_DATA_URL =
   'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAGAAAABgCAYAAADimHc4AAACBklEQVR42u3dWW4CMRBFUVbLarOn5JsIqRlsv6FuSfmE0O+IwS7bfbtR1GXdf34/+qMOhg2KcehgGIU+HsMt+DEQ7sHXQqQFXwWRHn4sQkvwkRCt4dsjtAdvDTEtfCuEqeFbIAgv/H/NQzAKfx6CYfhzEIzD70cQf+FFAGxFAEAIEBJ+J4LB7+04gKUIAAgBTEackQBfI4SG34MAgBDAaMIrHuAjBACEAGZTvhUAbyEAIAQwbHrUALyEAAAAcwGMe68V4V8iHAjJHeAI7mqAb0oNcOK1vwYgCP+di1E/334EMcDVRSmewx5gd60COPk6K94Bzy7u1OP4CAqrNQCCQdJ4gAcE0Uh1dPgrASYirB0Ri+dsRoa/A6AdYt+ckNksZn3wpwDSIc7NiprP69cFrwJwBdH3BUo6YLlN+qI2ZGZ7EgAA+AgqD99/ueKA8K0Q0veAxSMk7v+tQnABULQrvQZhQgBVv9gCQb00cXVoUQgOa0MBEALsCitvFlSEMBpAvT9gd0g5TRgATAGMe8Ru/ydul+TJULIBNiGMBlDvlFcE4rkGSISgCsICwOG0FGUIuQDCdaM121ydTs1S/wrJDP8gQN3pu44nJzo1RXLC56h6Ts4FAAROUCd8ELiLBuGDwJ2UCB8E7qhH8BMR4orgQZgdfjJEbRE8ELODd8KgBBjUQRSKuqo/fm7G7BpJ/VcAAAAASUVORK5CYII=';
-
-// A POI of the shared demo map known to carry a usable (label) position to copy.
-const DEFAULT_ANCHOR_POI_ID = 'B4-UL00-ID0009';
 
 // Only one icon is placed at a time in this demo, always under this id -- the live SDK
 // Image object is tracked on the WebView side, keyed by it.
@@ -49,7 +47,7 @@ const IconMarkerOverlay = ({
   removeIconMarker,
   createResult,
 }: Props) => {
-  const [anchorId, setAnchorId] = React.useState(DEFAULT_ANCHOR_POI_ID);
+  const [anchorId, setAnchorId] = React.useState(ANCHOR_POI_ID);
   const [orientation, setOrientation] = React.useState<ImageOrientationType>('facing');
   // Anchor POI id the icon is currently placed on, null when nothing is placed.
   const [placedOn, setPlacedOn] = React.useState<string | null>(null);

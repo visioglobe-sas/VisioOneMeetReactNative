@@ -2,6 +2,7 @@ import * as React from 'react';
 import { StyleSheet, Switch, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
 import { VisioMapBridge } from '../components/VisioMapView';
+import { EXCLUDE_MODALITIES_FROM, EXCLUDE_MODALITIES_TO } from '../demoMap';
 
 // navigation-exclude-modalities feature: the segment-particularity attribute string
 // that excludes the elevator on this demo venue. The SDK's own JSDoc comment on
@@ -16,8 +17,8 @@ interface Props {
 }
 
 const NavigationExcludeModalitiesOverlay = ({ startItinerary }: Props) => {
-  const [origin, setOrigin] = React.useState('');
-  const [destination, setDestination] = React.useState('');
+  const [origin, setOrigin] = React.useState(EXCLUDE_MODALITIES_FROM);
+  const [destination, setDestination] = React.useState(EXCLUDE_MODALITIES_TO);
   // Read only when Itinerary is pressed -- toggling it alone doesn't recompute
   // whatever route is already on screen.
   const [avoidElevator, setAvoidElevator] = React.useState(false);

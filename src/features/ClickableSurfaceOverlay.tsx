@@ -2,13 +2,14 @@ import * as React from 'react';
 import { StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
 import { VisioMapBridge } from '../components/VisioMapView';
+import { CLICKABLE_SURFACE_POI_ID } from '../demoMap';
 
 interface Props {
   setSurfaceInteractive: VisioMapBridge['setSurfaceInteractive'];
 }
 
 const ClickableSurfaceOverlay = ({ setSurfaceInteractive }: Props) => {
-  const [placeId, setPlaceId] = React.useState('');
+  const [placeId, setPlaceId] = React.useState(CLICKABLE_SURFACE_POI_ID);
 
   return (
     <View style={styles.row}>

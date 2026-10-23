@@ -2,6 +2,8 @@ import * as React from 'react';
 import { StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
 import { TextLabelCreateResult, VisioMapBridge } from '../components/VisioMapView';
+import { ANCHOR_POI_ID } from '../demoMap';
+import { useLocale } from '../i18n/useLocale';
 
 interface Props {
   createTextLabel: VisioMapBridge['createTextLabel'];
@@ -9,11 +11,6 @@ interface Props {
   removeTextLabel: VisioMapBridge['removeTextLabel'];
   createResult: TextLabelCreateResult | null;
 }
-
-// A POI of the shared demo map (a restaurant, ground floor of building B4) known to
-// carry a usable (label) position to copy.
-const DEFAULT_ANCHOR_POI_ID = 'B4-UL00-ID0009';
-const DEFAULT_TEXT = 'Lunch 12:00–14:00';
 
 // Only one label is placed at a time in this demo, always under this id -- the live
 // SDK Label object is tracked on the WebView side, keyed by it.
@@ -57,8 +54,9 @@ const reasonMessage = (result: TextLabelCreateResult): string => {
 };
 
 const TextLabelOverlay = ({ createTextLabel, updateTextLabel, removeTextLabel, createResult }: Props) => {
-  const [anchorId, setAnchorId] = React.useState(DEFAULT_ANCHOR_POI_ID);
-  const [text, setText] = React.useState(DEFAULT_TEXT);
+  const { t } = useLocale();
+  const [anchorId, setAnchorId] = React.useState(ANCHOR_POI_ID);
+  const [text, setText] = React.useState(() => t('customTextLabel.defaultText'));
   const [color, setColor] = React.useState(COLORS[0].value);
   const [size, setSize] = React.useState<SizeKey>('medium');
   const [rotation, setRotation] = React.useState(0);

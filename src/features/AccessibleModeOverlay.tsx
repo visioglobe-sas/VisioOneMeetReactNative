@@ -2,14 +2,15 @@ import * as React from 'react';
 import { StyleSheet, Switch, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
 import { VisioMapBridge } from '../components/VisioMapView';
+import { ACCESSIBLE_FROM, ACCESSIBLE_TO } from '../demoMap';
 
 interface Props {
   startItinerary: VisioMapBridge['startItinerary'];
 }
 
 const AccessibleModeOverlay = ({ startItinerary }: Props) => {
-  const [origin, setOrigin] = React.useState('');
-  const [destination, setDestination] = React.useState('');
+  const [origin, setOrigin] = React.useState(ACCESSIBLE_FROM);
+  const [destination, setDestination] = React.useState(ACCESSIBLE_TO);
   // Read only when Itinerary is pressed -- toggling it alone doesn't recompute
   // whatever route is already on screen.
   const [accessibleRoute, setAccessibleRoute] = React.useState(false);

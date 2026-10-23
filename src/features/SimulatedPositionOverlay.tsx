@@ -48,7 +48,7 @@ const SimulatedPositionOverlay = ({
     setCameraLockOnPosition?.(locked);
   };
 
-  const startDisabled = awaitingResolution || (!originId.trim() && !destinationId.trim());
+  const startDisabled = awaitingResolution || (!originId.trim() || !destinationId.trim());
 
   return (
     <View style={styles.column}>

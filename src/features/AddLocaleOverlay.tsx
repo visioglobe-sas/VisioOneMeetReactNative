@@ -12,7 +12,7 @@ interface Props {
 }
 
 // The same fixed dictionary the WebView side hardcodes in addSpanishLocale
-// (visioOneHtml.ts/visioOne.html) -- kept here only for display labels/order, not sent
+// (visioOne.html) -- kept here only for display labels/order, not sent
 // over the bridge. 'search-for-anything' is one of the SDK's own predefined UI keys
 // (see addLocale's doc comment in Translator.ts); 'welcome-message' is a plain custom
 // key the SDK gives no built-in meaning to.

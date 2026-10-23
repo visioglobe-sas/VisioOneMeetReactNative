@@ -25,7 +25,7 @@ type Status = 'loading' | 'ready' | 'error';
 export type VisioMapBridge = ReturnType<typeof useVisioMap>;
 
 // Forwarded from the WebView's 'ready'/'floor_changed' messages -- see the buildings
-// mapping and the 'currentfloorchanged' listener in visioOneHtml.ts/visioOne.html.
+// mapping and the 'currentfloorchanged' listener in visioOne.html.
 export interface VenueLayoutInfo {
   buildings: VenueBuilding[];
   currentBuildingId?: string;
@@ -143,7 +143,7 @@ export interface HtmlMarkerTap {
 
 // Response to the 'get_locales' request -- venue.translator.allLocales, with 'default'
 // already filtered out on the WebView side (it's a byte-identical duplicate of 'fr' on
-// this repo's shared demo map, see getLocales in visioOneHtml.ts/visioOne.html and
+// this repo's shared demo map, see getLocales in visioOne.html and
 // docs/features/runtime-locale.md), plus venue.currentLocale so the panel can highlight
 // the active one. Both start empty/null until the venue is ready.
 export interface LocaleInfo {
@@ -372,11 +372,11 @@ const VisioMapView = ({
       setReportedCameraProjection(evt.data?.cameraProjection ?? null);
       // Fetches venue.categories once the venue is loaded -- see the
       // 'get_categories' / 'categories_result' round trip in
-      // visioOneHtml.ts/visioOne.html and docs/features/category-highlight.md.
+      // visioOne.html and docs/features/category-highlight.md.
       getCategories();
       // Fetches the venue's available locales + the current one once the venue is
       // loaded -- see the 'get_locales' / 'locales_result' round trip in
-      // visioOneHtml.ts/visioOne.html and docs/features/runtime-locale.md.
+      // visioOne.html and docs/features/runtime-locale.md.
       getLocales();
     } else if (evt.type === 'error') {
       setStatus('error');
@@ -391,7 +391,7 @@ const VisioMapView = ({
     } else if (evt.type === 'floor_changed') {
       // Also fires when the SDK's own default floor-selector widget (not this app's UI)
       // is the one driving the change -- see the 'currentfloorchanged' listener in
-      // visioOneHtml.ts/visioOne.html. Keeps the app's own selector highlight in sync either way.
+      // visioOne.html. Keeps the app's own selector highlight in sync either way.
       setVenueLayout((prev) => ({
         ...prev,
         currentBuildingId: evt.data.buildingId,
@@ -431,7 +431,7 @@ const VisioMapView = ({
       // Also fires when the mode changes from direct camera/map interaction (e.g. a
       // click in 'building' mode auto-switches to 'floor') rather than the app's own
       // bridge.setExploreMode call -- see the 'exploremodechanged' listener in
-      // visioOneHtml.ts/visioOne.html and docs/features/explore-mode.md.
+      // visioOne.html and docs/features/explore-mode.md.
       setExploreModeState(evt.data?.currentExploreMode ?? 'global');
     } else if (evt.type === 'geofence_zone_resolved') {
       setGeofenceZoneError(null);
@@ -450,7 +450,7 @@ const VisioMapView = ({
     } else if (evt.type === 'camera_lock_changed') {
       // Also fires when the SDK changes the lock by itself (allowTracking = true turns
       // it on, a user pan turns it off, allowTracking = false turns it off) -- see the
-      // tracking listeners in visioOneHtml.ts/visioOne.html.
+      // tracking listeners in visioOne.html.
       setCameraLockOnPosition(evt.data?.locked === true);
     } else if (evt.type === 'camera_carousel_status') {
       setCameraCarousel(evt.data);

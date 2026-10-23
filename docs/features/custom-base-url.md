@@ -9,7 +9,7 @@ Points the SDK at a different map server than Visioglobe's default SaaS, via `Lo
 `baseURL` is a `loadVenue` option, not a live property of an already-loaded venue/view — changing it means reloading the venue from scratch:
 
 ```js
-// visioOneHtml.ts / visioOne.html
+// src/assets/visioOne.html
 const loadOptions = trimmedBaseURL
   ? { vg_maphash: venueHash, baseURL: trimmedBaseURL }
   : { vg_maphash: venueHash } // omitted entirely -> SDK falls back to its own default
@@ -24,7 +24,7 @@ sendMessage({ type: 'setup', data: { hash, baseURL } })
 ```
 
 ```ts
-// visioOneHtml.ts (WebView message handler)
+// src/assets/visioOne.html (WebView message handler)
 case 'setup':
   setup(evt.data.hash, evt.data.baseURL)
   break

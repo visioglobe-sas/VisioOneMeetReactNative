@@ -16,7 +16,7 @@ const setSurfaceInteractive = (placeId: string, interactive: boolean) => {
 ```
 
 ```js
-// visioOneHtml.ts / visioOne.html (kept in sync by hand)
+// src/assets/visioOne.html
 const setSurfaceInteractive = (placeId, interactive) => {
   if (!venue) {
     return

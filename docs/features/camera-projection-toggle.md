@@ -25,7 +25,7 @@ sendMessage({
 The WebView page forwards it to `createView`, then reads the projection back from the view and reports it with the `ready` message:
 
 ```js
-// visioOneHtml.ts / visioOne.html (kept in sync by hand)
+// src/assets/visioOne.html
 venue = await visioOne.loadVenue({ vg_maphash: venueHash }, container)
 const viewOptions = {
   cameraProjection: cameraProjection === 'orthographic' ? 'orthographic' : 'perspective',

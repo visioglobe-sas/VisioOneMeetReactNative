@@ -42,7 +42,7 @@ removeHtmlMarker('html-overlay-marker');
 ```
 
 ```js
-// visioOneHtml.ts / visioOne.html (kept in sync by hand)
+// src/assets/visioOne.html
 
 // Shared anchor-position lookup: first label of the POI, else its first marker.
 // excludeMarker skips the badge we already attached to that POI (see "Things to know").

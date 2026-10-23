@@ -52,7 +52,7 @@ and mirrors the state the page reports on every change (Start/Stop, a touch on t
 
 Keeping the loop in the page means it does not depend on any React component staying mounted (it keeps running while the control panel is closed), there is only ever one loop, and it ends with the WebView when the screen is left.
 
-The loop, in the page (`visioOneHtml.ts` / `visioOne.html`, kept in sync by hand). A run id, bumped by every start/pause/stop, guarantees an older loop never continues after a newer action:
+The loop, in the page (`src/assets/visioOne.html`). A run id, bumped by every start/pause/stop, guarantees an older loop never continues after a newer action:
 
 ```js
 const runCarouselLoop = async (runId, startIndex) => {

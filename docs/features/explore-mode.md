@@ -16,7 +16,7 @@ const setExploreMode = (mode: ExploreMode) => {
 ```
 
 ```js
-// visioOneHtml.ts / visioOne.html
+// src/assets/visioOne.html
 const setExploreMode = (mode) => {
   if (view) {
     view.currentExploreMode = mode
@@ -29,7 +29,7 @@ const setExploreMode = (mode) => {
 The mode also changes on its own from direct camera/map interaction (not just from this app's calls) — e.g. clicking while in `'building'` mode auto-switches to `'floor'` (see "Things to know" below). The app listens for `'exploremodechanged'` to stay in sync with that:
 
 ```js
-// visioOneHtml.ts / visioOne.html, registered once on the View right after createView()
+// src/assets/visioOne.html, registered once on the View right after createView()
 v.addEventListener('exploremodechanged', (event) => {
   sendToNative({
     type: 'explore_mode_changed',

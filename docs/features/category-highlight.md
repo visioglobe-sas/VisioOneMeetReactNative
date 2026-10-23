@@ -26,7 +26,7 @@ const clearCategoryHighlight = () => {
 ```
 
 ```js
-// visioOneHtml.ts / visioOne.html (kept in sync by hand)
+// src/assets/visioOne.html
 const getCategories = () => {
   if (!venue) {
     sendToNative({ type: 'categories_result', data: { categories: [] } })

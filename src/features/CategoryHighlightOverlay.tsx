@@ -13,7 +13,7 @@ interface Props {
 // locally (it's the only thing driving the highlight, so no round trip is needed
 // just to know which chip is selected) -- the WebView side separately guarantees
 // the previous category's surfaces are reverted before the new one is applied, see
-// highlightCategory in visioOneHtml.ts/visioOne.html.
+// highlightCategory in visioOne.html.
 const CategoryHighlightOverlay = ({ categories, highlightCategory, clearCategoryHighlight }: Props) => {
   const [selectedCategoryId, setSelectedCategoryId] = React.useState<string | null>(null);
 

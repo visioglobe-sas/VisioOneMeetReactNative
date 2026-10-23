@@ -14,7 +14,7 @@ interface Props {
 
 // Only one dynamically-created POI is tracked at a time -- the simplest demo state.
 // The live SDK POI/Label objects only exist on the WebView side (see
-// visioOneHtml.ts/visioOne.html); this overlay only tracks the display id/text it
+// visioOne.html); this overlay only tracks the display id/text it
 // gets back over the bridge. See docs/features/dynamic-poi-crud.md.
 interface TrackedPoi {
   id: string;

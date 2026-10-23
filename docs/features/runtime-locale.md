@@ -22,7 +22,7 @@ const setLocale = (locale: string) => {
 ```
 
 ```js
-// visioOneHtml.ts / visioOne.html (kept in sync by hand)
+// src/assets/visioOne.html
 const getLocales = () => {
   if (!venue) {
     sendToNative({ type: 'locales_result', data: { locales: [], currentLocale: null } })

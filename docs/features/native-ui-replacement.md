@@ -16,7 +16,7 @@ const setUIPartVisible = (uiPart: UIPart, isVisible: boolean) => {
 ```
 
 ```js
-// visioOneHtml.ts / visioOne.html (unchanged — same handler as ui-part-visibility)
+// src/assets/visioOne.html (unchanged — same handler as ui-part-visibility)
 const setUIPartVisible = (uiPart, isVisible) => {
   if (view) {
     view.setUIPartVisible(uiPart, isVisible)

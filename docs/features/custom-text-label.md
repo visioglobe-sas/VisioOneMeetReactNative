@@ -56,7 +56,7 @@ removeTextLabel('custom-text-label');
 ```
 
 ```js
-// visioOneHtml.ts / visioOne.html (kept in sync by hand)
+// src/assets/visioOne.html
 
 // Shared with Dynamic POI and 3D icon marker: resolves an anchor POI id to the POI plus
 // a WGS84 position copied from its first label, or else its first marker. excludeLabel

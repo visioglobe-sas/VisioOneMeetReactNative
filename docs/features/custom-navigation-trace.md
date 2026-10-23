@@ -22,7 +22,7 @@ const updateNavigationTrace = (style: NavigationTraceStyle) => {
 ```
 
 ```js
-// visioOneHtml.ts / visioOne.html (kept in sync by hand)
+// src/assets/visioOne.html
 let currentNavigationTrace = null
 
 const startItinerary = (origin, destination, isAccessible) => {

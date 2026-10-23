@@ -51,7 +51,7 @@ createIconMarker('icon-marker', 'B4-UL00-ID0009', {
 ```
 
 ```js
-// visioOneHtml.ts / visioOne.html (kept in sync by hand)
+// src/assets/visioOne.html
 
 // Shared with the Dynamic POI feature: resolves an anchor POI id to the POI plus a
 // WGS84 position copied from its first label, or else its first marker.

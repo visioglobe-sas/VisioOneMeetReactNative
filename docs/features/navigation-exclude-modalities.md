@@ -22,7 +22,7 @@ const startItinerary = (
 ```
 
 ```js
-// visioOneHtml.ts / visioOne.html (kept in sync by hand)
+// src/assets/visioOne.html
 const startItinerary = (origin, destination, isAccessible, excludedAttributes) => {
   const navigation = venue.computeNavigation({
     origin,

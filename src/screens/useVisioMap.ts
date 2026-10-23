@@ -78,7 +78,7 @@ export type TextLabelUpdate =
   | { width: number; height: number };
 
 // Mirrors the plain object shape sent from the WebView on 'poi_click' -- see the
-// poiclick handler in visioOneHtml.ts/visioOne.html. Not the live SDK POI type:
+// poiclick handler in visioOne.html. Not the live SDK POI type:
 // only serializable fields survive the WebView postMessage boundary.
 export interface ClickedPoi {
   id: string;
@@ -88,7 +88,7 @@ export interface ClickedPoi {
 }
 
 // Mirrors the plain object shape sent from the WebView in the 'ready' message's
-// data.buildings -- see the buildings mapping in visioOneHtml.ts/visioOne.html, built from
+// data.buildings -- see the buildings mapping in visioOne.html, built from
 // venue.venueLayout.buildings and resolved through venue.translator so labels match
 // whatever the SDK's own default floor-selector widget displays.
 export interface VenueFloor {
@@ -290,7 +290,7 @@ export const useVisioMap = (
   // Makes every surface of the given POI clickable (or not): once isInteractive is
   // true, the SDK itself swaps the surface's displayed color on hover/tap using
   // hoverColor/selectionColor -- no click listener needed on the app side for that
-  // part. See setSurfaceInteractive in visioOneHtml.ts/visioOne.html.
+  // part. See setSurfaceInteractive in visioOne.html.
   const setSurfaceInteractive = (placeId: string, interactive: boolean) => {
     sendMessage({
       type: 'set_surface_interactive',
@@ -327,7 +327,7 @@ export const useVisioMap = (
   // Highlights every POI carrying this category id by recoloring its surfaces --
   // fire-and-forget, no response expected. Reverting any previously-highlighted
   // category first (so only one is ever highlighted at a time) happens on the
-  // WebView side, see highlightCategory in visioOneHtml.ts/visioOne.html.
+  // WebView side, see highlightCategory in visioOne.html.
   const highlightCategory = (categoryId: string) => {
     sendMessage({
       type: 'highlight_category',

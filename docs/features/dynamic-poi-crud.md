@@ -35,7 +35,7 @@ const removeDynamicPoi = () => {
 ```
 
 ```js
-// visioOneHtml.ts / visioOne.html (kept in sync by hand)
+// src/assets/visioOne.html
 // Only one dynamically-created POI/Label pair is tracked at a time (this demo's own
 // choice) -- the live SDK objects only exist here, native only holds the display
 // id/text it gets back over the bridge.

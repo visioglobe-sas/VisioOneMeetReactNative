@@ -32,7 +32,7 @@ const getPoiCustomData = (placeId: string) => {
 ```
 
 ```js
-// visioOneHtml.ts / visioOne.html (kept in sync by hand)
+// src/assets/visioOne.html
 const refreshCustomData = async () => {
   if (!venue) {
     return

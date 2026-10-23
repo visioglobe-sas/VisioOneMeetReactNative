@@ -18,7 +18,7 @@ sendMessage({ type: 'set_camera_lock_on_position', data: { locked } }) // locked
 ```
 
 ```js
-// visioOneHtml.ts / visioOne.html (WebView message handler)
+// src/assets/visioOne.html (WebView message handler)
 case 'set_camera_lock_on_position':
   view.lockCameraPositionOnTracking = evt.data.locked
   break
@@ -27,7 +27,7 @@ case 'set_camera_lock_on_position':
 The toggle doesn't keep its own copy of the value: it displays the SDK's state, because the SDK changes the lock by itself (see "Things to know"). Right after `createView`, the page subscribes once to the three tracking events and forwards the current value to React Native. The events carry no lock value, so it's read from the view inside the handler:
 
 ```js
-// visioOneHtml.ts / visioOne.html, in the createView(...).then((v) => { ... }) callback
+// src/assets/visioOne.html, in the createView(...).then((v) => { ... }) callback
 const sendCameraLockState = () => {
   sendToNative({
     type: 'camera_lock_changed',
@@ -44,7 +44,7 @@ On the React Native side, `camera_lock_changed` updates the state the toggle dis
 Tracking itself is turned on once, right before the first injected position, and never again on later updates:
 
 ```js
-// visioOneHtml.ts / visioOne.html
+// src/assets/visioOne.html
 const injectTrackedPosition = (position, precisionCircleRadius) => {
   if (!view.allowTracking) {
     view.allowTracking = true
@@ -52,8 +52,6 @@ const injectTrackedPosition = (position, precisionCircleRadius) => {
   view.injectTrackedPosition({ position, precisionCircleRadius })
 }
 ```
-
-(`visioOneHtml.ts` and `visioOne.html` hold the same page and are kept in sync by hand.)
 
 ## Things to know
 

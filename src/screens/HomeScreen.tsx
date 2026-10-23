@@ -1,13 +1,13 @@
 import * as React from 'react';
 import { FlatList, Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { SafeAreaView } from 'react-native-safe-area-context';
+
+import { displayName } from '../../app.json';
 
 import { featureRegistry } from '../features/registry';
 import { useLocale } from '../i18n/useLocale';
 import { RootStackParamList } from '../navigation/RootNavigator';
-
-// Kept in sync with app.json/package.json's "displayName".
-const APP_DISPLAY_NAME = 'VisioOneMeetRN';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Home'>;
 
@@ -15,10 +15,10 @@ const HomeScreen = ({ navigation }: Props) => {
   const { t } = useLocale();
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
       <View style={styles.header}>
         <Image source={require('../assets/appIcon.png')} style={styles.headerIcon} />
-        <Text style={styles.headerTitle}>{APP_DISPLAY_NAME} by VisioGlobe</Text>
+        <Text style={styles.headerTitle}>{t('home.header', { app: displayName })}</Text>
       </View>
       <FlatList
         data={featureRegistry}
@@ -32,7 +32,7 @@ const HomeScreen = ({ navigation }: Props) => {
           </TouchableOpacity>
         )}
       />
-    </View>
+    </SafeAreaView>
   );
 };
 

@@ -1,24 +1,26 @@
 import * as React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
+import ColorChips from '../components/ColorChips';
 import { VisioMapBridge } from '../components/VisioMapView';
+import { StringKey } from '../i18n/strings';
 import { useLocale } from '../i18n/useLocale';
 
 // The SDK's own default scene theme -- there is no current-theme getter, so the
 // selection is tracked app-side starting from this value.
-export const DEFAULT_THEME = 'day';
+const DEFAULT_THEME = 'day';
 
-const ACCENT_COLORS: { value: string; label: string }[] = [
-  { value: '#0094F0', label: 'Blue' },
-  { value: '#E53935', label: 'Red' },
-  { value: '#43A047', label: 'Green' },
-  { value: '#8E24AA', label: 'Purple' },
+const ACCENT_COLORS: { value: string; labelKey: StringKey }[] = [
+  { value: '#0094F0', labelKey: 'color.blue' },
+  { value: '#E53935', labelKey: 'color.red' },
+  { value: '#43A047', labelKey: 'color.green' },
+  { value: '#8E24AA', labelKey: 'color.purple' },
 ];
 
-const TEXT_ACCENT_COLORS: { value: string; label: string }[] = [
-  { value: '#FFFFFF', label: 'White' },
-  { value: '#FFEB3B', label: 'Yellow' },
-  { value: '#212121', label: 'Black' },
+const TEXT_ACCENT_COLORS: { value: string; labelKey: StringKey }[] = [
+  { value: '#FFFFFF', labelKey: 'color.white' },
+  { value: '#FFEB3B', labelKey: 'color.yellow' },
+  { value: '#212121', labelKey: 'color.black' },
 ];
 
 export interface CustomThemeSelection {
@@ -77,24 +79,15 @@ const CustomThemeOverlay = ({
   };
 
   const renderChips = (
-    options: { value: string; label: string }[],
+    options: { value: string; labelKey: StringKey }[],
     current: string,
     onPress: (value: string) => void,
   ) => (
-    <View style={styles.row}>
-      {options.map(({ value, label }) => {
-        const isActive = value === current;
-        return (
-          <TouchableOpacity
-            key={value}
-            style={[styles.chip, isActive && styles.chipActive]}
-            onPress={() => onPress(value)}>
-            <View style={[styles.swatch, { backgroundColor: value }]} />
-            <Text style={[styles.chipText, isActive && styles.chipTextActive]}>{label}</Text>
-          </TouchableOpacity>
-        );
-      })}
-    </View>
+    <ColorChips
+      options={options.map(({ value, labelKey }) => ({ value, label: t(labelKey) }))}
+      selected={current}
+      onSelect={onPress}
+    />
   );
 
   return (
@@ -115,7 +108,7 @@ const CustomThemeOverlay = ({
           })}
         </View>
       ) : (
-        <Text style={styles.meta}>Loading themes…</Text>
+        <Text style={styles.meta}>{t('customTheme.loading')}</Text>
       )}
 
       <Text style={styles.label}>{t('customTheme.accentColor')}</Text>
@@ -137,44 +130,9 @@ const styles = StyleSheet.create({
   column: {
     gap: 10,
   },
-  row: {
-    flexDirection: 'row',
-    gap: 8,
-  },
   label: {
     color: '#aaa',
     fontSize: 13,
-  },
-  chip: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    backgroundColor: '#222',
-    borderRadius: 16,
-    borderWidth: 2,
-    borderColor: 'transparent',
-    paddingVertical: 8,
-  },
-  chipActive: {
-    borderColor: '#fff',
-  },
-  swatch: {
-    width: 14,
-    height: 14,
-    borderRadius: 7,
-    // Keeps the Black (#212121) swatch visible on the dark panel background.
-    borderWidth: 1,
-    borderColor: '#888',
-  },
-  chipText: {
-    color: '#aaa',
-    fontWeight: '600',
-    fontSize: 13,
-  },
-  chipTextActive: {
-    color: '#fff',
   },
   segmented: {
     flexDirection: 'row',

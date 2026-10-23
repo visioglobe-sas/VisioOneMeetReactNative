@@ -1,7 +1,6 @@
 import * as React from 'react';
 
 import BottomSheet from '../components/BottomSheet';
-import { GeofenceZone, PositionSimulationResolution, VisioMapBridge } from '../components/VisioMapView';
 import { TRACKING_FROM, TRACKING_TO } from '../demoMap';
 import AccuracyCircleStyleOverlay, {
   DEFAULT_POSITION_TRACKER_STYLE,
@@ -10,47 +9,34 @@ import AccuracyCircleStyleOverlay, {
 } from './AccuracyCircleStyleOverlay';
 import GeofencingOverlay, { useGeofenceTracker } from './GeofencingOverlay';
 import SimulatedPositionOverlay from './SimulatedPositionOverlay';
+import { FeatureProps } from './types';
 import { useSimulatedPositionSession } from './useSimulatedPositionSession';
 
 // The 4 screens driven by a simulated tracked position.
-export const TRACKING_FEATURE_SLUGS = [
+const TRACKING_FEATURE_SLUGS = [
   'simulated-position',
   'camera-lock-on-position',
   'geofencing',
   'accuracy-circle-style',
 ] as const;
-export type TrackingFeatureSlug = (typeof TRACKING_FEATURE_SLUGS)[number];
+type TrackingFeatureSlug = (typeof TRACKING_FEATURE_SLUGS)[number];
 
 export const isTrackingFeatureSlug = (slug: string): slug is TrackingFeatureSlug =>
   (TRACKING_FEATURE_SLUGS as readonly string[]).includes(slug);
 
-interface Props {
+interface Props extends FeatureProps {
   slug: TrackingFeatureSlug;
-  bridge: VisioMapBridge;
-  positionSimulation: { resolution: PositionSimulationResolution | null; error: string | null };
-  geofencing: { zone: GeofenceZone | null; error: string | null };
-  cameraLockOnPosition: boolean;
-  visible: boolean;
-  onClose: () => void;
 }
 
-// Rendered by FeatureScreen in the map's always-mounted overlay tree (not inside the
-// bottom sheet) for the tracking screens. It owns the simulation session -- fields,
+// The feature component of the 4 tracking screens (see FeatureProps). It owns the simulation session -- fields,
 // running flag, the single tick loop -- plus the screen-specific state (geofencing
 // zone check, accuracy-circle style), and only hands them to the sheet's content for
 // display. So closing the sheet (a React Native Modal, whose content unmounts) doesn't
 // stop the simulation and the map can be panned while the position keeps moving;
 // reopening it shows the current state; leaving the screen unmounts this host, which
 // stops the loop.
-const TrackingFeatureHost = ({
-  slug,
-  bridge,
-  positionSimulation,
-  geofencing,
-  cameraLockOnPosition,
-  visible,
-  onClose,
-}: Props) => {
+const TrackingFeatureHost = ({ slug, ctx, sheet }: Props) => {
+  const { bridge, positionSimulation, geofencing, cameraLockOnPosition } = ctx;
   const [trackerStyle, setTrackerStyle] = React.useState<PositionTrackerStyle>(
     DEFAULT_POSITION_TRACKER_STYLE,
   );
@@ -120,7 +106,7 @@ const TrackingFeatureHost = ({
   };
 
   return (
-    <BottomSheet visible={visible} onClose={onClose}>
+    <BottomSheet {...sheet}>
       {renderContent()}
     </BottomSheet>
   );

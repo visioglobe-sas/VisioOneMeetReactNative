@@ -1,27 +1,29 @@
 import * as React from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
-import { VisioMapBridge, VenueLayoutInfo } from '../components/VisioMapView';
+import BottomSheet from '../components/BottomSheet';
+import { VenueLayoutInfo, VisioMapBridge } from '../components/VisioMapView';
+import { useLocale } from '../i18n/useLocale';
+import { FeatureProps } from './types';
 
-interface Props {
+interface FloorListProps {
   venueLayout: VenueLayoutInfo;
   goToFloor: VisioMapBridge['goToFloor'];
   goToBuilding: VisioMapBridge['goToBuilding'];
 }
 
-const FloorSelectorOverlay = ({ venueLayout, goToFloor, goToBuilding }: Props) => {
+// The app's own floor/building picker, driven by venueLayout (reported by the page and
+// kept current by its 'currentfloorchanged' listener). Also reused as is by
+// native-ui-replacement.
+export const FloorList = ({ venueLayout, goToFloor, goToBuilding }: FloorListProps) => {
+  const { t } = useLocale();
   const { buildings, currentBuildingId, currentFloorId } = venueLayout;
 
-  // Nothing selected yet (e.g. the map isn't 'ready' or the 'ready' message hasn't
-  // carried any data): fall back to the venue's first building, per the task's brief.
+  // No current building reported yet: fall back to the venue's first building.
   const activeBuilding = buildings.find((building) => building.id === currentBuildingId) || buildings[0];
 
   if (!activeBuilding) {
-    return (
-      <View style={styles.column}>
-        <Text style={styles.hint}>No building found in this venue yet.</Text>
-      </View>
-    );
+    return <Text style={styles.hint}>{t('floorSelector.empty')}</Text>;
   }
 
   // Top floor first, like most physical floor-selector widgets (and the SDK's own).
@@ -52,15 +54,23 @@ const FloorSelectorOverlay = ({ venueLayout, goToFloor, goToBuilding }: Props) =
             key={floor.id}
             style={[styles.floorButton, isSelected && styles.floorButtonSelected]}
             onPress={() => goToFloor(activeBuilding.id, floor.id)}>
-            <Text style={[styles.floorText, isSelected && styles.floorTextSelected]}>
-              {floor.label || floor.id}
-            </Text>
+            <Text style={styles.floorText}>{floor.label || floor.id}</Text>
           </TouchableOpacity>
         );
       })}
     </View>
   );
 };
+
+const FloorSelectorFeature = ({ ctx, sheet }: FeatureProps) => (
+  <BottomSheet {...sheet}>
+    <FloorList
+      venueLayout={ctx.venueLayout}
+      goToFloor={ctx.bridge.goToFloor}
+      goToBuilding={ctx.bridge.goToBuilding}
+    />
+  </BottomSheet>
+);
 
 const styles = StyleSheet.create({
   column: {
@@ -101,9 +111,6 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontWeight: '600',
   },
-  floorTextSelected: {
-    color: '#fff',
-  },
 });
 
-export default FloorSelectorOverlay;
+export default FloorSelectorFeature;

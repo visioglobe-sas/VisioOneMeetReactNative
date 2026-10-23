@@ -1,17 +1,20 @@
 import * as React from 'react';
 import { StyleSheet, Text, TouchableOpacity } from 'react-native';
 
-import { VisioMapBridge } from '../components/VisioMapView';
+import BottomSheet from '../components/BottomSheet';
+import { useLocale } from '../i18n/useLocale';
+import { FeatureProps } from './types';
 
-interface Props {
-  resetMap: VisioMapBridge['resetMap'];
-}
-
-const ResetViewOverlay = ({ resetMap }: Props) => (
-  <TouchableOpacity style={styles.buttonSecondary} onPress={resetMap}>
-    <Text style={styles.buttonText}>Reset view</Text>
-  </TouchableOpacity>
-);
+const ResetViewFeature = ({ ctx, sheet }: FeatureProps) => {
+  const { t } = useLocale();
+  return (
+    <BottomSheet {...sheet}>
+      <TouchableOpacity style={styles.buttonSecondary} onPress={ctx.bridge.resetMap}>
+        <Text style={styles.buttonText}>{t('resetView.title')}</Text>
+      </TouchableOpacity>
+    </BottomSheet>
+  );
+};
 
 const styles = StyleSheet.create({
   buttonSecondary: {
@@ -28,4 +31,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default ResetViewOverlay;
+export default ResetViewFeature;

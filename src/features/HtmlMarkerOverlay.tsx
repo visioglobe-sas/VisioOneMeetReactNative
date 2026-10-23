@@ -1,18 +1,11 @@
 import * as React from 'react';
 import { StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
-import { HtmlMarkerCreateResult, HtmlMarkerTap, VisioMapBridge } from '../components/VisioMapView';
+import BottomSheet from '../components/BottomSheet';
+import { HtmlMarkerCreateResult } from '../components/VisioMapView';
 import { ANCHOR_POI_ID } from '../demoMap';
-import { useLocale } from '../i18n/useLocale';
-
-interface Props {
-  createHtmlMarker: VisioMapBridge['createHtmlMarker'];
-  updateHtmlMarkerText: VisioMapBridge['updateHtmlMarkerText'];
-  setHtmlMarkerVisible: VisioMapBridge['setHtmlMarkerVisible'];
-  removeHtmlMarker: VisioMapBridge['removeHtmlMarker'];
-  createResult: HtmlMarkerCreateResult | null;
-  tap: HtmlMarkerTap | null;
-}
+import { Translate, useLocale } from '../i18n/useLocale';
+import { FeatureProps } from './types';
 
 // Only one badge is placed at a time in this demo, always under this id -- the live
 // SDK Marker object (and its DOM element) is tracked on the WebView side, keyed by it.
@@ -23,74 +16,77 @@ interface Status {
   isError: boolean;
 }
 
-const reasonMessage = (result: HtmlMarkerCreateResult): string => {
+const reasonMessage = (result: HtmlMarkerCreateResult, t: Translate): string => {
   switch (result.reason) {
     case 'empty_text':
-      return 'Text is required';
+      return t('common.textRequired');
     case 'anchor_not_found':
-      return 'POI not found';
+      return t('common.poiNotFound');
     case 'no_position':
-      return 'This POI has no position';
+      return t('common.noPosition');
     default:
-      return `Could not place the badge${result.message ? ` (${result.message})` : ''}`;
+      return t('htmlOverlayMarker.failed', { details: result.message ? ` (${result.message})` : '' });
   }
 };
 
-const HtmlMarkerOverlay = ({
-  createHtmlMarker,
-  updateHtmlMarkerText,
-  setHtmlMarkerVisible,
-  removeHtmlMarker,
-  createResult,
-  tap,
-}: Props) => {
+// Fields, visibility and what is placed live here (mounted for the whole screen), so
+// the panel reflects the badge actually on the map when reopened. Create results are
+// only applied while a Place is awaiting its answer.
+const HtmlMarkerFeature = ({ ctx, sheet }: FeatureProps) => {
   const { t } = useLocale();
+  const { createHtmlMarker, updateHtmlMarkerText, setHtmlMarkerVisible, removeHtmlMarker } = ctx.bridge;
+  const { createResult, tap } = ctx.htmlMarker;
   const [anchorId, setAnchorId] = React.useState(ANCHOR_POI_ID);
   const [text, setText] = React.useState(() => t('htmlOverlayMarker.defaultText'));
   // Anchor id of the badge currently on the map, null when nothing is placed.
   const [placedOn, setPlacedOn] = React.useState<string | null>(null);
   const [isVisible, setIsVisible] = React.useState(true);
+  const [awaitingCreate, setAwaitingCreate] = React.useState(false);
   const [status, setStatus] = React.useState<Status | null>(null);
 
   React.useEffect(() => {
-    if (!createResult) {
+    if (!awaitingCreate || !createResult) {
       return;
     }
+    setAwaitingCreate(false);
     if (createResult.ok) {
       setPlacedOn(createResult.anchorId);
       setIsVisible(true);
-      setStatus({ message: `Badge placed on ${createResult.anchorId}`, isError: false });
+      setStatus({ message: t('htmlOverlayMarker.placedOn', { id: createResult.anchorId }), isError: false });
     } else {
       // A validation failure leaves the current badge (if any) untouched on the
       // WebView side; only an SDK error may have removed it.
       if (createResult.reason === 'sdk_error') {
         setPlacedOn(null);
       }
-      setStatus({ message: reasonMessage(createResult), isError: true });
+      setStatus({ message: reasonMessage(createResult, t), isError: true });
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [createResult]);
 
   // The tap counter lives on the WebView side (it resets on each successful Place),
   // so each forwarded tap already carries the running count.
   React.useEffect(() => {
     if (tap) {
-      setStatus({ message: `Badge tapped (${tap.tapCount})`, isError: false });
+      setStatus({ message: t('htmlOverlayMarker.tapped', { count: tap.tapCount }), isError: false });
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tap]);
 
   const handlePlace = () => {
     const badgeText = text.trim();
     if (!badgeText) {
-      setStatus({ message: 'Text is required', isError: true });
+      setStatus({ message: t('common.textRequired'), isError: true });
       return;
     }
     const anchor = anchorId.trim();
     if (!anchor) {
-      setStatus({ message: 'POI not found', isError: true });
+      setStatus({ message: t('common.poiNotFound'), isError: true });
       return;
     }
     // No remove here: the WebView side replaces the previous badge only once the new
     // one passes validation, so a failed Place leaves it on the map.
+    setAwaitingCreate(true);
     createHtmlMarker(MARKER_ID, anchor, badgeText);
   };
 
@@ -100,11 +96,11 @@ const HtmlMarkerOverlay = ({
     }
     const badgeText = text.trim();
     if (!badgeText) {
-      setStatus({ message: 'Text is required', isError: true });
+      setStatus({ message: t('common.textRequired'), isError: true });
       return;
     }
     updateHtmlMarkerText(MARKER_ID, badgeText);
-    setStatus({ message: 'Badge text updated', isError: false });
+    setStatus({ message: t('htmlOverlayMarker.updated'), isError: false });
   };
 
   const handleToggleVisible = () => {
@@ -114,7 +110,7 @@ const HtmlMarkerOverlay = ({
     const next = !isVisible;
     setHtmlMarkerVisible(MARKER_ID, next);
     setIsVisible(next);
-    setStatus({ message: next ? 'Badge shown' : 'Badge hidden', isError: false });
+    setStatus({ message: next ? t('htmlOverlayMarker.shown') : t('htmlOverlayMarker.hidden'), isError: false });
   };
 
   const handleRemove = () => {
@@ -124,17 +120,17 @@ const HtmlMarkerOverlay = ({
     removeHtmlMarker(MARKER_ID);
     setPlacedOn(null);
     setIsVisible(true);
-    setStatus({ message: 'Badge removed', isError: false });
+    setStatus({ message: t('htmlOverlayMarker.removed'), isError: false });
   };
 
   const disabledStyle = !placedOn ? styles.buttonDisabled : null;
 
   return (
-    <View style={styles.column}>
-      <Text style={styles.label}>Anchor POI ID</Text>
+    <BottomSheet {...sheet}>
+      <Text style={styles.label}>{t('common.anchorPoiId')}</Text>
       <TextInput
         style={styles.input}
-        placeholder="Anchor POI ID"
+        placeholder={t('common.anchorPoiId')}
         placeholderTextColor="#666"
         value={anchorId}
         onChangeText={setAnchorId}
@@ -142,10 +138,10 @@ const HtmlMarkerOverlay = ({
         autoCorrect={false}
       />
 
-      <Text style={styles.label}>Badge text</Text>
+      <Text style={styles.label}>{t('htmlOverlayMarker.badgeText')}</Text>
       <TextInput
         style={styles.input}
-        placeholder="Badge text"
+        placeholder={t('htmlOverlayMarker.badgeText')}
         placeholderTextColor="#666"
         value={text}
         onChangeText={setText}
@@ -154,13 +150,13 @@ const HtmlMarkerOverlay = ({
 
       <View style={styles.row}>
         <TouchableOpacity style={styles.button} onPress={handlePlace}>
-          <Text style={styles.buttonText}>Place badge</Text>
+          <Text style={styles.buttonText}>{t('htmlOverlayMarker.place')}</Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={[styles.buttonSecondary, disabledStyle]}
           disabled={!placedOn}
           onPress={handleUpdateText}>
-          <Text style={styles.buttonText}>Update text</Text>
+          <Text style={styles.buttonText}>{t('common.updateText')}</Text>
         </TouchableOpacity>
       </View>
       <View style={styles.row}>
@@ -168,27 +164,30 @@ const HtmlMarkerOverlay = ({
           style={[styles.buttonSecondary, disabledStyle]}
           disabled={!placedOn}
           onPress={handleToggleVisible}>
-          <Text style={styles.buttonText}>{isVisible ? 'Hide badge' : 'Show badge'}</Text>
+          <Text style={styles.buttonText}>
+            {isVisible ? t('htmlOverlayMarker.hide') : t('htmlOverlayMarker.show')}
+          </Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={[styles.buttonSecondary, disabledStyle]}
           disabled={!placedOn}
           onPress={handleRemove}>
-          <Text style={styles.buttonText}>Remove badge</Text>
+          <Text style={styles.buttonText}>{t('htmlOverlayMarker.remove')}</Text>
         </TouchableOpacity>
       </View>
 
       <Text style={status?.isError ? styles.error : styles.meta}>
-        {status ? status.message : placedOn ? `Badge placed on ${placedOn}` : 'No badge placed'}
+        {status
+          ? status.message
+          : placedOn
+            ? t('htmlOverlayMarker.placedOn', { id: placedOn })
+            : t('htmlOverlayMarker.none')}
       </Text>
-    </View>
+    </BottomSheet>
   );
 };
 
 const styles = StyleSheet.create({
-  column: {
-    gap: 10,
-  },
   row: {
     flexDirection: 'row',
     gap: 8,
@@ -241,4 +240,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default HtmlMarkerOverlay;
+export default HtmlMarkerFeature;

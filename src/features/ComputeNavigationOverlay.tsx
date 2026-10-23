@@ -1,9 +1,11 @@
 import * as React from 'react';
-import { StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, TouchableOpacity, View } from 'react-native';
 
-import { VisioMapBridge } from '../components/VisioMapView';
+import BottomSheet from '../components/BottomSheet';
+import ItineraryForm, { useItineraryFields } from '../components/ItineraryForm';
 import { ITINERARY_FROM, ITINERARY_TO } from '../demoMap';
 import { NavigationTraceStyle } from '../screens/useVisioMap';
+import { FeatureProps } from './types';
 
 // custom-navigation-trace feature: a fixed catalogue of NavigationTraceUpdateOptions
 // (colors only, see docs/features/custom-navigation-trace.md) applied via
@@ -11,7 +13,7 @@ import { NavigationTraceStyle } from '../screens/useVisioMap';
 // 'visioglobeBlue' isn't a fake no-op -- it re-states the Line defaults documented in
 // the SDK's own typings (progressColor '#0094F0', previewColor '#C5C5C5') as an
 // explicit preset like any other.
-export const TRACE_PRESETS: Record<string, NavigationTraceStyle> = {
+const TRACE_PRESETS: Record<string, NavigationTraceStyle> = {
   visioglobeBlue: {
     progressColor: '#0094F0',
     progressOutlineColor: '#FFFFFF',
@@ -41,29 +43,27 @@ export const TRACE_PRESETS: Record<string, NavigationTraceStyle> = {
     previewOutlineColor: '#FFFFFF',
   },
 };
-export type TracePresetKey = keyof typeof TRACE_PRESETS;
+type TracePresetKey = keyof typeof TRACE_PRESETS;
 const TRACE_PRESET_KEYS = Object.keys(TRACE_PRESETS) as TracePresetKey[];
 const DEFAULT_TRACE_PRESET: TracePresetKey = 'visioglobeBlue';
 
-interface Props {
-  startItinerary: VisioMapBridge['startItinerary'];
-  // Optional: only the custom-navigation-trace feature passes this, which is what makes
-  // the color-preset swatch row below appear at all -- the plain compute-navigation
-  // feature renders the same component without it.
-  updateNavigationTrace?: VisioMapBridge['updateNavigationTrace'];
+interface Props extends FeatureProps {
+  // custom-navigation-trace only: shows the color-preset swatch row. The plain
+  // compute-navigation feature renders the same component without it.
+  withTraceStyle?: boolean;
 }
 
-const ComputeNavigationOverlay = ({ startItinerary, updateNavigationTrace }: Props) => {
-  const [origin, setOrigin] = React.useState(ITINERARY_FROM);
-  const [destination, setDestination] = React.useState(ITINERARY_TO);
-  // custom-navigation-trace feature only -- remembers the last-tapped preset so the
-  // *next* computed itinerary is styled with it too, not just whatever trace is
-  // currently on screen.
+const ComputeNavigationFeature = ({ ctx, sheet, withTraceStyle = false }: Props) => {
+  const { startItinerary, updateNavigationTrace } = ctx.bridge;
+  const fields = useItineraryFields(ITINERARY_FROM, ITINERARY_TO);
+  // custom-navigation-trace only -- the last-tapped preset, so the *next* computed
+  // itinerary is styled with it too, not just whatever trace is currently on screen.
   const [selectedPreset, setSelectedPreset] = React.useState<TracePresetKey>(DEFAULT_TRACE_PRESET);
 
   const handleCompute = () => {
-    startItinerary(origin, destination, false);
-    if (updateNavigationTrace) {
+    fields.markSubmitted();
+    startItinerary(fields.origin.trim(), fields.destination.trim(), false);
+    if (withTraceStyle) {
       // Sent right after start_itinerary -- the WebView handles messages in the order
       // it receives them, so by the time this one runs, the trace startItinerary just
       // created is already the one tracked on the WebView side. See
@@ -75,33 +75,23 @@ const ComputeNavigationOverlay = ({ startItinerary, updateNavigationTrace }: Pro
   const handleSelectPreset = (key: TracePresetKey) => {
     setSelectedPreset(key);
     // Restyles whatever trace is already displayed, if any -- a no-op on the WebView
-    // side otherwise (see updateNavigationTrace in useVisioMap.ts).
-    updateNavigationTrace?.(TRACE_PRESETS[key]);
+    // side otherwise.
+    updateNavigationTrace(TRACE_PRESETS[key]);
   };
 
   return (
-    <View style={updateNavigationTrace ? styles.column : styles.row}>
-      <View style={styles.row}>
-        <TextInput
-          style={styles.input}
-          placeholder="From (place ID)"
-          value={origin}
-          onChangeText={setOrigin}
-          autoCapitalize="none"
-        />
-        <TextInput
-          style={styles.input}
-          placeholder="To (place ID)"
-          value={destination}
-          onChangeText={setDestination}
-          autoCapitalize="none"
-        />
-        <TouchableOpacity style={styles.button} onPress={handleCompute}>
-          <Text style={styles.buttonText}>Itinerary</Text>
-        </TouchableOpacity>
-      </View>
+    <BottomSheet {...sheet}>
+      <ItineraryForm
+        origin={fields.origin}
+        destination={fields.destination}
+        onChangeOrigin={fields.setOrigin}
+        onChangeDestination={fields.setDestination}
+        onSubmit={handleCompute}
+        commandError={ctx.commandError}
+        submittedAt={fields.submittedAt}
+      />
 
-      {updateNavigationTrace ? (
+      {withTraceStyle ? (
         <View style={styles.swatchRow}>
           {TRACE_PRESET_KEYS.map((key) => (
             <TouchableOpacity
@@ -117,39 +107,15 @@ const ComputeNavigationOverlay = ({ startItinerary, updateNavigationTrace }: Pro
           ))}
         </View>
       ) : null}
-    </View>
+    </BottomSheet>
   );
 };
 
 const styles = StyleSheet.create({
-  column: {
-    gap: 10,
-  },
-  row: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  input: {
-    flex: 1,
-    backgroundColor: '#222',
-    color: '#fff',
-    borderRadius: 6,
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-  },
-  button: {
-    backgroundColor: '#057DBC',
-    borderRadius: 6,
-    paddingHorizontal: 14,
-    justifyContent: 'center',
-  },
-  buttonText: {
-    color: '#fff',
-    fontWeight: '600',
-  },
   swatchRow: {
     flexDirection: 'row',
     gap: 12,
+    marginTop: 2,
   },
   swatch: {
     width: 32,
@@ -163,4 +129,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default ComputeNavigationOverlay;
+export default ComputeNavigationFeature;

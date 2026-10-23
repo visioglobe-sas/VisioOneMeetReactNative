@@ -1,8 +1,11 @@
 import * as React from 'react';
-import { StyleSheet, Switch, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, Switch, Text, View } from 'react-native';
 
-import { VisioMapBridge } from '../components/VisioMapView';
+import BottomSheet from '../components/BottomSheet';
+import ItineraryForm, { useItineraryFields } from '../components/ItineraryForm';
 import { EXCLUDE_MODALITIES_FROM, EXCLUDE_MODALITIES_TO } from '../demoMap';
+import { useLocale } from '../i18n/useLocale';
+import { FeatureProps } from './types';
 
 // navigation-exclude-modalities feature: the segment-particularity attribute string
 // that excludes the elevator on this demo venue. The SDK's own JSDoc comment on
@@ -12,77 +15,43 @@ import { EXCLUDE_MODALITIES_FROM, EXCLUDE_MODALITIES_TO } from '../demoMap';
 // reads attributes: ['lift', 'B1-lift-1'].
 const ELEVATOR_ATTRIBUTE = 'lift';
 
-interface Props {
-  startItinerary: VisioMapBridge['startItinerary'];
-}
-
-const NavigationExcludeModalitiesOverlay = ({ startItinerary }: Props) => {
-  const [origin, setOrigin] = React.useState(EXCLUDE_MODALITIES_FROM);
-  const [destination, setDestination] = React.useState(EXCLUDE_MODALITIES_TO);
+const NavigationExcludeModalitiesFeature = ({ ctx, sheet }: FeatureProps) => {
+  const { t } = useLocale();
+  const fields = useItineraryFields(EXCLUDE_MODALITIES_FROM, EXCLUDE_MODALITIES_TO);
   // Read only when Itinerary is pressed -- toggling it alone doesn't recompute
   // whatever route is already on screen.
   const [avoidElevator, setAvoidElevator] = React.useState(false);
 
   const handleCompute = () => {
-    startItinerary(origin, destination, false, avoidElevator ? [ELEVATOR_ATTRIBUTE] : undefined);
+    fields.markSubmitted();
+    ctx.bridge.startItinerary(
+      fields.origin.trim(),
+      fields.destination.trim(),
+      false,
+      avoidElevator ? [ELEVATOR_ATTRIBUTE] : undefined,
+    );
   };
 
   return (
-    <View style={styles.column}>
-      <View style={styles.row}>
-        <TextInput
-          style={styles.input}
-          placeholder="From (place ID)"
-          value={origin}
-          onChangeText={setOrigin}
-          autoCapitalize="none"
-        />
-        <TextInput
-          style={styles.input}
-          placeholder="To (place ID)"
-          value={destination}
-          onChangeText={setDestination}
-          autoCapitalize="none"
-        />
-        <TouchableOpacity style={styles.button} onPress={handleCompute}>
-          <Text style={styles.buttonText}>Itinerary</Text>
-        </TouchableOpacity>
-      </View>
-
+    <BottomSheet {...sheet}>
+      <ItineraryForm
+        origin={fields.origin}
+        destination={fields.destination}
+        onChangeOrigin={fields.setOrigin}
+        onChangeDestination={fields.setDestination}
+        onSubmit={handleCompute}
+        commandError={ctx.commandError}
+        submittedAt={fields.submittedAt}
+      />
       <View style={styles.toggleRow}>
-        <Text style={styles.label}>Avoid elevator</Text>
+        <Text style={styles.label}>{t('navigationExcludeModalities.title')}</Text>
         <Switch value={avoidElevator} onValueChange={setAvoidElevator} />
       </View>
-    </View>
+    </BottomSheet>
   );
 };
 
 const styles = StyleSheet.create({
-  column: {
-    gap: 10,
-  },
-  row: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  input: {
-    flex: 1,
-    backgroundColor: '#222',
-    color: '#fff',
-    borderRadius: 6,
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-  },
-  button: {
-    backgroundColor: '#057DBC',
-    borderRadius: 6,
-    paddingHorizontal: 14,
-    justifyContent: 'center',
-  },
-  buttonText: {
-    color: '#fff',
-    fontWeight: '600',
-  },
   toggleRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -94,4 +63,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default NavigationExcludeModalitiesOverlay;
+export default NavigationExcludeModalitiesFeature;

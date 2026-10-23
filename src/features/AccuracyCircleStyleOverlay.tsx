@@ -1,6 +1,7 @@
 import * as React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
+import ColorChips from '../components/ColorChips';
 import { VisioMapBridge } from '../components/VisioMapView';
 import { useLocale } from '../i18n/useLocale';
 import { StringKey } from '../i18n/strings';
@@ -12,10 +13,10 @@ import { SimulatedPositionSession } from './useSimulatedPositionSession';
 export const DEFAULT_RADIUS = 6;
 
 const COLOR_PRESETS: { value: string; labelKey: StringKey }[] = [
-  { value: '#0094f0', labelKey: 'accuracyCircleStyle.colorDefault' },
-  { value: '#e53935', labelKey: 'accuracyCircleStyle.colorRed' },
-  { value: '#43a047', labelKey: 'accuracyCircleStyle.colorGreen' },
-  { value: '#8e24aa', labelKey: 'accuracyCircleStyle.colorPurple' },
+  { value: '#0094f0', labelKey: 'color.default' },
+  { value: '#e53935', labelKey: 'color.red' },
+  { value: '#43a047', labelKey: 'color.green' },
+  { value: '#8e24aa', labelKey: 'color.purple' },
 ];
 
 // Opacity is handled in tenths (1..10) to avoid floating-point drift on the stepper.
@@ -66,21 +67,12 @@ const AccuracyCircleStyleOverlay = ({ session, setPositionTrackerStyle, style, o
     <View style={styles.column}>
       <SimulatedPositionOverlay session={session} />
 
-      <Text style={styles.label}>{t('accuracyCircleStyle.color')}</Text>
-      <View style={styles.chips}>
-        {COLOR_PRESETS.map(({ value, labelKey }) => {
-          const isActive = value === style.color;
-          return (
-            <TouchableOpacity
-              key={value}
-              style={[styles.chip, isActive && styles.chipActive]}
-              onPress={() => applyStyle({ ...style, color: value })}>
-              <View style={[styles.swatch, { backgroundColor: value }]} />
-              <Text style={[styles.chipText, isActive && styles.chipTextActive]}>{t(labelKey)}</Text>
-            </TouchableOpacity>
-          );
-        })}
-      </View>
+      <Text style={styles.label}>{t('common.color')}</Text>
+      <ColorChips
+        options={COLOR_PRESETS.map(({ value, labelKey }) => ({ value, label: t(labelKey) }))}
+        selected={style.color}
+        onSelect={(value) => applyStyle({ ...style, color: value })}
+      />
 
       <View style={styles.opacityRow}>
         <Text style={styles.label}>
@@ -114,39 +106,6 @@ const styles = StyleSheet.create({
   label: {
     color: '#fff',
     fontSize: 15,
-  },
-  chips: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  chip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    backgroundColor: '#222',
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: '#333',
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-  },
-  chipActive: {
-    borderColor: '#fff',
-    backgroundColor: '#333',
-  },
-  swatch: {
-    width: 14,
-    height: 14,
-    borderRadius: 7,
-  },
-  chipText: {
-    color: '#bbb',
-    fontSize: 13,
-  },
-  chipTextActive: {
-    color: '#fff',
-    fontWeight: '600',
   },
   opacityRow: {
     flexDirection: 'row',

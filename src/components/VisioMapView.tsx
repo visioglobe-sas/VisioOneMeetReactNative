@@ -5,6 +5,7 @@ import { WebView, WebViewMessageEvent } from 'react-native-webview';
 
 import { visioOneHtml } from '../assets/visioOneHtml';
 import { DEMO_MAP_HASH } from '../demoMap';
+import { useLocale } from '../i18n/useLocale';
 import {
   CameraProjection,
   ClickedPoi,
@@ -14,13 +15,22 @@ import {
   VenueBuilding,
 } from '../screens/useVisioMap';
 
-
 // The SDK's own default LoadOptions.baseURL, mirrored here so the custom-base-url
 // feature can pre-fill its field with the real value instead of a placeholder -- see
 // docs/features/custom-base-url.md.
 export const DEFAULT_BASE_URL = 'https://mapserver.visioglobe.com/';
 
-type Status = 'loading' | 'ready' | 'error';
+export type MapStatus = 'loading' | 'ready' | 'error';
+type Status = MapStatus;
+
+// A command the page received but that threw (e.g. 'start_itinerary' with an unknown
+// place ID), reported as 'command_error'. `at` is set on reception so the same error
+// twice in a row is still a new value.
+export interface CommandError {
+  command: string;
+  message: string;
+  at: number;
+}
 
 export type VisioMapBridge = ReturnType<typeof useVisioMap>;
 
@@ -66,10 +76,6 @@ export interface CustomDataRefreshOutcome {
 export interface CategoryOption {
   id: string;
   label: string;
-}
-
-export interface CategoriesResult {
-  categories: CategoryOption[];
 }
 
 // Result of the WebView resolving a 'create_dynamic_poi' request -- see
@@ -271,6 +277,8 @@ interface VisioMapViewProps {
     cameraProjection: CameraProjection | null,
     // camera-showcase-carousel feature: mirror of the WebView page's tour state.
     cameraCarousel: CameraCarouselStatus,
+    // Last command that threw in the page, see CommandError.
+    commandError: CommandError | null,
   ) => React.ReactNode;
   // Fired from the WebView's onMessage handler (an event, not during render) so the
   // parent can safely react -- e.g. open its own controls -- without the "setState
@@ -288,6 +296,7 @@ const VisioMapView = ({
   renderOverlay,
   onPoiClick,
 }: VisioMapViewProps) => {
+  const { t } = useLocale();
   const [status, setStatus] = React.useState<Status>('loading');
   const [errorMessage, setErrorMessage] = React.useState<string | null>(null);
   const [clickedPois, setClickedPois] = React.useState<ClickedPoi[]>([]);
@@ -333,6 +342,7 @@ const VisioMapView = ({
   const [cameraCarousel, setCameraCarousel] = React.useState<CameraCarouselStatus>(
     INITIAL_CAMERA_CAROUSEL_STATUS,
   );
+  const [commandError, setCommandError] = React.useState<CommandError | null>(null);
 
   const rawBridge = useVisioMap(
     mapHash ?? DEMO_MAP_HASH,
@@ -359,7 +369,10 @@ const VisioMapView = ({
     const raw = event.nativeEvent.data;
     const evt = typeof raw === 'string' ? JSON.parse(raw) : raw;
 
-    if (evt.type === 'ready') {
+    if (evt.type === 'page_ready') {
+      // Handshake: the page's message listener is registered, the setup can be sent.
+      sendSetup();
+    } else if (evt.type === 'ready') {
       setStatus('ready');
       setErrorMessage(null);
       setVenueLayout({
@@ -383,7 +396,7 @@ const VisioMapView = ({
       setErrorMessage(String(evt.data));
     } else if (evt.type === 'unauthorized') {
       setStatus('error');
-      setErrorMessage(`Authorization token invalid, expired or missing (${String(evt.data)})`);
+      setErrorMessage(t('map.unauthorized', { message: String(evt.data) }));
       onUnauthorized?.(String(evt.data));
     } else if (evt.type === 'poi_click') {
       setClickedPois(evt.data.pois);
@@ -397,8 +410,6 @@ const VisioMapView = ({
         currentBuildingId: evt.data.buildingId,
         currentFloorId: evt.data.floorId,
       }));
-    } else if (evt.type === 'itinerary_instructions') {
-      console.log('[VisioMap] itinerary instructions:', evt.data);
     } else if (evt.type === 'poi_positions_resolved') {
       setPositionSimulationError(null);
       setPositionSimulationResolution(evt.data);
@@ -454,6 +465,12 @@ const VisioMapView = ({
       setCameraLockOnPosition(evt.data?.locked === true);
     } else if (evt.type === 'camera_carousel_status') {
       setCameraCarousel(evt.data);
+    } else if (evt.type === 'command_error') {
+      setCommandError({
+        command: String(evt.data?.command ?? ''),
+        message: String(evt.data?.message ?? ''),
+        at: Date.now(),
+      });
     }
   };
 
@@ -466,7 +483,6 @@ const VisioMapView = ({
         // Loaded inline with an explicit baseUrl rather than via require('./visioOne.html') —
         // see docs/SDK_NOTES.md for why this matters in Debug builds connected to Metro.
         source={{ html: visioOneHtml, baseUrl: 'https://cdn.visioglobe.com/' }}
-        onLoadEnd={sendSetup}
         onMessage={handleWebMessage}
         allowUniversalAccessFromFileURLs
         mixedContentMode="compatibility"
@@ -476,9 +492,9 @@ const VisioMapView = ({
 
       <View style={styles.statusBadge}>
         <Text style={styles.status}>
-          {status === 'loading' && 'Loading venue…'}
-          {status === 'ready' && 'Venue ready'}
-          {status === 'error' && `Error: ${errorMessage}`}
+          {status === 'loading' && t('map.loading')}
+          {status === 'ready' && t('map.ready')}
+          {status === 'error' && t('map.error', { message: errorMessage ?? '' })}
         </Text>
       </View>
 
@@ -508,6 +524,7 @@ const VisioMapView = ({
         cameraLockOnPosition,
         reportedCameraProjection,
         cameraCarousel,
+        commandError,
       )}
     </SafeAreaView>
   );

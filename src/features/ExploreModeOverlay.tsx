@@ -11,7 +11,7 @@ interface Props {
   setExploreMode: VisioMapBridge['setExploreMode'];
 }
 
-// Order mirrors the SDK's own ExploreMode union (ExploreMode.ts in visioone) exactly --
+// Order mirrors the SDK's own ExploreMode union (View/ExploreMode.d.ts in the SDK typings) exactly --
 // 'global' (outside), 'building' (exploded/"carousel" view), 'floor' (single floor).
 const EXPLORE_MODES: { mode: ExploreMode; labelKey: StringKey; hintKey: StringKey }[] = [
   { mode: 'global', labelKey: 'exploreMode.global', hintKey: 'exploreMode.globalHint' },

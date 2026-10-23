@@ -3,6 +3,7 @@ import { StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-nativ
 
 import { GeofenceZone, VisioMapBridge } from '../components/VisioMapView';
 import { GEOFENCE_ZONE_ID } from '../demoMap';
+import { useLocale } from '../i18n/useLocale';
 import { Position } from '../screens/useVisioMap';
 import SimulatedPositionOverlay from './SimulatedPositionOverlay';
 import { SimulatedPositionSession } from './useSimulatedPositionSession';
@@ -32,7 +33,7 @@ const isPointInPolygon = (point: Position, polygon: Position[]): boolean => {
 // bottom sheet's content -- so the zone check keeps running, and the panel shows the
 // current state, while the sheet is closed. Its onPositionTick/onTrackingStopped are
 // passed to useSimulatedPositionSession, piggybacking on that single tick loop.
-export interface GeofenceTracker {
+interface GeofenceTracker {
   zonePlaceId: string;
   setZonePlaceId: (value: string) => void;
   inside: boolean;
@@ -91,6 +92,7 @@ interface Props {
 }
 
 const GeofencingOverlay = ({ session, tracker, resolveZone, zone, zoneError }: Props) => {
+  const { t } = useLocale();
   const { zonePlaceId, setZonePlaceId, inside } = tracker;
 
   const handleLoadZone = () => {
@@ -106,20 +108,21 @@ const GeofencingOverlay = ({ session, tracker, resolveZone, zone, zoneError }: P
       <View style={styles.row}>
         <TextInput
           style={styles.input}
-          placeholder="Zone POI ID"
+          placeholder={t('geofencing.zonePoiId')}
+          placeholderTextColor="#666"
           value={zonePlaceId}
           onChangeText={setZonePlaceId}
           autoCapitalize="none"
         />
         <TouchableOpacity style={styles.button} onPress={handleLoadZone}>
-          <Text style={styles.buttonText}>Load zone</Text>
+          <Text style={styles.buttonText}>{t('geofencing.loadZone')}</Text>
         </TouchableOpacity>
       </View>
 
       {zoneError ? <Text style={styles.error}>{zoneError}</Text> : null}
 
       <Text style={styles.label}>
-        {zone ? (inside ? 'Inside zone' : 'Outside zone') : 'No zone loaded'}
+        {zone ? (inside ? t('geofencing.inside') : t('geofencing.outside')) : t('geofencing.noZone')}
       </Text>
 
       <SimulatedPositionOverlay session={session} />

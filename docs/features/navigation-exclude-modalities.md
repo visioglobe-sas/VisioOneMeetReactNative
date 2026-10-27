@@ -36,14 +36,12 @@ const startItinerary = (origin, destination, isAccessible, excludedAttributes) =
 
   currentNavigationTrace = venue.createNavigationTrace(navigation)
   view.setCurrentNavigationTrace(currentNavigationTrace)
-
-  sendToNative({ type: 'itinerary_instructions', data: navigation.instructions })
 }
 ```
 
 `excludedAttributes` is forwarded as-is into `computeNavigation`'s options object. It's `undefined` for every caller of `startItinerary` other than this feature's overlay, which is exactly equivalent to not passing the option at all — `compute-navigation` and `custom-navigation-trace` are unaffected.
 
-On the React Native side, `NavigationExcludeModalitiesOverlay` reuses the same origin/destination fields and "Itinerary" button as `compute-navigation`, plus an "Avoid elevator" `Switch`. The toggle is only read when "Itinerary" is pressed — flipping it alone does not recompute whatever route is already on screen:
+On the React Native side, `src/features/NavigationExcludeModalitiesOverlay.tsx` reuses the same origin/destination fields and "Itinerary" button as `compute-navigation`, plus an "Avoid elevator" `Switch`. The toggle is only read when "Itinerary" is pressed — flipping it alone does not recompute whatever route is already on screen:
 
 ```tsx
 const handleCompute = () => {

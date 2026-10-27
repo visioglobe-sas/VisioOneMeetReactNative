@@ -2,7 +2,7 @@
 
 ## Description
 
-Places your own free text on the map — opening hours, a price, a zone name… — next to an existing place, and restyles it live (text, color, size, rotation). The label is independent of the map's own labels: it is added alongside them and never alters them. Built on three `Venue` methods (SDK `visioone`, see `Venue.ts`):
+Places your own free text on the map — opening hours, a price, a zone name… — next to an existing place, and restyles it live (text, color, size, rotation). The label is independent of the map's own labels: it is added alongside them and never alters them. Built on three `Venue` methods (see `Venue/Venue.d.ts` in the SDK typings):
 
 - `venue.createLabel(options: { poi: POI; position: Position; width: number; height?: number; text: string; color?: Color; rotation?: number }): Label` — creates a Label owned by `poi`, at a WGS84 `position`. `width`/`height` are in meters (the text is fitted inside that box); `rotation` is in degrees, relative to the map's orientation; `color` is the font color.
 - `venue.updateLabel(label: Label, options: { text?; color?; width?; height?; position?; isVisible? }): void` — updates an existing Label live. Note that `rotation` is **not** part of these options.
@@ -61,13 +61,29 @@ removeTextLabel('custom-text-label');
 // Shared with Dynamic POI and 3D icon marker: resolves an anchor POI id to the POI plus
 // a WGS84 position copied from its first label, or else its first marker. excludeLabel
 // (used here only) skips the custom label we already attached to that POI.
-const resolveAnchorPoi = (anchorId, excludeLabel) => {
+// Shared by every feature that needs "where is this POI": (1) its first Label
+// position, (2) its first Image, then Marker position, (3) the centroid of its first
+// Surface's vertices. `exclude` skips objects the app itself attached to the POI.
+const getPoiDisplayPosition = (poi, exclude = []) => {
+  const first = (items) => (items || []).find((item) => !exclude.includes(item) && item.position)
+  const position =
+    first(poi.labels)?.position ?? first(poi.images)?.position ?? first(poi.markers)?.position
+  if (position) {
+    return { latitude: position.latitude, longitude: position.longitude, altitude: position.altitude }
+  }
+  const vertices = poi.surfaces?.[0]?.positions ?? []
+  if (vertices.length === 0) {
+    return null
+  }
+  // ...average of the vertices' latitude / longitude / altitude
+}
+
+const resolveAnchorPoi = (anchorId, exclude = []) => {
   const poi = venue.pois.find((p) => p.id === anchorId)
   if (!poi) {
     return { reason: 'anchor_not_found' }
   }
-  const ownLabel = poi.labels.find((label) => label !== excludeLabel)
-  const position = ownLabel?.position ?? poi.markers[0]?.position
+  const position = getPoiDisplayPosition(poi, exclude)
   if (!position) {
     return { reason: 'no_position' }
   }
@@ -86,7 +102,7 @@ const createTextLabel = (labelId, anchorId, options, moveCamera) => {
     fail('empty_text') // createLabel would throw "Cannot create Label, text is required"
     return
   }
-  const anchor = resolveAnchorPoi(anchorId, textLabels.get(labelId))
+  const anchor = resolveAnchorPoi(anchorId, [textLabels.get(labelId)])
   if (anchor.reason) {
     fail(anchor.reason)
     return
@@ -166,7 +182,7 @@ Placing needs a round trip: `create_text_label` goes in, `text_label_create_resu
 - **A Label needs an owner POI.** `createLabel` requires `poi` — this demo uses the anchor POI itself. The new Label is pushed onto `poi.labels`, after the POI's own label (`poi.labels[0]`, e.g. "Restaurant"), which is left untouched; `removeLabel` only removes the one you created.
 - **Your label joins `poi.labels`.** If the anchor POI has no label of its own (only a marker), your custom label becomes `poi.labels[0]` while attached. Copying "the POI's first label position" again (e.g. to recreate the label for a new rotation) would then copy your already-offset position and the offset would build up on each recreation — skip your own label when resolving the anchor's position.
 - **`removeLabel` / `updateLabel` on a removed label throw** `Provided label is not registered`. Forget your reference once removed (this demo deletes it from its map, so a second remove is a no-op).
-- **A POI has no direct lat/lng field.** Its position comes from one of its sub-objects — `poi.labels[0].position` or `poi.markers[0].position` here. A POI with neither (e.g. a surface-only POI) has nothing to copy, reported as `no_position`. The copied position keeps its altitude.
+- **A POI has no direct lat/lng field.** Its position comes from the objects it owns: this demo uses its first Label's position, else its first Image's or Marker's, else the centroid of its first Surface (`getPoiDisplayPosition` above, the same helper every feature of this repo uses). Only a POI with none of these (e.g. a POI just created with `createPOI`) has nothing to copy, reported as `'no_position'`.
 - **Indoor labels are only visible on their floor.** A Label is rendered only while its POI's floor is displayed; from the default whole-venue view indoor floors aren't shown, so the camera is moved to the anchor POI after placing (`view.goToPOI`, the same call as [Go to place](goto-poi.md)).
 
 ## Learn more

@@ -2,7 +2,7 @@
 
 ## Description
 
-Places a custom image (here a small PNG icon) at a precise spot on the 3D map, and lets the user switch how it is oriented relative to the camera — e.g. a product visual above a shelf, or a branded pin on a shop. Built on three `Venue` methods (SDK `visioone`, see `Venue.ts`):
+Places a custom image (here a small PNG icon) at a precise spot on the 3D map, and lets the user switch how it is oriented relative to the camera — e.g. a product visual above a shelf, or a branded pin on a shop. Built on three `Venue` methods (see `Venue/Venue.d.ts` in the SDK typings):
 
 - `venue.createImage(options: { poi: POI; position: Position; width: number; height?: number; rotation?: number; url: string; orientationType?: OrientationType }): Image` — creates an Image owned by `poi`, at a WGS84 `position`. `width`/`height` are in meters (`height` defaults to `width`); `url` can be a web URL, a URL relative to the venue's `baseURL`, or a `data:` URL.
 - `venue.updateImage(image: Image, options: { orientationType?; width?; height?; position?; rotation?; url?; isVisible? }): void` — updates an existing Image live, here its `orientationType`.
@@ -55,12 +55,29 @@ createIconMarker('icon-marker', 'B4-UL00-ID0009', {
 
 // Shared with the Dynamic POI feature: resolves an anchor POI id to the POI plus a
 // WGS84 position copied from its first label, or else its first marker.
-const resolveAnchorPoi = (anchorId) => {
+// Shared by every feature that needs "where is this POI": (1) its first Label
+// position, (2) its first Image, then Marker position, (3) the centroid of its first
+// Surface's vertices. `exclude` skips objects the app itself attached to the POI.
+const getPoiDisplayPosition = (poi, exclude = []) => {
+  const first = (items) => (items || []).find((item) => !exclude.includes(item) && item.position)
+  const position =
+    first(poi.labels)?.position ?? first(poi.images)?.position ?? first(poi.markers)?.position
+  if (position) {
+    return { latitude: position.latitude, longitude: position.longitude, altitude: position.altitude }
+  }
+  const vertices = poi.surfaces?.[0]?.positions ?? []
+  if (vertices.length === 0) {
+    return null
+  }
+  // ...average of the vertices' latitude / longitude / altitude
+}
+
+const resolveAnchorPoi = (anchorId, exclude = []) => {
   const poi = venue.pois.find((p) => p.id === anchorId)
   if (!poi) {
     return { reason: 'anchor_not_found' }
   }
-  const position = poi.labels[0]?.position ?? poi.markers[0]?.position
+  const position = getPoiDisplayPosition(poi, exclude)
   if (!position) {
     return { reason: 'no_position' }
   }
@@ -71,7 +88,7 @@ const resolveAnchorPoi = (anchorId) => {
 const iconMarkers = new Map()
 
 const createIconMarker = (imageId, anchorId, options) => {
-  const anchor = resolveAnchorPoi(anchorId)
+  const anchor = resolveAnchorPoi(anchorId, [iconMarkers.get(imageId)]) // skip our own previous icon
   if (anchor.reason) {
     sendToNative({ type: 'icon_marker_create_result', data: { ok: false, imageId, anchorId, reason: anchor.reason } })
     return
@@ -130,7 +147,7 @@ Placing needs a round trip: `create_icon_marker` goes in, `icon_marker_create_re
 - **`updateImage` applies live**, no remove/recreate needed — switching `orientationType` on an already-placed Image takes effect immediately.
 - **`'flat'` and `'facing'` require SDK ≥ 1.0.9.** On earlier versions, runtime-created images ignore these two orientations (they lie flat and don't follow the camera); this was an SDK bug fixed in 1.0.9. `'fixed'` works on all versions.
 - **Mind the altitude.** The image is placed at `position`, altitude included. A position copied from a label sits right at floor level (altitude 0.5 m on the demo map), so a ground-lying image can z-fight with the floor/label there. Raising `position.altitude` slightly avoids it.
-- **A POI has no direct lat/lng field.** Its position comes from one of its sub-objects — `poi.labels[0].position` or `poi.markers[0].position` here. A POI with neither (e.g. a surface-only POI) has nothing to copy, reported as `no_position`.
+- **A POI has no direct lat/lng field.** Its position comes from the objects it owns: this demo uses its first Label's position, else its first Image's or Marker's, else the centroid of its first Surface (`getPoiDisplayPosition` above, the same helper every feature of this repo uses). Only a POI with none of these (e.g. a POI just created with `createPOI`) has nothing to copy, reported as `'no_position'`.
 - **Indoor images are only visible on their floor.** From the default whole-venue view, indoor floors aren't shown, so the camera is moved to the anchor POI after placing (`view.goToPOI`, the same call as [Go to place](goto-poi.md)).
 
 ## Learn more

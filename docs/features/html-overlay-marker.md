@@ -2,7 +2,7 @@
 
 ## Description
 
-Pins an HTML element — here a small "Open now · 12:00–14:00" badge — on the map at a geographic position. Unlike a [Label](custom-text-label.md) or an [Image](3d-icon-marker.md), which live in the 3D scene, an HTML marker is drawn **above** the map: it always faces the screen, is never hidden by walls or 3D geometry, and — the point of this demo — it is **interactive**: tapping it reaches the app (here, React Native counts the taps). Built on three `Venue` methods (SDK `visioone`, see `Venue.ts`):
+Pins an HTML element — here a small "Open now · 12:00–14:00" badge — on the map at a geographic position. Unlike a [Label](custom-text-label.md) or an [Image](3d-icon-marker.md), which live in the 3D scene, an HTML marker is drawn **above** the map: it always faces the screen, is never hidden by walls or 3D geometry, and — the point of this demo — it is **interactive**: tapping it reaches the app (here, React Native counts the taps). Built on three `Venue` methods (see `Venue/Venue.d.ts` in the SDK typings):
 
 - `venue.createMarker(options: { poi: POI; position: Position; element: HTMLElement }): Marker` — creates a Marker owned by `poi`, displaying `element` centered on the WGS84 `position`.
 - `venue.updateMarker(marker: Marker, options: { position?: Position; isVisible?: boolean }): void` — moves or shows/hides it.
@@ -46,14 +46,29 @@ removeHtmlMarker('html-overlay-marker');
 
 // Shared anchor-position lookup: first label of the POI, else its first marker.
 // excludeMarker skips the badge we already attached to that POI (see "Things to know").
-const resolveAnchorPoi = (anchorId, excludeLabel, excludeMarker) => {
+// Shared by every feature that needs "where is this POI": (1) its first Label
+// position, (2) its first Image, then Marker position, (3) the centroid of its first
+// Surface's vertices. `exclude` skips objects the app itself attached to the POI.
+const getPoiDisplayPosition = (poi, exclude = []) => {
+  const first = (items) => (items || []).find((item) => !exclude.includes(item) && item.position)
+  const position =
+    first(poi.labels)?.position ?? first(poi.images)?.position ?? first(poi.markers)?.position
+  if (position) {
+    return { latitude: position.latitude, longitude: position.longitude, altitude: position.altitude }
+  }
+  const vertices = poi.surfaces?.[0]?.positions ?? []
+  if (vertices.length === 0) {
+    return null
+  }
+  // ...average of the vertices' latitude / longitude / altitude
+}
+
+const resolveAnchorPoi = (anchorId, exclude = []) => {
   const poi = venue.pois.find((p) => p.id === anchorId)
   if (!poi) {
     return { reason: 'anchor_not_found' }
   }
-  const ownLabel = poi.labels.find((label) => label !== excludeLabel)
-  const ownMarker = poi.markers.find((marker) => marker !== excludeMarker)
-  const position = ownLabel?.position ?? ownMarker?.position
+  const position = getPoiDisplayPosition(poi, exclude)
   if (!position) {
     return { reason: 'no_position' }
   }
@@ -78,7 +93,7 @@ const createHtmlMarker = (markerId, anchorId, text) => {
     return
   }
   const previous = htmlMarkers.get(markerId)
-  const anchor = resolveAnchorPoi(anchorId, undefined, previous?.marker)
+  const anchor = resolveAnchorPoi(anchorId, [previous?.marker])
   if (anchor.reason) {
     fail(anchor.reason) // the current badge, if any, stays in place
     return
@@ -159,7 +174,7 @@ Placing needs a round trip: `create_html_marker` goes in, `html_marker_create_re
 - **`updateMarker` only accepts `position` and `isVisible`.** `isVisible: false` sets `display: none`; the element stays in the DOM. To change what the marker shows, edit `marker.element` directly — it is a live DOM node.
 - **`removeMarker` detaches the element.** Calling `removeMarker` or `updateMarker` again on a removed marker throws `Provided marker is not registered` — forget your reference once removed (this demo deletes it from its map, so a second remove is a no-op).
 - **Your marker joins `poi.markers`.** The Marker is owned by the anchor POI and appended to its `markers` array. If you copy "the POI's first marker position" again later (e.g. to re-place the badge on a POI without a label of its own), skip your own marker, or you'll copy your already-offset position and the offset will build up.
-- **A POI has no direct lat/lng field.** Its position comes from one of its sub-objects — `poi.labels[0].position` or `poi.markers[0].position` here. A POI with neither (e.g. a surface-only POI) has nothing to copy, reported as `no_position`.
+- **A POI has no direct lat/lng field.** Its position comes from the objects it owns: this demo uses its first Label's position, else its first Image's or Marker's, else the centroid of its first Surface (`getPoiDisplayPosition` above, the same helper every feature of this repo uses). Only a POI with none of these (e.g. a POI just created with `createPOI`) has nothing to copy, reported as `'no_position'`.
 
 ## Learn more
 

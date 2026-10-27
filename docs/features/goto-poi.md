@@ -1,33 +1,60 @@
-# Aller à un lieu
+# Go to place
 
 ## Description
 
-Centre la caméra du SDK sur un lieu (POI) à partir de son identifiant, en s'appuyant sur `select_place`/`clear_place` — déjà exposés côté pont JS (`goToPlace`/`clearPlace` dans `useVisioMap.ts`, gérés côté WebView dans `visioOneHtml.ts`/`visioOne.html`).
+Moves the camera onto a place (POI) given its id, and drops a pin image on it. Built on:
 
-`goToPlace(placeId)` résout l'identifiant en POI côté SDK et recentre la vue dessus ; `clearPlace()` annule cette sélection sans paramètre, de la même façon que `resetMap()` ramène la caméra à son cadrage initial (voir `docs/features/reset-view.md`).
+- `view.goToPOI(poi, options)` — animates the camera onto the POI (and its floor).
+- `venue.createImage(options)` / `venue.removeImage(image)` — the pin, an `Image` owned by the POI, placed at the POI's display position.
 
-## Step by step
+## SDK usage
 
-1. **Rien à ajouter côté pont** : `useVisioMap().goToPlace(placeId: string)` et `useVisioMap().clearPlace()` existent déjà et envoient respectivement `{ type: 'select_place', data: { placeId } }` et `{ type: 'clear_place' }` à la WebView.
-2. Dans le composant consommateur (`src/features/GoToPoiOverlay.tsx`, rendu par `FeatureScreen.tsx` à l'intérieur de `VisioMapView.tsx`), garder l'identifiant saisi dans un état local (`useState`) et exposer deux boutons :
-   ```tsx
-   <TextInput value={placeId} onChangeText={setPlaceId} placeholder="Place ID" />
-   <TouchableOpacity onPress={() => goToPlace(placeId)}>
-     <Text>Go</Text>
-   </TouchableOpacity>
-   <TouchableOpacity onPress={clearPlace}>
-     <Text>Clear</Text>
-   </TouchableOpacity>
-   ```
-3. Le bridge (`goToPlace`, `clearPlace`, `webRef`, `sendSetup`, ...) est fourni par `useVisioMap()` à l'intérieur de `VisioMapView.tsx`, qui le passe à l'overlay actif via la prop `renderOverlay` — voir `FeatureScreen.tsx` pour le branchement par `slug` de feature (`'goto-poi'`).
+React Native sends `{ type: 'select_place', data: { placeId } }` (`goToPlace`) and `{ type: 'clear_place' }` (`clearPlace`), see `src/screens/useVisioMap.ts`. The page (`src/assets/visioOne.html`) handles them:
 
-## Points d'attention
+```js
+// src/assets/visioOne.html
+let gotoPin = null
+const GOTO_PIN_URL = 'data:image/png;base64,...' // inline 96x96 PNG, no third-party host
 
-- **`placeId` doit être un vrai ID de POI de la carte chargée.** Comme pour `update_occupancy` (voir `docs/features/occupancy-simulated.md`), une résolution qui échoue côté SDK n'affiche pas d'erreur exploitable dans cette démo — vérifier avec un ID de POI existant de la carte de démo (voir VisioMapEditor pour la liste des POIs).
-- **Pas d'état à nettoyer au démontage** : contrairement à `occupancy-simulated`, il n'y a ni timer ni `useEffect` — `goToPlace`/`clearPlace` sont de simples appels ponctuels, sans effet de bord persistant.
-- Ce champ + ces deux boutons étaient auparavant regroupés avec les autres contrôles de démo (itinéraire, reset, occupation) dans un unique `MapScreen.tsx` ; ils vivent maintenant sur leur propre écran (`FeatureScreen` avec `slug: 'goto-poi'`), accessible depuis le menu (`HomeScreen.tsx`).
+const clearPlace = () => {
+  if (venue && gotoPin) {
+    venue.removeImage(gotoPin)
+  }
+  gotoPin = null
+}
 
-## Pour aller plus loin
+const goToPlace = (placeId) => {
+  if (!venue || !view) {
+    return
+  }
+  clearPlace() // one pin at a time
+  const poi = venue.pois.find((p) => p.id === placeId)
+  if (!poi) {
+    throw new Error(`POI not found: ${placeId}`) // reported to React Native as 'command_error'
+  }
+  view.goToPOI(poi, {
+    orientation: { pitch: 20 },
+    padding: { top: 100, bottom: 100, right: 100, left: 100 },
+  })
+  const position = getPoiDisplayPosition(poi)
+  if (position) {
+    gotoPin = venue.createImage({ poi, position, width: 2, height: 2, orientationType: 'facing', url: GOTO_PIN_URL })
+  }
+}
+```
 
-- `docs/features/reset-view.md` de ce repo pour l'action symétrique sans paramètre (`resetMap`).
-- `docs/SDK_NOTES.md` de ce repo pour les gotchas SDK/WebView documentés indépendamment de toute feature.
+`getPoiDisplayPosition(poi)` is the page's single "where is this POI" helper: the POI's first Label position, else its first Image or Marker position, else the centroid of its first Surface's vertices.
+
+A command that throws in the page (here an unknown id) comes back as `{ type: 'command_error', data: { command: 'select_place', message } }`; the panel shows it.
+
+## Things to know
+
+- **A POI has no position field of its own.** It comes from what the POI owns (labels, images, markers, surfaces). Some POIs have no surface at all (marker- or image-only), so never assume `poi.surfaces[0]` exists.
+- **`venue.pois.find(...)` returns `undefined` for an unknown id** — the SDK doesn't throw for you; check it before calling `goToPOI`.
+- **Remove what you create.** Every `createImage` adds a new Image; keep a reference and `removeImage` it before placing another one, or images pile up on the map.
+- **`createImage`'s `url` accepts data: URLs**, so an icon can ship inside the app instead of depending on an external host.
+
+## Learn more
+
+- [Reset view](reset-view.md) — back to the default camera framing.
+- [3D icon marker](3d-icon-marker.md) — the Image options (`orientationType`, size) in more detail.

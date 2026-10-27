@@ -4,13 +4,13 @@ import { WebView } from 'react-native-webview';
 
 import { CAROUSEL_STOP_IDS } from '../demoMap';
 
-export interface OccupancyUpdate {
+interface OccupancyUpdate {
   planId: string;
   color?: string;
 }
 
 // WGS84 coordinate, same shape the SDK's PositionTrackerOptions.position expects --
-// see injectTrackedPosition in useVisioMap.ts below, no conversion needed.
+// see injectTrackedPosition below, no conversion needed.
 export interface Position {
   latitude: number;
   longitude: number;
@@ -18,7 +18,7 @@ export interface Position {
 }
 
 // custom-navigation-trace feature: mirrors the SDK's NavigationTraceUpdateOptions type
-// exactly (Navigation/NavigationTraceUpdateOptions.d.ts in visioone) -- colors only.
+// exactly (Navigation/NavigationTraceUpdateOptions.d.ts in the SDK typings) -- colors only.
 // The type also has textureRepeat/animationSpeed, omitted here since they only matter
 // for the 'textured' displayMode, which createNavigationTrace() has no option to select
 // in the first place. See docs/features/custom-navigation-trace.md.
@@ -30,15 +30,15 @@ export interface NavigationTraceStyle {
   previewOutlineColor?: string;
 }
 
-// Mirrors the SDK's View.UIPart type exactly (View.ts in visioone) -- these 5 string
+// Mirrors the SDK's View.UIPart type exactly (View/View.d.ts in the SDK typings) -- these 5 string
 // values are the only ones the SDK recognizes, case-sensitive, no others exist.
 export type UIPart = 'floorSelector' | 'navigation' | 'poiDetails' | 'search' | 'userTracking';
 
-// Mirrors the SDK's View.ExploreMode type exactly (ExploreMode.ts in visioone) -- see
+// Mirrors the SDK's ExploreMode type exactly (View/ExploreMode.d.ts in the SDK typings) -- see
 // docs/features/explore-mode.md for what each of the 3 values actually does.
 export type ExploreMode = 'global' | 'building' | 'floor';
 
-// Mirrors the SDK's OrientationType exactly (Venue/OrientationType.ts in visioone):
+// Mirrors the SDK's OrientationType exactly (Venue/OrientationType.d.ts in the SDK typings):
 // 'fixed' = flat on the ground with a fixed heading, 'flat' = flat on the ground but
 // turning to face the camera, 'facing' = always camera-facing (the SDK default). See
 // docs/features/3d-icon-marker.md.
@@ -48,7 +48,7 @@ export type ImageOrientationType = 'fixed' | 'flat' | 'facing';
 // `position` are resolved on the WebView side from an anchor POI id instead, since a
 // live POI object can't be serialized. width/height are in meters; url can be any image
 // URL, including a data: URL.
-export interface IconMarkerOptions {
+interface IconMarkerOptions {
   width: number;
   height?: number;
   url: string;
@@ -61,7 +61,7 @@ export interface IconMarkerOptions {
 // createLabel defaults height to width when omitted. rotation is in degrees, relative
 // to the map's orientation. color is a hex / rgb() / hsl() string. See
 // docs/features/custom-text-label.md.
-export interface TextLabelOptions {
+interface TextLabelOptions {
   text: string;
   color: string;
   width: number;
@@ -72,13 +72,13 @@ export interface TextLabelOptions {
 // Mirrors the subset of the SDK's LabelUpdateOptions this demo uses. width and height
 // go together (updateLabel with width alone also sets height = width); rotation is
 // absent on purpose -- it isn't part of LabelUpdateOptions.
-export type TextLabelUpdate =
+type TextLabelUpdate =
   | { text: string }
   | { color: string }
   | { width: number; height: number };
 
 // Mirrors the plain object shape sent from the WebView on 'poi_click' -- see the
-// poiclick handler in visioOneHtml.ts/visioOne.html. Not the live SDK POI type:
+// poiclick handler in visioOne.html. Not the live SDK POI type:
 // only serializable fields survive the WebView postMessage boundary.
 export interface ClickedPoi {
   id: string;
@@ -88,7 +88,7 @@ export interface ClickedPoi {
 }
 
 // Mirrors the plain object shape sent from the WebView in the 'ready' message's
-// data.buildings -- see the buildings mapping in visioOneHtml.ts/visioOne.html, built from
+// data.buildings -- see the buildings mapping in visioOne.html, built from
 // venue.venueLayout.buildings and resolved through venue.translator so labels match
 // whatever the SDK's own default floor-selector widget displays.
 export interface VenueFloor {
@@ -104,6 +104,12 @@ export interface VenueBuilding {
   floors: VenueFloor[];
 }
 
+// Mirrors the SDK's createView cameraProjection option.
+export type CameraProjection = 'perspective' | 'orthographic';
+
+// The React Native -> WebView senders (one 'type' per command, see the page's
+// onMessage switch in src/assets/visioOne.html).
+//
 // baseURL is the custom-base-url feature's override of LoadOptions.baseURL -- undefined
 // means "let the WebView page fall back to the SDK's own default"
 // (https://mapserver.visioglobe.com/), same as every other screen. See
@@ -119,8 +125,6 @@ export interface VenueBuilding {
 // authorizationToken is the auth-token feature's LoadOptions.authorizationToken (a JWT
 // from your own backend, for a map on the protected map server) -- undefined everywhere
 // else (public map, no Authorization header). See docs/features/auth-token.md.
-export type CameraProjection = 'perspective' | 'orthographic';
-
 export const useVisioMap = (
   hash: string,
   baseURL?: string,
@@ -134,16 +138,16 @@ export const useVisioMap = (
     webRef.current?.postMessage(JSON.stringify(message));
   };
 
+  // Sent when the page reports 'page_ready' (its message listener is registered), see
+  // VisioMapView.tsx.
   const sendSetup = () => {
     if (!hash) {
       return;
     }
-    setTimeout(() => {
-      sendMessage({
-        type: 'setup',
-        data: { hash, baseURL, enableShadows, cameraProjection, authorizationToken },
-      });
-    }, 500);
+    sendMessage({
+      type: 'setup',
+      data: { hash, baseURL, enableShadows, cameraProjection, authorizationToken },
+    });
   };
 
   const resetMap = () => {
@@ -243,10 +247,10 @@ export const useVisioMap = (
     });
   };
 
-  // The ping-pong interpolation timer lives on the native side (same idiom as
-  // occupancy-simulated's color-cycling setInterval) -- this is called on every tick
-  // with the already-interpolated position, the WebView handler just forwards it to
-  // injectTrackedPosition (setting allowTracking on first call).
+  // The ping-pong interpolation timer lives on the React Native side (see
+  // useSimulatedPositionSession.ts) -- this is called on every tick with the
+  // already-interpolated position, the WebView handler just forwards it to
+  // view.injectTrackedPosition (setting allowTracking on first call).
   const injectTrackedPosition = (position: Position, precisionCircleRadius: number) => {
     sendMessage({
       type: 'inject_tracked_position',
@@ -290,7 +294,7 @@ export const useVisioMap = (
   // Makes every surface of the given POI clickable (or not): once isInteractive is
   // true, the SDK itself swaps the surface's displayed color on hover/tap using
   // hoverColor/selectionColor -- no click listener needed on the app side for that
-  // part. See setSurfaceInteractive in visioOneHtml.ts/visioOne.html.
+  // part. See setSurfaceInteractive in visioOne.html.
   const setSurfaceInteractive = (placeId: string, interactive: boolean) => {
     sendMessage({
       type: 'set_surface_interactive',
@@ -327,7 +331,7 @@ export const useVisioMap = (
   // Highlights every POI carrying this category id by recoloring its surfaces --
   // fire-and-forget, no response expected. Reverting any previously-highlighted
   // category first (so only one is ever highlighted at a time) happens on the
-  // WebView side, see highlightCategory in visioOneHtml.ts/visioOne.html.
+  // WebView side, see highlightCategory in visioOne.html.
   const highlightCategory = (categoryId: string) => {
     sendMessage({
       type: 'highlight_category',

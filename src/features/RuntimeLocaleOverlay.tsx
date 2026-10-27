@@ -2,6 +2,7 @@ import * as React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 import { LocaleInfo, VisioMapBridge } from '../components/VisioMapView';
+import { useLocale } from '../i18n/useLocale';
 
 interface Props {
   localeInfo: LocaleInfo;
@@ -19,12 +20,13 @@ const LOCALE_LABELS: Record<string, string> = {
 };
 
 const RuntimeLocaleOverlay = ({ localeInfo, error, setLocale }: Props) => {
+  const { t } = useLocale();
   const { locales, currentLocale } = localeInfo;
 
   return (
     <View style={styles.column}>
       {locales.length === 0 ? (
-        <Text style={styles.hint}>Loading languages…</Text>
+        <Text style={styles.hint}>{t('runtimeLocale.loading')}</Text>
       ) : (
         <View style={styles.chipsRow}>
           {locales.map((locale) => (
@@ -40,10 +42,7 @@ const RuntimeLocaleOverlay = ({ localeInfo, error, setLocale }: Props) => {
 
       {error ? <Text style={styles.error}>{error}</Text> : null}
 
-      <Text style={styles.hint}>
-        Switches the language of place names and labels shown on the map, without
-        reloading or republishing it.
-      </Text>
+      <Text style={styles.hint}>{t('runtimeLocale.hint')}</Text>
     </View>
   );
 };

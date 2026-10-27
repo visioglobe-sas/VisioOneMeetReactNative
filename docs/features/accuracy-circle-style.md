@@ -16,7 +16,7 @@ sendMessage({ type: 'set_position_tracker_style', data: { color, opacity } }) //
 ```
 
 ```js
-// visioOneHtml.ts / visioOne.html (kept in sync by hand)
+// src/assets/visioOne.html
 case 'set_position_tracker_style':
   view.updatePositionTrackerGraphicOptions({ color: evt.data.color, opacity: evt.data.opacity })
   break
@@ -32,7 +32,7 @@ sendMessage({ type: 'inject_tracked_position', data: { position, precisionCircle
 ```
 
 ```js
-// visioOneHtml.ts / visioOne.html
+// src/assets/visioOne.html
 if (!view.allowTracking) {
   view.allowTracking = true
 }

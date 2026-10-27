@@ -17,7 +17,7 @@ const addLocale = () => {
 ```
 
 ```js
-// visioOneHtml.ts / visioOne.html (kept in sync by hand)
+// src/assets/visioOne.html
 const addSpanishLocale = () => {
   if (!venue) {
     return

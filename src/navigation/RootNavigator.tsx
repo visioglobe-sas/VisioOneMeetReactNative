@@ -16,7 +16,8 @@ const Stack = createNativeStackNavigator<RootStackParamList>();
 
 const RootNavigator = () => (
   <Stack.Navigator>
-    <Stack.Screen name="Home" component={HomeScreen} options={{ title: 'VisioOne demos' }} />
+    {/* HomeScreen draws its own header (app icon + name). */}
+    <Stack.Screen name="Home" component={HomeScreen} options={{ headerShown: false }} />
     <Stack.Screen
       name="Feature"
       component={FeatureScreen}
@@ -25,7 +26,7 @@ const RootNavigator = () => (
         const locale = resolveLocale();
         return {
           headerBackVisible: true,
-          title: feature ? strings[locale][feature.titleKey] : 'Feature',
+          title: feature ? strings[locale][feature.titleKey] : '',
         };
       }}
     />

@@ -1,48 +1,41 @@
 import * as React from 'react';
 import { StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
-import { DynamicPoiCreateResult, VisioMapBridge } from '../components/VisioMapView';
+import BottomSheet from '../components/BottomSheet';
+import { DynamicPoiCreateResult } from '../components/VisioMapView';
 import { ANCHOR_POI_ID, DYNAMIC_POI_NEW_ID } from '../demoMap';
-import { useLocale } from '../i18n/useLocale';
-
-interface Props {
-  createDynamicPoi: VisioMapBridge['createDynamicPoi'];
-  updateDynamicPoiLabel: VisioMapBridge['updateDynamicPoiLabel'];
-  removeDynamicPoi: VisioMapBridge['removeDynamicPoi'];
-  createResult: DynamicPoiCreateResult | null;
-}
+import { Translate, useLocale } from '../i18n/useLocale';
+import { FeatureProps } from './types';
 
 // Only one dynamically-created POI is tracked at a time -- the simplest demo state.
-// The live SDK POI/Label objects only exist on the WebView side (see
-// visioOneHtml.ts/visioOne.html); this overlay only tracks the display id/text it
-// gets back over the bridge. See docs/features/dynamic-poi-crud.md.
+// The live SDK POI/Label objects only exist on the WebView side (see visioOne.html);
+// this component only tracks the display id/text it gets back over the bridge. It
+// stays mounted for the whole screen, so after closing and reopening the panel the
+// tracked POI can still be updated or removed. See docs/features/dynamic-poi-crud.md.
 interface TrackedPoi {
   id: string;
   text: string;
 }
 
-const reasonMessage = (result: DynamicPoiCreateResult): string => {
+const reasonMessage = (result: DynamicPoiCreateResult, t: Translate): string => {
   switch (result.reason) {
     case 'anchor_not_found':
-      return "Anchor POI not found -- check that ID exists on this venue.";
+      return t('dynamicPoiCrud.anchorNotFound');
     case 'no_position':
-      return 'This anchor POI has no position to copy (no label or marker on it).';
+      return t('dynamicPoiCrud.noPosition');
     case 'duplicate_id':
-      return `That POI ID is already used in this venue.${result.message ? ` (${result.message})` : ''}`;
+      return t('dynamicPoiCrud.duplicateId', { details: result.message ? ` (${result.message})` : '' });
     case 'already_tracked':
-      return 'A dynamic POI is already tracked -- remove it first.';
+      return t('dynamicPoiCrud.alreadyTracked');
     default:
-      return 'Could not create the POI.';
+      return t('dynamicPoiCrud.failed');
   }
 };
 
-const DynamicPoiCrudOverlay = ({
-  createDynamicPoi,
-  updateDynamicPoiLabel,
-  removeDynamicPoi,
-  createResult,
-}: Props) => {
+const DynamicPoiCrudFeature = ({ ctx, sheet }: FeatureProps) => {
   const { t } = useLocale();
+  const { createDynamicPoi, updateDynamicPoiLabel, removeDynamicPoi } = ctx.bridge;
+  const createResult = ctx.dynamicPoiCreateResult;
   const [newId, setNewId] = React.useState(DYNAMIC_POI_NEW_ID);
   const [anchorId, setAnchorId] = React.useState(ANCHOR_POI_ID);
   const [labelText, setLabelText] = React.useState(() => t('dynamicPoiCrud.defaultLabel'));
@@ -59,7 +52,7 @@ const DynamicPoiCrudOverlay = ({
       setError(null);
       setTrackedPoi({ id: createResult.id, text: createResult.text });
     } else {
-      setError(reasonMessage(createResult));
+      setError(reasonMessage(createResult, t));
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [createResult]);
@@ -95,50 +88,55 @@ const DynamicPoiCrudOverlay = ({
   };
 
   return (
-    <View style={styles.column}>
-      <View style={styles.column}>
-        <TextInput
-          style={styles.input}
-          placeholder="New POI ID"
-          value={newId}
-          onChangeText={setNewId}
-          autoCapitalize="none"
-          editable={!trackedPoi}
-        />
-        <TextInput
-          style={styles.input}
-          placeholder="Anchor POI ID (copy its position)"
-          value={anchorId}
-          onChangeText={setAnchorId}
-          autoCapitalize="none"
-          editable={!trackedPoi}
-        />
-        <TextInput
-          style={styles.input}
-          placeholder="Label text"
-          value={labelText}
-          onChangeText={setLabelText}
-        />
-      </View>
+    <BottomSheet {...sheet}>
+      <TextInput
+        style={styles.input}
+        placeholder={t('dynamicPoiCrud.newId')}
+        placeholderTextColor="#666"
+        value={newId}
+        onChangeText={setNewId}
+        autoCapitalize="none"
+        autoCorrect={false}
+        editable={!trackedPoi}
+      />
+      <TextInput
+        style={styles.input}
+        placeholder={t('dynamicPoiCrud.anchorId')}
+        placeholderTextColor="#666"
+        value={anchorId}
+        onChangeText={setAnchorId}
+        autoCapitalize="none"
+        autoCorrect={false}
+        editable={!trackedPoi}
+      />
+      <TextInput
+        style={styles.input}
+        placeholder={t('dynamicPoiCrud.labelText')}
+        placeholderTextColor="#666"
+        value={labelText}
+        onChangeText={setLabelText}
+      />
 
       <View style={styles.row}>
         <TouchableOpacity
-          style={[styles.button, trackedPoi ? styles.buttonDisabled : null]}
-          disabled={!!trackedPoi}
+          style={[styles.button, (trackedPoi || awaitingCreate) && styles.buttonDisabled]}
+          disabled={!!trackedPoi || awaitingCreate}
           onPress={handleCreate}>
-          <Text style={styles.buttonText}>{awaitingCreate ? 'Creating…' : 'Create'}</Text>
+          <Text style={styles.buttonText}>
+            {awaitingCreate ? t('dynamicPoiCrud.creating') : t('dynamicPoiCrud.create')}
+          </Text>
         </TouchableOpacity>
         <TouchableOpacity
-          style={[styles.buttonSecondary, !trackedPoi ? styles.buttonDisabled : null]}
+          style={[styles.buttonSecondary, !trackedPoi && styles.buttonDisabled]}
           disabled={!trackedPoi}
           onPress={handleUpdate}>
-          <Text style={styles.buttonText}>Update text</Text>
+          <Text style={styles.buttonText}>{t('common.updateText')}</Text>
         </TouchableOpacity>
         <TouchableOpacity
-          style={[styles.buttonSecondary, !trackedPoi ? styles.buttonDisabled : null]}
+          style={[styles.buttonSecondary, !trackedPoi && styles.buttonDisabled]}
           disabled={!trackedPoi}
           onPress={handleRemove}>
-          <Text style={styles.buttonText}>Remove</Text>
+          <Text style={styles.buttonText}>{t('dynamicPoiCrud.remove')}</Text>
         </TouchableOpacity>
       </View>
 
@@ -146,23 +144,16 @@ const DynamicPoiCrudOverlay = ({
 
       <Text style={styles.meta}>
         {trackedPoi
-          ? `Created: ${trackedPoi.id} — “${trackedPoi.text}”`
-          : 'No dynamic POI created yet.'}
+          ? t('dynamicPoiCrud.created', { id: trackedPoi.id, text: trackedPoi.text })
+          : t('dynamicPoiCrud.none')}
       </Text>
 
-      <Text style={styles.hint}>
-        Create makes up a new POI ID and copies the position of an existing "anchor" POI
-        (a bare POI has no visual footprint of its own). Only one dynamic POI is tracked
-        at a time in this demo -- remove it before creating another.
-      </Text>
-    </View>
+      <Text style={styles.hint}>{t('dynamicPoiCrud.hint')}</Text>
+    </BottomSheet>
   );
 };
 
 const styles = StyleSheet.create({
-  column: {
-    gap: 10,
-  },
   row: {
     flexDirection: 'row',
     gap: 8,
@@ -178,7 +169,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#057DBC',
     borderRadius: 6,
-    paddingHorizontal: 14,
+    paddingHorizontal: 8,
     paddingVertical: 10,
     justifyContent: 'center',
     alignItems: 'center',
@@ -187,7 +178,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#333',
     borderRadius: 6,
-    paddingHorizontal: 14,
+    paddingHorizontal: 8,
     paddingVertical: 10,
     justifyContent: 'center',
     alignItems: 'center',
@@ -198,6 +189,7 @@ const styles = StyleSheet.create({
   buttonText: {
     color: '#fff',
     fontWeight: '600',
+    textAlign: 'center',
   },
   error: {
     color: '#E74C3C',
@@ -214,4 +206,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default DynamicPoiCrudOverlay;
+export default DynamicPoiCrudFeature;

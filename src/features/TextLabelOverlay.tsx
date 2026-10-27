@@ -1,36 +1,33 @@
 import * as React from 'react';
 import { StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
-import { TextLabelCreateResult, VisioMapBridge } from '../components/VisioMapView';
+import BottomSheet from '../components/BottomSheet';
+import ColorChips from '../components/ColorChips';
+import { TextLabelCreateResult } from '../components/VisioMapView';
 import { ANCHOR_POI_ID } from '../demoMap';
-import { useLocale } from '../i18n/useLocale';
-
-interface Props {
-  createTextLabel: VisioMapBridge['createTextLabel'];
-  updateTextLabel: VisioMapBridge['updateTextLabel'];
-  removeTextLabel: VisioMapBridge['removeTextLabel'];
-  createResult: TextLabelCreateResult | null;
-}
+import { StringKey } from '../i18n/strings';
+import { Translate, useLocale } from '../i18n/useLocale';
+import { FeatureProps } from './types';
 
 // Only one label is placed at a time in this demo, always under this id -- the live
 // SDK Label object is tracked on the WebView side, keyed by it.
 const LABEL_ID = 'custom-text-label';
 
-const COLORS: { value: string; label: string }[] = [
-  { value: '#E53935', label: 'Red' },
-  { value: '#43A047', label: 'Green' },
-  { value: '#1E88E5', label: 'Blue' },
-  { value: '#212121', label: 'Dark' },
+const COLORS: { value: string; labelKey: StringKey }[] = [
+  { value: '#E53935', labelKey: 'color.red' },
+  { value: '#43A047', labelKey: 'color.green' },
+  { value: '#1E88E5', labelKey: 'color.blue' },
+  { value: '#212121', labelKey: 'color.dark' },
 ];
 
 type SizeKey = 'small' | 'medium' | 'large';
 
 // Text box size in meters. Width and height are always sent together: createLabel
 // defaults height to width, and updateLabel with width alone sets height = width.
-const SIZES: { value: SizeKey; label: string; width: number; height: number }[] = [
-  { value: 'small', label: 'Small', width: 10, height: 2 },
-  { value: 'medium', label: 'Medium', width: 16, height: 3 },
-  { value: 'large', label: 'Large', width: 22, height: 4 },
+const SIZES: { value: SizeKey; labelKey: StringKey; width: number; height: number }[] = [
+  { value: 'small', labelKey: 'customTextLabel.small', width: 10, height: 2 },
+  { value: 'medium', labelKey: 'customTextLabel.medium', width: 16, height: 3 },
+  { value: 'large', labelKey: 'customTextLabel.large', width: 22, height: 4 },
 ];
 
 const ROTATIONS = [0, 45, 90];
@@ -40,21 +37,28 @@ interface Status {
   isError: boolean;
 }
 
-const reasonMessage = (result: TextLabelCreateResult): string => {
+const reasonMessage = (result: TextLabelCreateResult, t: Translate): string => {
   switch (result.reason) {
     case 'empty_text':
-      return 'Text is required';
+      return t('common.textRequired');
     case 'anchor_not_found':
-      return 'POI not found';
+      return t('common.poiNotFound');
     case 'no_position':
-      return 'This POI has no position';
+      return t('common.noPosition');
     default:
-      return `Could not place the label${result.message ? ` (${result.message})` : ''}`;
+      return t('customTextLabel.failed', { details: result.message ? ` (${result.message})` : '' });
   }
 };
 
-const TextLabelOverlay = ({ createTextLabel, updateTextLabel, removeTextLabel, createResult }: Props) => {
+const sizeOf = (key: SizeKey) => SIZES.find((item) => item.value === key) ?? SIZES[1];
+
+// Fields, style selections and what is placed live here (mounted for the whole
+// screen), so reopening the panel shows the label actually on the map and a later
+// rotation change re-creates it with its real text.
+const TextLabelFeature = ({ ctx, sheet }: FeatureProps) => {
   const { t } = useLocale();
+  const { createTextLabel, updateTextLabel, removeTextLabel } = ctx.bridge;
+  const createResult = ctx.textLabelCreateResult;
   const [anchorId, setAnchorId] = React.useState(ANCHOR_POI_ID);
   const [text, setText] = React.useState(() => t('customTextLabel.defaultText'));
   const [color, setColor] = React.useState(COLORS[0].value);
@@ -63,25 +67,25 @@ const TextLabelOverlay = ({ createTextLabel, updateTextLabel, removeTextLabel, c
   // What is currently placed (anchor + text actually on the map), null when nothing is.
   // Needed to recreate the label with the same values when only the rotation changes.
   const [placed, setPlaced] = React.useState<{ anchorId: string; text: string } | null>(null);
-  // Anchor/text of the create request in flight, confirmed by the next createResult.
+  // Anchor/text of the create request in flight, confirmed by the next createResult;
+  // null when no create is awaiting its answer.
   const pending = React.useRef<{ anchorId: string; text: string } | null>(null);
   const [status, setStatus] = React.useState<Status | null>(null);
 
-  const sizeOf = (key: SizeKey) => SIZES.find((item) => item.value === key) ?? SIZES[1];
-
   React.useEffect(() => {
-    if (!createResult) {
+    const request = pending.current;
+    if (!createResult || !request) {
       return;
     }
+    pending.current = null;
     if (createResult.ok) {
-      const request = pending.current;
-      setPlaced({ anchorId: createResult.anchorId, text: request?.text ?? '' });
-      setStatus({ message: `Label placed on ${createResult.anchorId}`, isError: false });
+      setPlaced({ anchorId: createResult.anchorId, text: request.text });
+      setStatus({ message: t('customTextLabel.placedOn', { id: createResult.anchorId }), isError: false });
     } else {
       setPlaced(null);
-      setStatus({ message: reasonMessage(createResult), isError: true });
+      setStatus({ message: reasonMessage(createResult, t), isError: true });
     }
-    pending.current = null;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [createResult]);
 
   const sendCreate = (
@@ -103,12 +107,12 @@ const TextLabelOverlay = ({ createTextLabel, updateTextLabel, removeTextLabel, c
   const handlePlace = () => {
     const labelText = text.trim();
     if (!labelText) {
-      setStatus({ message: 'Text is required', isError: true });
+      setStatus({ message: t('common.textRequired'), isError: true });
       return;
     }
     const anchor = anchorId.trim();
     if (!anchor) {
-      setStatus({ message: 'POI not found', isError: true });
+      setStatus({ message: t('common.poiNotFound'), isError: true });
       return;
     }
     // Only one label at a time: remove the current one before placing a new one.
@@ -126,12 +130,12 @@ const TextLabelOverlay = ({ createTextLabel, updateTextLabel, removeTextLabel, c
     }
     const labelText = text.trim();
     if (!labelText) {
-      setStatus({ message: 'Text is required', isError: true });
+      setStatus({ message: t('common.textRequired'), isError: true });
       return;
     }
     updateTextLabel(LABEL_ID, { text: labelText });
     setPlaced({ ...placed, text: labelText });
-    setStatus({ message: 'Label text updated', isError: false });
+    setStatus({ message: t('customTextLabel.updated'), isError: false });
   };
 
   const handleRemove = () => {
@@ -140,7 +144,7 @@ const TextLabelOverlay = ({ createTextLabel, updateTextLabel, removeTextLabel, c
     }
     removeTextLabel(LABEL_ID);
     setPlaced(null);
-    setStatus({ message: 'Label removed', isError: false });
+    setStatus({ message: t('customTextLabel.removed'), isError: false });
   };
 
   const handleColor = (value: string) => {
@@ -168,11 +172,11 @@ const TextLabelOverlay = ({ createTextLabel, updateTextLabel, removeTextLabel, c
   };
 
   return (
-    <View style={styles.column}>
-      <Text style={styles.label}>Anchor POI ID</Text>
+    <BottomSheet {...sheet}>
+      <Text style={styles.label}>{t('common.anchorPoiId')}</Text>
       <TextInput
         style={styles.input}
-        placeholder="Anchor POI ID"
+        placeholder={t('common.anchorPoiId')}
         placeholderTextColor="#666"
         value={anchorId}
         onChangeText={setAnchorId}
@@ -180,48 +184,39 @@ const TextLabelOverlay = ({ createTextLabel, updateTextLabel, removeTextLabel, c
         autoCorrect={false}
       />
 
-      <Text style={styles.label}>Text</Text>
+      <Text style={styles.label}>{t('common.text')}</Text>
       <TextInput
         style={styles.input}
-        placeholder="Text"
+        placeholder={t('common.text')}
         placeholderTextColor="#666"
         value={text}
         onChangeText={setText}
         autoCorrect={false}
       />
 
-      <Text style={styles.label}>Color</Text>
-      <View style={styles.row}>
-        {COLORS.map(({ value, label }) => {
-          const isActive = value === color;
-          return (
-            <TouchableOpacity
-              key={value}
-              style={[styles.chip, isActive && styles.chipActive]}
-              onPress={() => handleColor(value)}>
-              <View style={[styles.swatch, { backgroundColor: value }]} />
-              <Text style={[styles.chipText, isActive && styles.chipTextActive]}>{label}</Text>
-            </TouchableOpacity>
-          );
-        })}
-      </View>
+      <Text style={styles.label}>{t('common.color')}</Text>
+      <ColorChips
+        options={COLORS.map(({ value, labelKey }) => ({ value, label: t(labelKey) }))}
+        selected={color}
+        onSelect={handleColor}
+      />
 
-      <Text style={styles.label}>Size</Text>
+      <Text style={styles.label}>{t('customTextLabel.size')}</Text>
       <View style={styles.segmented}>
-        {SIZES.map(({ value, label }) => {
+        {SIZES.map(({ value, labelKey }) => {
           const isActive = value === size;
           return (
             <TouchableOpacity
               key={value}
               style={[styles.segment, isActive && styles.segmentActive]}
               onPress={() => handleSize(value)}>
-              <Text style={[styles.segmentText, isActive && styles.segmentTextActive]}>{label}</Text>
+              <Text style={[styles.segmentText, isActive && styles.segmentTextActive]}>{t(labelKey)}</Text>
             </TouchableOpacity>
           );
         })}
       </View>
 
-      <Text style={styles.label}>Rotation</Text>
+      <Text style={styles.label}>{t('customTextLabel.rotation')}</Text>
       <View style={styles.segmented}>
         {ROTATIONS.map((value) => {
           const isActive = value === rotation;
@@ -238,33 +233,34 @@ const TextLabelOverlay = ({ createTextLabel, updateTextLabel, removeTextLabel, c
 
       <View style={styles.row}>
         <TouchableOpacity style={styles.button} onPress={handlePlace}>
-          <Text style={styles.buttonText}>Place label</Text>
+          <Text style={styles.buttonText}>{t('customTextLabel.place')}</Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={[styles.buttonSecondary, !placed ? styles.buttonDisabled : null]}
           disabled={!placed}
           onPress={handleUpdateText}>
-          <Text style={styles.buttonText}>Update text</Text>
+          <Text style={styles.buttonText}>{t('common.updateText')}</Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={[styles.buttonSecondary, !placed ? styles.buttonDisabled : null]}
           disabled={!placed}
           onPress={handleRemove}>
-          <Text style={styles.buttonText}>Remove label</Text>
+          <Text style={styles.buttonText}>{t('customTextLabel.remove')}</Text>
         </TouchableOpacity>
       </View>
 
       <Text style={status?.isError ? styles.error : styles.meta}>
-        {status ? status.message : placed ? `Label placed on ${placed.anchorId}` : 'No label placed'}
+        {status
+          ? status.message
+          : placed
+            ? t('customTextLabel.placedOn', { id: placed.anchorId })
+            : t('customTextLabel.none')}
       </Text>
-    </View>
+    </BottomSheet>
   );
 };
 
 const styles = StyleSheet.create({
-  column: {
-    gap: 10,
-  },
   row: {
     flexDirection: 'row',
     gap: 8,
@@ -279,37 +275,6 @@ const styles = StyleSheet.create({
     borderRadius: 6,
     paddingHorizontal: 10,
     paddingVertical: 8,
-  },
-  chip: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    backgroundColor: '#222',
-    borderRadius: 16,
-    borderWidth: 2,
-    borderColor: 'transparent',
-    paddingVertical: 8,
-  },
-  chipActive: {
-    borderColor: '#fff',
-  },
-  swatch: {
-    width: 14,
-    height: 14,
-    borderRadius: 7,
-    // Keeps the Dark (#212121) swatch visible on the dark panel background.
-    borderWidth: 1,
-    borderColor: '#888',
-  },
-  chipText: {
-    color: '#aaa',
-    fontWeight: '600',
-    fontSize: 13,
-  },
-  chipTextActive: {
-    color: '#fff',
   },
   segmented: {
     flexDirection: 'row',
@@ -373,4 +338,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default TextLabelOverlay;
+export default TextLabelFeature;

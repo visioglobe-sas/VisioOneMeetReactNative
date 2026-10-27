@@ -1,19 +1,10 @@
 import * as React from 'react';
 import { StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
-import {
-  CustomDataLookupResult,
-  CustomDataRefreshOutcome,
-  VisioMapBridge,
-} from '../components/VisioMapView';
+import BottomSheet from '../components/BottomSheet';
 import { CUSTOM_DATA_KNOWN_POI_IDS, CUSTOM_DATA_POI_ID } from '../demoMap';
-
-interface Props {
-  refreshCustomData: VisioMapBridge['refreshCustomData'];
-  getPoiCustomData: VisioMapBridge['getPoiCustomData'];
-  refresh: CustomDataRefreshOutcome | null;
-  lookup: CustomDataLookupResult | null;
-}
+import { useLocale } from '../i18n/useLocale';
+import { FeatureProps } from './types';
 
 // This screen loads a dedicated map (CUSTOM_DATA_MAP_HASH in demoMap.ts) confirmed to
 // carry real, published CustomData on the CUSTOM_DATA_KNOWN_POI_IDS POIs -- unlike the
@@ -21,11 +12,14 @@ interface Props {
 // triggered with a single tap instead of typing an id by hand. See
 // docs/features/custom-data.md.
 
-const CustomDataOverlay = ({ refreshCustomData, getPoiCustomData, refresh, lookup }: Props) => {
+const CustomDataFeature = ({ ctx, sheet }: FeatureProps) => {
+  const { t } = useLocale();
+  const { refreshCustomData, getPoiCustomData } = ctx.bridge;
+  const { refresh, lookup } = ctx.customData;
   const [placeId, setPlaceId] = React.useState(CUSTOM_DATA_POI_ID);
   // True from the moment a button is pressed until the matching WebView response
   // ('custom_data_refreshed'/'custom_data_refresh_error' or 'poi_custom_data_result')
-  // comes back -- same idiom as SimulatedPositionOverlay's awaitingResolution.
+  // comes back.
   const [awaitingRefresh, setAwaitingRefresh] = React.useState(false);
   const [awaitingLookup, setAwaitingLookup] = React.useState(false);
 
@@ -67,7 +61,7 @@ const CustomDataOverlay = ({ refreshCustomData, getPoiCustomData, refresh, looku
   const entries = lookup ? Object.entries(lookup.customData) : [];
 
   return (
-    <View style={styles.column}>
+    <BottomSheet {...sheet}>
       <View style={styles.chipsRow}>
         {CUSTOM_DATA_KNOWN_POI_IDS.map((id) => (
           <TouchableOpacity
@@ -82,33 +76,38 @@ const CustomDataOverlay = ({ refreshCustomData, getPoiCustomData, refresh, looku
       <View style={styles.row}>
         <TextInput
           style={styles.input}
-          placeholder="Place ID"
+          placeholder={t('common.placeId')}
+          placeholderTextColor="#666"
           value={placeId}
           onChangeText={setPlaceId}
           autoCapitalize="none"
         />
         <TouchableOpacity style={styles.buttonSecondary} onPress={handleRefresh}>
-          <Text style={styles.buttonText}>{awaitingRefresh ? 'Refreshing…' : 'Refresh from server'}</Text>
+          <Text style={styles.buttonText}>
+            {awaitingRefresh ? t('customData.refreshing') : t('customData.refresh')}
+          </Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={styles.button}
           disabled={!placeId.trim()}
           onPress={() => handleLookup()}>
-          <Text style={styles.buttonText}>{awaitingLookup ? 'Looking up…' : 'Look up'}</Text>
+          <Text style={styles.buttonText}>
+            {awaitingLookup ? t('customData.lookingUp') : t('customData.lookup')}
+          </Text>
         </TouchableOpacity>
       </View>
 
       {refresh && !refresh.ok ? (
-        <Text style={styles.error}>Refresh failed: {refresh.error}</Text>
+        <Text style={styles.error}>{t('customData.refreshFailed', { error: refresh.error ?? '' })}</Text>
       ) : null}
-      {refresh?.ok ? <Text style={styles.hint}>Custom data refreshed from the server.</Text> : null}
+      {refresh?.ok ? <Text style={styles.hint}>{t('customData.refreshed')}</Text> : null}
 
       {lookup ? (
         <View style={styles.result}>
           {!lookup.found ? (
-            <Text style={styles.meta}>POI not found: {lookup.placeId}</Text>
+            <Text style={styles.meta}>{t('customData.notFound', { id: lookup.placeId })}</Text>
           ) : entries.length === 0 ? (
-            <Text style={styles.meta}>No custom data for this POI.</Text>
+            <Text style={styles.meta}>{t('customData.empty')}</Text>
           ) : (
             entries.map(([key, value]) => (
               <View key={key} style={styles.entry}>
@@ -119,19 +118,13 @@ const CustomDataOverlay = ({ refreshCustomData, getPoiCustomData, refresh, looku
           )}
         </View>
       ) : (
-        <Text style={styles.hint}>
-          Tap one of the place IDs above for a real, published example, or type any
-          other place ID and hit Look up.
-        </Text>
+        <Text style={styles.hint}>{t('customData.hint')}</Text>
       )}
-    </View>
+    </BottomSheet>
   );
 };
 
 const styles = StyleSheet.create({
-  column: {
-    gap: 10,
-  },
   row: {
     flexDirection: 'row',
     gap: 8,
@@ -213,4 +206,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default CustomDataOverlay;
+export default CustomDataFeature;

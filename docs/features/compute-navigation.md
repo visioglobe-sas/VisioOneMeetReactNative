@@ -1,33 +1,46 @@
-# Itinéraire
+# Itinerary
 
 ## Description
 
-Calcule et affiche un itinéraire entre deux lieux (POI) de la carte chargée, en s'appuyant sur `start_itinerary` — déjà exposé côté pont JS (`startItinerary` dans `useVisioMap.ts`, géré côté WebView dans `visioOneHtml.ts`/`visioOne.html`).
+Computes a route between two places (POIs) and displays it on the map. Built on:
 
-`startItinerary(origin, destination, isAccessible)` demande au SDK de calculer un chemin entre les deux identifiants de POI donnés et de l'afficher sur la carte ; `isAccessible` bascule le calcul sur un itinéraire accessible (évite escaliers/marches) quand la carte fournit cette information.
+- `venue.computeNavigation(request)` — computes the route (`Navigation`, with its `instructions`).
+- `venue.createNavigationTrace(navigation)` — builds the drawable trace.
+- `view.setCurrentNavigationTrace(trace)` — displays it, replacing any trace already shown.
 
-## Step by step
+## SDK usage
 
-1. **Rien à ajouter côté pont** : `useVisioMap().startItinerary(origin: string, destination: string, isAccessible: boolean)` existe déjà et envoie `{ type: 'start_itinerary', data: { origin, destination, isAccessible } }` à la WebView.
-2. Dans le composant consommateur (`src/features/ComputeNavigationOverlay.tsx`, rendu par `FeatureScreen.tsx` à l'intérieur de `VisioMapView.tsx`), garder les deux identifiants saisis dans des états locaux (`useState`) et exposer un bouton :
-   ```tsx
-   <TextInput value={origin} onChangeText={setOrigin} placeholder="From (place ID)" />
-   <TextInput value={destination} onChangeText={setDestination} placeholder="To (place ID)" />
-   <TouchableOpacity onPress={() => startItinerary(origin, destination, false)}>
-     <Text>Itinerary</Text>
-   </TouchableOpacity>
-   ```
-   Cette démo appelle toujours `startItinerary` avec `isAccessible: false` — le paramètre reste piloté par le code, pas par un contrôle UI dédié.
-3. Le bridge (`startItinerary`, `webRef`, `sendSetup`, ...) est fourni par `useVisioMap()` à l'intérieur de `VisioMapView.tsx`, qui le passe à l'overlay actif via la prop `renderOverlay` — voir `FeatureScreen.tsx` pour le branchement par `slug` de feature (`'compute-navigation'`).
+React Native sends `{ type: 'start_itinerary', data: { origin, destination, isAccessible, excludedAttributes } }` (`startItinerary` in `src/screens/useVisioMap.ts`); the page computes and displays the route:
 
-## Points d'attention
+```js
+// src/assets/visioOne.html
+const startItinerary = (origin, destination, isAccessible, excludedAttributes) => {
+  if (!venue || !view) {
+    return
+  }
+  const navigation = venue.computeNavigation({
+    origin,
+    destination,
+    isAccessible,
+    type: 'fastest',
+    firstNodeAsIntersection: false,
+    mergeFloorChangeInstructions: false,
+    excludedAttributes,
+  })
+  currentNavigationTrace = venue.createNavigationTrace(navigation)
+  view.setCurrentNavigationTrace(currentNavigationTrace)
+}
+```
 
-- **`origin` et `destination` doivent être de vrais IDs de POI de la carte chargée**, comme pour `goto-poi` (voir `docs/features/goto-poi.md`) — un ID invalide échoue silencieusement côté SDK dans cette démo.
-- **Pas d'état à nettoyer au démontage** : `startItinerary` est un appel ponctuel, sans timer ni cleanup à gérer.
-- Les évènements `itinerary_instructions` renvoyés par la WebView (étapes du trajet calculé) sont déjà relayés vers la console par `VisioMapView.tsx` (`handleWebMessage`) mais ne sont pas affichés dans l'UI de cette démo — un client voulant les exploiter branchera son propre affichage sur ce même évènement.
-- Ces deux champs + ce bouton étaient auparavant regroupés avec les autres contrôles de démo (Place ID, reset, occupation) dans un unique `MapScreen.tsx` ; ils vivent maintenant sur leur propre écran (`FeatureScreen` avec `slug: 'compute-navigation'`), accessible depuis le menu (`HomeScreen.tsx`).
+`origin` and `destination` are POI ids. This screen always passes `isAccessible: false` and no `excludedAttributes` (see [Accessible route](accessible-mode.md) and [Avoid elevator](navigation-exclude-modalities.md)).
 
-## Pour aller plus loin
+## Things to know
 
-- `docs/features/goto-poi.md` de ce repo pour la feature de sélection d'un lieu unique dont celle-ci reprend la logique d'identifiants de POI.
-- `docs/SDK_NOTES.md` de ce repo pour les gotchas SDK/WebView documentés indépendamment de toute feature.
+- **`computeNavigation` throws on an unknown POI id** (e.g. "Cannot compute Navigation as origin is an unknown POI."). The page catches it and reports `{ type: 'command_error', data: { command: 'start_itinerary', message } }`, which the panel shows.
+- **Computing a new route needs no cleanup**: `setCurrentNavigationTrace(newTrace)` replaces the trace currently displayed. Don't also call `venue.removeNavigationTrace(previousTrace)` on a trace that was replaced or removed with `view.removeCurrentNavigationTrace()`: it is already unregistered, and the SDK throws "Cannot remove Navigation as it is unregistered".
+- **`navigation.instructions`** holds the step-by-step instructions; this demo doesn't display them.
+
+## Learn more
+
+- [Custom navigation trace](custom-navigation-trace.md) — restyle the displayed trace.
+- [Accessible route](accessible-mode.md), [Avoid elevator](navigation-exclude-modalities.md) — the other request options.

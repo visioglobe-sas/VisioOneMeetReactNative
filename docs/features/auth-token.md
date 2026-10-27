@@ -55,7 +55,7 @@ const setAuthorizationToken = (token: string) => {
 
 ### WebView side
 
-In `src/assets/visioOneHtml.ts` (and its readable copy `visioOne.html`, kept in sync by hand), `setup()` adds the token to the load options and `setAuthorizationToken()` forwards refreshes to the venue:
+In the WebView page (`src/assets/visioOne.html`), `setup()` adds the token to the load options and `setAuthorizationToken()` forwards refreshes to the venue:
 
 ```js
 const loadOptions = { vg_maphash: venueHash, baseURL: trimmedBaseURL }

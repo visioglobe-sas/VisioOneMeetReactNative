@@ -42,6 +42,16 @@ npm run ios
 npm run android
 ```
 
+### Editing the WebView page
+
+All SDK calls run in the page [`src/assets/visioOne.html`](src/assets/visioOne.html). The WebView loads it as an inline string (see [`docs/SDK_NOTES.md`](docs/SDK_NOTES.md)), so `src/assets/visioOneHtml.ts` is a **generated** copy of it, committed so a fresh clone builds as is. Edit `visioOne.html` only, then regenerate:
+
+```sh
+npm run build:webview
+```
+
+`npm start`, `npm run ios`, `npm run android` and `npm test` regenerate it first on their own, and `npm run lint` fails if the generated file is out of date.
+
 ## Features
 
 Each feature below is a self-contained screen in the app, demonstrating one piece of the VisioOne SDK. Every entry links to a developer doc with the exact SDK call, its signature, and any gotchas.
@@ -80,7 +90,9 @@ Each feature below is a self-contained screen in the app, demonstrating one piec
 ## Project structure
 
 ```
-App.tsx                                    # entry point, optionally switches to a diagnostic mode
+App.tsx                                    # entry point (providers + navigation)
+scripts/
+└── build-webview.mjs                      # generates src/assets/visioOneHtml.ts from visioOne.html
 src/
 ├── demoMap.ts                             # demo map hash + POI ids used as prefilled values
 ├── navigation/
@@ -95,10 +107,8 @@ src/
 │   ├── registry.ts                        # feature list (slug, title, description)
 │   └── *Overlay.tsx                       # per-feature controls
 └── assets/
-    ├── visioOne.html                      # WebView-hosted page loading the SDK from the CDN
-    ├── visioOneHtml.ts                    # same content as visioOne.html, as a template literal
-    ├── diagnostic.html                    # low-level debug page (isolate WebView issues from SDK issues)
-    └── diagnosticInlineHtml.ts            # same content, as a template literal
+    ├── visioOne.html                      # WebView-hosted page loading the SDK from the CDN (edit this one)
+    └── visioOneHtml.ts                    # GENERATED from visioOne.html, the string actually loaded
 
 docs/
 ├── SDK_NOTES.md                           # why the HTML is loaded "inline" rather than via require()

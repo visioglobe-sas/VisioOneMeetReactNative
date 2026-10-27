@@ -24,7 +24,7 @@ const startItinerary = (
 ```
 
 ```js
-// visioOneHtml.ts / visioOne.html (kept in sync by hand) -- unchanged by this feature
+// src/assets/visioOne.html -- unchanged by this feature
 const startItinerary = (origin, destination, isAccessible, excludedAttributes) => {
   const navigation = venue.computeNavigation({
     origin,
@@ -38,12 +38,10 @@ const startItinerary = (origin, destination, isAccessible, excludedAttributes) =
 
   currentNavigationTrace = venue.createNavigationTrace(navigation)
   view.setCurrentNavigationTrace(currentNavigationTrace)
-
-  sendToNative({ type: 'itinerary_instructions', data: navigation.instructions })
 }
 ```
 
-On the React Native side, `AccessibleModeOverlay` reuses the same origin/destination fields and "Itinerary" button as `compute-navigation`, plus an "Accessible route" `Switch`. Like the exclude-modalities toggle, it's only read when "Itinerary" is pressed — flipping it alone does not recompute whatever route is already on screen:
+On the React Native side, `src/features/AccessibleModeOverlay.tsx` reuses the same origin/destination fields and "Itinerary" button as `compute-navigation`, plus an "Accessible route" `Switch`. Like the exclude-modalities toggle, it's only read when "Itinerary" is pressed — flipping it alone does not recompute whatever route is already on screen:
 
 ```tsx
 const handleCompute = () => {

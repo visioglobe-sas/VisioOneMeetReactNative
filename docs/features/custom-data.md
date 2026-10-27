@@ -2,7 +2,7 @@
 
 ## Description
 
-Reads business `CustomData` — a free `{ [key: string]: string }` bag of fields (price, opening hours, product reference, ...) attached to a POI while editing the map in VisioMapEditor — via two `Venue` methods (SDK `visioone`, see `Venue.ts` in the `visioone` repo):
+Reads business `CustomData` — a free `{ [key: string]: string }` bag of fields (price, opening hours, product reference, ...) attached to a POI while editing the map in VisioMapEditor — via two `Venue` methods (see `Venue/Venue.d.ts` in the SDK typings):
 
 - `venue.refreshCustomData(): Promise<void>` — (re)loads all `CustomData` from the server.
 - `venue.getPOICustomData(poi: POI): CustomData` — synchronous read of one POI's already-cached `CustomData`.
@@ -32,7 +32,7 @@ const getPoiCustomData = (placeId: string) => {
 ```
 
 ```js
-// visioOneHtml.ts / visioOne.html (kept in sync by hand)
+// src/assets/visioOne.html
 const refreshCustomData = async () => {
   if (!venue) {
     return

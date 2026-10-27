@@ -19,7 +19,7 @@ sendMessage({ type: 'setup', data: { hash, baseURL, enableShadows } })
 ```
 
 ```js
-// visioOneHtml.ts / visioOne.html
+// src/assets/visioOne.html
 const viewOptions = { cameraProjection: 'perspective' } // see camera-projection-toggle.md
 if (enableShadows === true) {
   viewOptions.enableShadows = true
@@ -42,7 +42,7 @@ sendMessage({ type: 'set_accent_colors', data: { accentColor, textAccentColor } 
 ```
 
 ```js
-// visioOneHtml.ts / visioOne.html (WebView message handler)
+// src/assets/visioOne.html (WebView message handler)
 case 'set_theme':
   view.setTheme(evt.data.theme)
   break

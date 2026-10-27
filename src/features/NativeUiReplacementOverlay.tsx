@@ -1,53 +1,51 @@
 import * as React from 'react';
 import { StyleSheet, Switch, Text, View } from 'react-native';
 
-import { VenueLayoutInfo, VisioMapBridge } from '../components/VisioMapView';
+import BottomSheet from '../components/BottomSheet';
 import { useLocale } from '../i18n/useLocale';
-import FloorSelectorOverlay from './FloorSelectorOverlay';
+import { FloorList } from './FloorSelectorOverlay';
+import { FeatureProps } from './types';
 
-interface Props {
-  venueLayout: VenueLayoutInfo;
-  goToFloor: VisioMapBridge['goToFloor'];
-  goToBuilding: VisioMapBridge['goToBuilding'];
-  setUIPartVisible: VisioMapBridge['setUIPartVisible'];
-}
-
-// Reuses floor-selector's own overlay verbatim -- the whole point of this feature is
-// that the app's existing native picker needs no changes to stand in for the SDK's
-// widget, see docs/features/native-ui-replacement.md.
-const NativeUiReplacementOverlay = ({ venueLayout, goToFloor, goToBuilding, setUIPartVisible }: Props) => {
+// Hides the SDK's own floor-selector widget as soon as the map is ready and reuses
+// floor-selector's own picker verbatim -- the point of this feature is that the app's
+// existing native picker needs no changes to stand in for the SDK's widget, see
+// docs/features/native-ui-replacement.md. This component stays mounted for the whole
+// screen, so the switch keeps reflecting the map when the panel is reopened.
+const NativeUiReplacementFeature = ({ ctx, sheet }: FeatureProps) => {
   const { t } = useLocale();
-  // Mirrors the screen-level default applied once the map is ready (see
-  // FeatureScreen.tsx's SdkFloorSelectorDefaultOff) -- the SDK's own floor-selector
-  // widget starts hidden, so this switch starts off too, without a bridge round trip.
+  const { status, bridge } = ctx;
   const [sdkFloorSelectorVisible, setSdkFloorSelectorVisible] = React.useState(false);
+
+  React.useEffect(() => {
+    if (status === 'ready') {
+      bridge.setUIPartVisible('floorSelector', false);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [status]);
 
   const toggle = (isVisible: boolean) => {
     setSdkFloorSelectorVisible(isVisible);
-    setUIPartVisible('floorSelector', isVisible);
+    bridge.setUIPartVisible('floorSelector', isVisible);
   };
 
   return (
-    <View style={styles.column}>
+    <BottomSheet {...sheet}>
       <View style={styles.row}>
         <Text style={styles.label}>{t('nativeUiReplacement.toggleLabel')}</Text>
-        <Switch value={sdkFloorSelectorVisible} onValueChange={toggle} />
+        <Switch testID="sdk-floor-selector" value={sdkFloorSelectorVisible} onValueChange={toggle} />
       </View>
       <Text style={styles.hint}>{t('nativeUiReplacement.hint')}</Text>
-      <FloorSelectorOverlay venueLayout={venueLayout} goToFloor={goToFloor} goToBuilding={goToBuilding} />
-    </View>
+      <FloorList venueLayout={ctx.venueLayout} goToFloor={bridge.goToFloor} goToBuilding={bridge.goToBuilding} />
+    </BottomSheet>
   );
 };
 
 const styles = StyleSheet.create({
-  column: {
-    gap: 10,
-  },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingVertical: 6,
+    paddingVertical: 4,
   },
   label: {
     color: '#fff',
@@ -58,7 +56,8 @@ const styles = StyleSheet.create({
   hint: {
     color: '#aaa',
     fontSize: 12,
+    marginBottom: 4,
   },
 });
 
-export default NativeUiReplacementOverlay;
+export default NativeUiReplacementFeature;

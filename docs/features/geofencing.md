@@ -25,7 +25,7 @@ const setGeofenceAlert = (placeId: string, active: boolean) => {
 ```
 
 ```js
-// visioOneHtml.ts / visioOne.html (kept in sync by hand)
+// src/assets/visioOne.html
 const resolveGeofenceZone = (placeId) => {
   if (!venue) return
   const poi = venue.pois.find((p) => p.id === placeId)

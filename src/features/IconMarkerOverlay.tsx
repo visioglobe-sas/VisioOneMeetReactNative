@@ -1,16 +1,13 @@
 import * as React from 'react';
 import { StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
-import { IconMarkerCreateResult, VisioMapBridge } from '../components/VisioMapView';
+import BottomSheet from '../components/BottomSheet';
+import { IconMarkerCreateResult } from '../components/VisioMapView';
 import { ANCHOR_POI_ID } from '../demoMap';
+import { StringKey } from '../i18n/strings';
+import { Translate, useLocale } from '../i18n/useLocale';
 import { ImageOrientationType } from '../screens/useVisioMap';
-
-interface Props {
-  createIconMarker: VisioMapBridge['createIconMarker'];
-  updateIconMarkerOrientation: VisioMapBridge['updateIconMarkerOrientation'];
-  removeIconMarker: VisioMapBridge['removeIconMarker'];
-  createResult: IconMarkerCreateResult | null;
-}
+import { FeatureProps } from './types';
 
 // A 96x96 PNG (blue disc + white star), inlined as a data URL -- venue.createImage's
 // url accepts data: URLs as well as regular web URLs.
@@ -24,45 +21,49 @@ const IMAGE_ID = 'icon-marker';
 // Size in meters, as venue.createImage expects.
 const ICON_SIZE_METERS = 6;
 
-const ORIENTATIONS: { value: ImageOrientationType; label: string }[] = [
-  { value: 'fixed', label: 'Fixed' },
-  { value: 'flat', label: 'Flat' },
-  { value: 'facing', label: 'Facing camera' },
+const ORIENTATIONS: { value: ImageOrientationType; labelKey: StringKey }[] = [
+  { value: 'fixed', labelKey: 'iconMarker.fixed' },
+  { value: 'flat', labelKey: 'iconMarker.flat' },
+  { value: 'facing', labelKey: 'iconMarker.facing' },
 ];
 
-const reasonMessage = (result: IconMarkerCreateResult): string => {
+const reasonMessage = (result: IconMarkerCreateResult, t: Translate): string => {
   switch (result.reason) {
     case 'anchor_not_found':
-      return 'POI not found';
+      return t('common.poiNotFound');
     case 'no_position':
-      return 'This POI has no position';
+      return t('common.noPosition');
     default:
-      return `Could not place the icon${result.message ? ` (${result.message})` : ''}`;
+      return t('iconMarker.failed', { details: result.message ? ` (${result.message})` : '' });
   }
 };
 
-const IconMarkerOverlay = ({
-  createIconMarker,
-  updateIconMarkerOrientation,
-  removeIconMarker,
-  createResult,
-}: Props) => {
+// The anchor field, the orientation and what is placed live here (mounted for the
+// whole screen), so the panel reflects the map when reopened. Create results are only
+// applied while a Place is awaiting its answer.
+const IconMarkerFeature = ({ ctx, sheet }: FeatureProps) => {
+  const { t } = useLocale();
+  const { createIconMarker, updateIconMarkerOrientation, removeIconMarker } = ctx.bridge;
+  const createResult = ctx.iconMarkerCreateResult;
   const [anchorId, setAnchorId] = React.useState(ANCHOR_POI_ID);
   const [orientation, setOrientation] = React.useState<ImageOrientationType>('facing');
   // Anchor POI id the icon is currently placed on, null when nothing is placed.
   const [placedOn, setPlacedOn] = React.useState<string | null>(null);
+  const [awaitingCreate, setAwaitingCreate] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
 
   React.useEffect(() => {
-    if (!createResult) {
+    if (!awaitingCreate || !createResult) {
       return;
     }
+    setAwaitingCreate(false);
     if (createResult.ok) {
       setError(null);
       setPlacedOn(createResult.anchorId);
     } else {
-      setError(reasonMessage(createResult));
+      setError(reasonMessage(createResult, t));
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [createResult]);
 
   const handlePlace = () => {
@@ -76,6 +77,7 @@ const IconMarkerOverlay = ({
       setPlacedOn(null);
     }
     setError(null);
+    setAwaitingCreate(true);
     createIconMarker(IMAGE_ID, anchor, {
       width: ICON_SIZE_METERS,
       height: ICON_SIZE_METERS,
@@ -101,27 +103,28 @@ const IconMarkerOverlay = ({
   };
 
   return (
-    <View style={styles.column}>
-      <Text style={styles.label}>Anchor POI ID</Text>
+    <BottomSheet {...sheet}>
+      <Text style={styles.label}>{t('common.anchorPoiId')}</Text>
       <TextInput
         style={styles.input}
-        placeholder="Anchor POI ID"
+        placeholder={t('common.anchorPoiId')}
+        placeholderTextColor="#666"
         value={anchorId}
         onChangeText={setAnchorId}
         autoCapitalize="none"
         autoCorrect={false}
       />
 
-      <Text style={styles.label}>Orientation</Text>
+      <Text style={styles.label}>{t('iconMarker.orientation')}</Text>
       <View style={styles.segmented}>
-        {ORIENTATIONS.map(({ value, label }) => {
+        {ORIENTATIONS.map(({ value, labelKey }) => {
           const isActive = value === orientation;
           return (
             <TouchableOpacity
               key={value}
               style={[styles.segment, isActive && styles.segmentActive]}
               onPress={() => handleOrientation(value)}>
-              <Text style={[styles.segmentText, isActive && styles.segmentTextActive]}>{label}</Text>
+              <Text style={[styles.segmentText, isActive && styles.segmentTextActive]}>{t(labelKey)}</Text>
             </TouchableOpacity>
           );
         })}
@@ -129,26 +132,25 @@ const IconMarkerOverlay = ({
 
       <View style={styles.row}>
         <TouchableOpacity style={styles.button} onPress={handlePlace}>
-          <Text style={styles.buttonText}>Place icon</Text>
+          <Text style={styles.buttonText}>{t('iconMarker.place')}</Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={[styles.buttonSecondary, !placedOn ? styles.buttonDisabled : null]}
           disabled={!placedOn}
           onPress={handleRemove}>
-          <Text style={styles.buttonText}>Remove icon</Text>
+          <Text style={styles.buttonText}>{t('iconMarker.remove')}</Text>
         </TouchableOpacity>
       </View>
 
       {error ? <Text style={styles.error}>{error}</Text> : null}
-      <Text style={styles.meta}>{placedOn ? `Icon placed on ${placedOn}` : 'No icon placed'}</Text>
-    </View>
+      <Text style={styles.meta}>
+        {placedOn ? t('iconMarker.placedOn', { id: placedOn }) : t('iconMarker.none')}
+      </Text>
+    </BottomSheet>
   );
 };
 
 const styles = StyleSheet.create({
-  column: {
-    gap: 10,
-  },
   row: {
     flexDirection: 'row',
     gap: 8,
@@ -225,4 +227,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default IconMarkerOverlay;
+export default IconMarkerFeature;

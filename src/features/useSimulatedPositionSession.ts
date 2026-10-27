@@ -5,8 +5,8 @@ import { Position } from '../screens/useVisioMap';
 
 // Stand-in for a real positioning feed: linearly interpolates between two resolved POI
 // positions and ping-pongs back and forth on a timer, calling injectTrackedPosition on
-// every tick. See docs/features/simulated-position.md. Same idiom as occupancy-simulated's
-// color-cycling setInterval -- the timer lives on the native side, not in the WebView.
+// every tick. See docs/features/simulated-position.md. The timer lives on the React
+// Native side, not in the WebView.
 //
 // This hook is owned by the feature screen (TrackingFeatureHost), NOT by the bottom
 // sheet's content: the sheet is a React Native Modal whose content unmounts when it
@@ -19,7 +19,7 @@ export const RADIUS_MIN = 1;
 export const RADIUS_MAX = 20;
 const RADIUS_DEFAULT = 5;
 
-export interface SimulatedPositionSessionOptions {
+interface SimulatedPositionSessionOptions {
   resolvePois: VisioMapBridge['resolvePositionSimulationPois'];
   injectTrackedPosition: VisioMapBridge['injectTrackedPosition'];
   stopSimulation: VisioMapBridge['stopPositionSimulation'];

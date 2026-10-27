@@ -1,42 +1,40 @@
 import * as React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
-import { CategoryOption, VisioMapBridge } from '../components/VisioMapView';
+import BottomSheet from '../components/BottomSheet';
+import { useLocale } from '../i18n/useLocale';
+import { FeatureProps } from './types';
 
-interface Props {
-  categories: CategoryOption[];
-  highlightCategory: VisioMapBridge['highlightCategory'];
-  clearCategoryHighlight: VisioMapBridge['clearCategoryHighlight'];
-}
-
-// Only one category is ever highlighted at a time. This overlay tracks which one
-// locally (it's the only thing driving the highlight, so no round trip is needed
-// just to know which chip is selected) -- the WebView side separately guarantees
-// the previous category's surfaces are reverted before the new one is applied, see
-// highlightCategory in visioOneHtml.ts/visioOne.html.
-const CategoryHighlightOverlay = ({ categories, highlightCategory, clearCategoryHighlight }: Props) => {
+// Only one category is ever highlighted at a time. The selected category is tracked
+// here (this component stays mounted for the whole screen, so reopening the panel
+// shows it and Clear stays enabled while a highlight is on the map); the WebView side
+// separately reverts the previous category's surfaces before applying a new one, see
+// highlightCategory in visioOne.html.
+const CategoryHighlightFeature = ({ ctx, sheet }: FeatureProps) => {
+  const { t } = useLocale();
+  const { categories, bridge } = ctx;
   const [selectedCategoryId, setSelectedCategoryId] = React.useState<string | null>(null);
 
   const handleSelect = (categoryId: string) => {
     if (selectedCategoryId === categoryId) {
       // Tapping the already-selected category again clears it.
-      clearCategoryHighlight();
+      bridge.clearCategoryHighlight();
       setSelectedCategoryId(null);
       return;
     }
-    highlightCategory(categoryId);
+    bridge.highlightCategory(categoryId);
     setSelectedCategoryId(categoryId);
   };
 
   const handleClear = () => {
-    clearCategoryHighlight();
+    bridge.clearCategoryHighlight();
     setSelectedCategoryId(null);
   };
 
   return (
-    <View style={styles.column}>
+    <BottomSheet {...sheet}>
       {categories.length === 0 ? (
-        <Text style={styles.hint}>Loading categories…</Text>
+        <Text style={styles.hint}>{t('categoryHighlight.loading')}</Text>
       ) : (
         <View style={styles.chipsRow}>
           {categories.map((category) => (
@@ -51,25 +49,18 @@ const CategoryHighlightOverlay = ({ categories, highlightCategory, clearCategory
       )}
 
       <TouchableOpacity
-        style={styles.buttonSecondary}
+        style={[styles.buttonSecondary, !selectedCategoryId && styles.disabled]}
         disabled={!selectedCategoryId}
         onPress={handleClear}>
-        <Text style={styles.buttonText}>Clear</Text>
+        <Text style={styles.buttonText}>{t('common.clear')}</Text>
       </TouchableOpacity>
 
-      <Text style={styles.hint}>
-        Tap a category to highlight every place that belongs to it. Not every place
-        has a surface to color (some are marker-only), so a few may not visibly
-        change.
-      </Text>
-    </View>
+      <Text style={styles.hint}>{t('categoryHighlight.hint')}</Text>
+    </BottomSheet>
   );
 };
 
 const styles = StyleSheet.create({
-  column: {
-    gap: 10,
-  },
   chipsRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -99,6 +90,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
+  disabled: {
+    opacity: 0.4,
+  },
   buttonText: {
     color: '#fff',
     fontWeight: '600',
@@ -109,4 +103,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default CategoryHighlightOverlay;
+export default CategoryHighlightFeature;

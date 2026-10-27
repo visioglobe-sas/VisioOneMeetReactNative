@@ -1,17 +1,14 @@
 import * as React from 'react';
 import { StyleSheet, Switch, Text, View } from 'react-native';
 
-import { VisioMapBridge } from '../components/VisioMapView';
-import { UIPart } from '../screens/useVisioMap';
+import BottomSheet from '../components/BottomSheet';
 import { StringKey } from '../i18n/strings';
 import { useLocale } from '../i18n/useLocale';
+import { UIPart } from '../screens/useVisioMap';
+import { FeatureProps } from './types';
 
-interface Props {
-  setUIPartVisible: VisioMapBridge['setUIPartVisible'];
-}
-
-// Order and labelKey mirror the SDK's own View.UIPart union exactly (View.ts in visioone) --
-// these 5 string values are the only ones it recognizes, case-sensitive, no others exist.
+// Order and labelKey mirror the SDK's own UIPart union exactly (View/View.d.ts in the
+// SDK typings) -- these 5 string values are the only ones it recognizes, case-sensitive.
 const UI_PARTS: { part: UIPart; labelKey: StringKey }[] = [
   { part: 'floorSelector', labelKey: 'uiPartVisibility.floorSelector' },
   { part: 'navigation', labelKey: 'uiPartVisibility.navigation' },
@@ -20,9 +17,11 @@ const UI_PARTS: { part: UIPart; labelKey: StringKey }[] = [
   { part: 'userTracking', labelKey: 'uiPartVisibility.userTracking' },
 ];
 
-const UIPartVisibilityOverlay = ({ setUIPartVisible }: Props) => {
+// The switch states live here (mounted for the whole screen), not in the panel, so
+// reopening the panel shows what the map actually displays.
+const UIPartVisibilityFeature = ({ ctx, sheet }: FeatureProps) => {
   const { t } = useLocale();
-  // The SDK's own default is all parts visible -- mirror that here rather than querying
+  // The SDK's own default is all parts visible -- mirrored here rather than querying
   // view.isUIPartVisible(), which would need a round trip through the WebView bridge.
   const [visibility, setVisibility] = React.useState<Record<UIPart, boolean>>({
     floorSelector: true,
@@ -34,30 +33,31 @@ const UIPartVisibilityOverlay = ({ setUIPartVisible }: Props) => {
 
   const toggle = (part: UIPart, isVisible: boolean) => {
     setVisibility((prev) => ({ ...prev, [part]: isVisible }));
-    setUIPartVisible(part, isVisible);
+    ctx.bridge.setUIPartVisible(part, isVisible);
   };
 
   return (
-    <View style={styles.column}>
+    <BottomSheet {...sheet}>
       {UI_PARTS.map(({ part, labelKey }) => (
         <View key={part} style={styles.row}>
           <Text style={styles.label}>{t(labelKey)}</Text>
-          <Switch value={visibility[part]} onValueChange={(isVisible) => toggle(part, isVisible)} />
+          <Switch
+            testID={`ui-part-${part}`}
+            value={visibility[part]}
+            onValueChange={(isVisible) => toggle(part, isVisible)}
+          />
         </View>
       ))}
-    </View>
+    </BottomSheet>
   );
 };
 
 const styles = StyleSheet.create({
-  column: {
-    gap: 4,
-  },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingVertical: 6,
+    paddingVertical: 4,
   },
   label: {
     color: '#fff',
@@ -65,4 +65,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default UIPartVisibilityOverlay;
+export default UIPartVisibilityFeature;

@@ -1,6 +1,8 @@
 import * as React from 'react';
 import { StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
+import { useLocale } from '../i18n/useLocale';
+
 interface Props {
   baseURL: string;
   onChangeBaseURL: (value: string) => void;
@@ -8,11 +10,13 @@ interface Props {
 }
 
 const CustomBaseUrlOverlay = ({ baseURL, onChangeBaseURL, onReload }: Props) => {
+  const { t } = useLocale();
   return (
     <View style={styles.column}>
       <TextInput
         style={styles.input}
-        placeholder="Base URL"
+        placeholder={t('customBaseUrl.placeholder')}
+        placeholderTextColor="#666"
         value={baseURL}
         onChangeText={onChangeBaseURL}
         autoCapitalize="none"
@@ -20,14 +24,9 @@ const CustomBaseUrlOverlay = ({ baseURL, onChangeBaseURL, onReload }: Props) => 
         keyboardType="url"
       />
       <TouchableOpacity style={styles.button} onPress={onReload}>
-        <Text style={styles.buttonText}>Reload venue</Text>
+        <Text style={styles.buttonText}>{t('customBaseUrl.reload')}</Text>
       </TouchableOpacity>
-      <Text style={styles.hint}>
-        Reloads the whole venue against this URL as LoadOptions.baseURL. The default value
-        above is the SDK's own — clearing the field or typing an unreachable URL both
-        demonstrate the parameter is genuinely wired through (see the status badge above the
-        map for the load outcome).
-      </Text>
+      <Text style={styles.hint}>{t('customBaseUrl.hint')}</Text>
     </View>
   );
 };

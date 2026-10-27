@@ -6,7 +6,7 @@
 // shows an explanatory text), so nothing here runs with the placeholders. See
 // docs/features/auth-token.md.
 //
-// The WebView side lives in src/assets/visioOneHtml.ts (setup() passes
+// The WebView side lives in src/assets/visioOne.html (setup() passes
 // authorizationToken to visioOne.loadVenue, setAuthorizationToken() calls
 // venue.setAuthorizationToken, isUnauthorizedError() recognizes UnauthorizedError).
 import * as React from 'react';

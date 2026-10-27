@@ -16,7 +16,7 @@ const setSurfaceInteractive = (placeId: string, interactive: boolean) => {
 ```
 
 ```js
-// visioOneHtml.ts / visioOne.html (kept in sync by hand)
+// src/assets/visioOne.html
 const setSurfaceInteractive = (placeId, interactive) => {
   if (!venue) {
     return
@@ -56,5 +56,4 @@ A POI can have multiple surfaces; `updateSurface` is called once per surface so 
 ## Learn more
 
 - [Simulated Occupancy](occupancy-simulated.md) — colors a surface from external data via the same `venue.updateSurface` call, without requiring `isInteractive`.
-- [Go to Place](goto-poi.md) — another use of `venue.updateSurface`'s `selectionColor`, driven by app code instead of the SDK's own click handling.
 - [Tap a Place](poi-click.md) — reading the actual clicked-POI payload from a pointer event, for building click-driven logic on top of an interactive surface.

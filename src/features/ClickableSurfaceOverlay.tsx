@@ -1,36 +1,42 @@
 import * as React from 'react';
 import { StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
-import { VisioMapBridge } from '../components/VisioMapView';
+import BottomSheet from '../components/BottomSheet';
 import { CLICKABLE_SURFACE_POI_ID } from '../demoMap';
+import { useLocale } from '../i18n/useLocale';
+import { FeatureProps } from './types';
 
-interface Props {
-  setSurfaceInteractive: VisioMapBridge['setSurfaceInteractive'];
-}
-
-const ClickableSurfaceOverlay = ({ setSurfaceInteractive }: Props) => {
+const ClickableSurfaceFeature = ({ ctx, sheet }: FeatureProps) => {
+  const { t } = useLocale();
   const [placeId, setPlaceId] = React.useState(CLICKABLE_SURFACE_POI_ID);
+  const id = placeId.trim();
 
   return (
-    <View style={styles.row}>
-      <TextInput
-        style={styles.input}
-        placeholder="Place ID"
-        value={placeId}
-        onChangeText={setPlaceId}
-        autoCapitalize="none"
-      />
-      <TouchableOpacity
-        style={styles.button}
-        onPress={() => setSurfaceInteractive(placeId, true)}>
-        <Text style={styles.buttonText}>Enable</Text>
-      </TouchableOpacity>
-      <TouchableOpacity
-        style={styles.buttonSecondary}
-        onPress={() => setSurfaceInteractive(placeId, false)}>
-        <Text style={styles.buttonText}>Disable</Text>
-      </TouchableOpacity>
-    </View>
+    <BottomSheet {...sheet}>
+      <View style={styles.row}>
+        <TextInput
+          style={styles.input}
+          placeholder={t('common.placeId')}
+          placeholderTextColor="#666"
+          value={placeId}
+          onChangeText={setPlaceId}
+          autoCapitalize="none"
+          autoCorrect={false}
+        />
+        <TouchableOpacity
+          style={[styles.button, !id && styles.disabled]}
+          disabled={!id}
+          onPress={() => ctx.bridge.setSurfaceInteractive(id, true)}>
+          <Text style={styles.buttonText}>{t('clickableSurface.enable')}</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.buttonSecondary, !id && styles.disabled]}
+          disabled={!id}
+          onPress={() => ctx.bridge.setSurfaceInteractive(id, false)}>
+          <Text style={styles.buttonText}>{t('clickableSurface.disable')}</Text>
+        </TouchableOpacity>
+      </View>
+    </BottomSheet>
   );
 };
 
@@ -61,10 +67,13 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
+  disabled: {
+    opacity: 0.4,
+  },
   buttonText: {
     color: '#fff',
     fontWeight: '600',
   },
 });
 
-export default ClickableSurfaceOverlay;
+export default ClickableSurfaceFeature;

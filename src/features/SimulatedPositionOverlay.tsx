@@ -2,6 +2,7 @@ import * as React from 'react';
 import { StyleSheet, Switch, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
 import { VisioMapBridge } from '../components/VisioMapView';
+import { useLocale } from '../i18n/useLocale';
 import { RADIUS_MAX, RADIUS_MIN, SimulatedPositionSession } from './useSimulatedPositionSession';
 
 const RADIUS_STEP = 1;
@@ -28,6 +29,7 @@ const SimulatedPositionOverlay = ({
   setCameraLockOnPosition,
   cameraLockOnPosition = false,
 }: Props) => {
+  const { t } = useLocale();
   const {
     originId,
     setOriginId,
@@ -55,7 +57,8 @@ const SimulatedPositionOverlay = ({
       <View style={styles.row}>
         <TextInput
           style={styles.input}
-          placeholder="Origin POI ID"
+          placeholder={t('simulatedPosition.origin')}
+          placeholderTextColor="#666"
           value={originId}
           onChangeText={setOriginId}
           autoCapitalize="none"
@@ -63,7 +66,8 @@ const SimulatedPositionOverlay = ({
         />
         <TextInput
           style={styles.input}
-          placeholder="Destination POI ID"
+          placeholder={t('simulatedPosition.destination')}
+          placeholderTextColor="#666"
           value={destinationId}
           onChangeText={setDestinationId}
           autoCapitalize="none"
@@ -72,7 +76,7 @@ const SimulatedPositionOverlay = ({
       </View>
 
       <View style={styles.radiusRow}>
-        <Text style={styles.label}>Accuracy radius: {radius} m</Text>
+        <Text style={styles.label}>{t('simulatedPosition.radius', { radius })}</Text>
         <View style={styles.stepper}>
           <TouchableOpacity
             style={styles.stepperButton}
@@ -97,16 +101,16 @@ const SimulatedPositionOverlay = ({
         onPress={running ? stop : start}>
         <Text style={styles.buttonText}>
           {running
-            ? 'Stop position simulation'
+            ? t('simulatedPosition.stop')
             : awaitingResolution
-              ? 'Resolving…'
-              : 'Simulate position between POIs'}
+              ? t('simulatedPosition.resolving')
+              : t('simulatedPosition.start')}
         </Text>
       </TouchableOpacity>
 
       {setCameraLockOnPosition ? (
         <View style={styles.lockRow}>
-          <Text style={styles.label}>Recenter camera on position</Text>
+          <Text style={styles.label}>{t('cameraLockOnPosition.toggle')}</Text>
           <Switch value={cameraLockOnPosition} onValueChange={handleCameraLockToggle} disabled={!running} />
         </View>
       ) : null}

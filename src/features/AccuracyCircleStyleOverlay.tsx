@@ -76,7 +76,7 @@ const AccuracyCircleStyleOverlay = ({ session, setPositionTrackerStyle, style, o
 
       <View style={styles.opacityRow}>
         <Text style={styles.label}>
-          {t('accuracyCircleStyle.opacity')}: {style.opacity.toFixed(1)}
+          {t('accuracyCircleStyle.opacity', { value: style.opacity.toFixed(1) })}
         </Text>
         <View style={styles.stepper}>
           <TouchableOpacity

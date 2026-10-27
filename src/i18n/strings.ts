@@ -113,7 +113,7 @@ export const strings = {
       'This feature is a code sample only: this demo has no protected map to load. See src/features/AuthTokenSample.tsx (React Native side), src/assets/visioOne.html (WebView side) and docs/features/auth-token.md, then replace the placeholder map hash and token with your own values.',
     'accuracyCircleStyle.title': 'Accuracy circle style',
     'accuracyCircleStyle.description': "Recolor the tracked position's precision circle, live",
-    'accuracyCircleStyle.opacity': 'Opacity',
+    'accuracyCircleStyle.opacity': 'Opacity: {value}',
     'accuracyCircleStyle.hint':
       'Color and opacity apply to the precision circle (not the center arrow), from the next position update.',
     'common.placeId': 'Place ID',
@@ -368,7 +368,7 @@ export const strings = {
     'accuracyCircleStyle.title': 'Style du cercle de précision',
     'accuracyCircleStyle.description':
       'Recolorer le cercle de précision de la position, en direct',
-    'accuracyCircleStyle.opacity': 'Opacité',
+    'accuracyCircleStyle.opacity': 'Opacité : {value}',
     'accuracyCircleStyle.hint':
       "La couleur et l'opacité s'appliquent au cercle de précision (pas à la flèche centrale), dès la prochaine mise à jour de position.",
     'common.placeId': 'ID du lieu',

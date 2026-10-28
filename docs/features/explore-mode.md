@@ -7,33 +7,55 @@ Drives the SDK's 3 building-exploration modes from the app — a segmented contr
 ## SDK usage
 
 ```ts
-// useVisioMap.ts
+// src/features/explore-mode/bridge.ts
 export type ExploreMode = 'global' | 'building' | 'floor';
 
-const setExploreMode = (mode: ExploreMode) => {
-  sendMessage({ type: 'set_explore_mode', data: { mode } });
+export const useExploreModeBridge = () => {
+  const { send } = useMapBridge();
+  const [exploreMode, setExploreModeState] = React.useState<ExploreMode>('global');
+
+  useMapEvent('ready', (data) => setExploreModeState(data?.currentExploreMode ?? 'global'));
+  useMapEvent('explore_mode_changed', (data) =>
+    setExploreModeState(data?.currentExploreMode ?? 'global'),
+  );
+
+  return {
+    exploreMode,
+    // Sets view.currentExploreMode. Fire-and-forget: the resulting mode comes back as
+    // 'explore_mode_changed'.
+    setExploreMode: (mode: ExploreMode) => send('set_explore_mode', { mode }),
+  };
 };
 ```
 
 ```js
-// src/assets/visioOne.html
-const setExploreMode = (mode) => {
-  if (view) {
-    view.currentExploreMode = mode
-  }
-}
+// src/features/explore-mode/webview.js
+core.register({
+  set_explore_mode: ({ mode }) => {
+    if (core.view) {
+      core.view.currentExploreMode = mode
+    }
+  },
+})
 ```
 
-`view.currentExploreMode: ExploreMode` — a plain settable property, not a method call. Assigning it triggers the mode transition immediately.
+`view.currentExploreMode: ExploreMode` — a plain settable property, not a method call. Assigning it triggers the mode transition immediately. Its initial value is added to the `ready` message:
+
+```js
+// src/features/explore-mode/webview.js
+core.onReady((view) => ({ currentExploreMode: view.currentExploreMode }))
+```
 
 The mode also changes on its own from direct camera/map interaction (not just from this app's calls) — e.g. clicking while in `'building'` mode auto-switches to `'floor'` (see "Things to know" below). The app listens for `'exploremodechanged'` to stay in sync with that:
 
 ```js
-// src/assets/visioOne.html, registered once on the View right after createView()
-v.addEventListener('exploremodechanged', (event) => {
-  sendToNative({
-    type: 'explore_mode_changed',
-    data: { currentExploreMode: event.currentExploreMode },
+// src/features/explore-mode/webview.js, registered once on the View right after createView()
+core.onViewCreated((view) => {
+  view.addEventListener('exploremodechanged', (event) => {
+    core.sendToNative({
+      type: 'explore_mode_changed',
+      data: { currentExploreMode: event.currentExploreMode },
+    })
   })
 })
 ```

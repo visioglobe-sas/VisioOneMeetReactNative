@@ -11,41 +11,34 @@ Highlights every place (POI) belonging to a chosen category in one action — e.
 ## SDK usage
 
 ```ts
-// useVisioMap.ts
-const getCategories = () => {
-  sendMessage({ type: 'get_categories' });
-};
+// src/features/category-highlight/bridge.ts
+export interface CategoryOption {
+  id: string;
+  label: string;
+}
 
-const highlightCategory = (categoryId: string) => {
-  sendMessage({ type: 'highlight_category', data: { categoryId } });
-};
+export const useCategoryHighlightBridge = () => {
+  const { send } = useMapBridge();
+  const [categories, setCategories] = React.useState<CategoryOption[]>([]);
 
-const clearCategoryHighlight = () => {
-  sendMessage({ type: 'clear_category_highlight' });
+  // Asks for venue.categories once the venue is loaded.
+  useMapEvent('ready', () => send('get_categories'));
+  useMapEvent('categories_result', (data) => setCategories(data?.categories ?? []));
+
+  return {
+    categories,
+    highlightCategory: (categoryId: string) => send('highlight_category', { categoryId }),
+    clearCategoryHighlight: () => send('clear_category_highlight'),
+  };
 };
 ```
 
 ```js
-// src/assets/visioOne.html
-const getCategories = () => {
-  if (!venue) {
-    sendToNative({ type: 'categories_result', data: { categories: [] } })
-    return
-  }
-  sendToNative({
-    type: 'categories_result',
-    data: {
-      categories: venue.categories.map((c) => ({
-        id: c.id,
-        label: venue.translator.translateCategory(c, venue.currentLocale).name || c.id,
-      })),
-    },
-  })
-}
-
+// src/features/category-highlight/webview.js
 let highlightedCategoryId = null
 
 const revertCategoryHighlight = () => {
+  const venue = core.venue
   if (!venue || !highlightedCategoryId) {
     return
   }
@@ -59,31 +52,51 @@ const revertCategoryHighlight = () => {
   highlightedCategoryId = null
 }
 
-const highlightCategory = (categoryId) => {
-  if (!venue) {
-    return
-  }
-  if (highlightedCategoryId === categoryId) {
-    revertCategoryHighlight()
-    return
-  }
-  revertCategoryHighlight()
-  venue.pois
-    .filter((poi) => poi.categories.some((c) => c.id === categoryId))
-    .forEach((poi) => {
-      poi.surfaces.forEach((surface) => {
-        venue.updateSurface(surface, { color: '#FF6B00' })
-      })
+core.register({
+  get_categories: () => {
+    const venue = core.venue
+    if (!venue) {
+      core.sendToNative({ type: 'categories_result', data: { categories: [] } })
+      return
+    }
+    core.sendToNative({
+      type: 'categories_result',
+      data: {
+        categories: venue.categories.map((c) => ({
+          id: c.id,
+          label: venue.translator.translateCategory(c, venue.currentLocale).name || c.id,
+        })),
+      },
     })
-  highlightedCategoryId = categoryId
-}
+  },
 
-const clearCategoryHighlight = () => {
-  revertCategoryHighlight()
-}
+  highlight_category: ({ categoryId }) => {
+    const venue = core.venue
+    if (!venue) {
+      return
+    }
+    if (highlightedCategoryId === categoryId) {
+      revertCategoryHighlight()
+      return
+    }
+    revertCategoryHighlight()
+    venue.pois
+      .filter((poi) => poi.categories.some((c) => c.id === categoryId))
+      .forEach((poi) => {
+        poi.surfaces.forEach((surface) => {
+          venue.updateSurface(surface, { color: '#FF6B00' })
+        })
+      })
+    highlightedCategoryId = categoryId
+  },
+
+  clear_category_highlight: () => {
+    revertCategoryHighlight()
+  },
+})
 ```
 
-Getting the category list into React Native needs a request/response round trip, the same idiom [Custom data](custom-data.md) uses: `get_categories` goes in, `categories_result` (`{ data: { categories: { id: string; label: string }[] } }`) comes back once the WebView has an answer. `highlight_category` and `clear_category_highlight` are fire-and-forget one-way messages — no response is needed since they don't return any data, only cause a side effect.
+Getting the category list into React Native needs a request/response round trip, the same idiom [Custom data](custom-data.md) uses: `get_categories` goes in (sent automatically when the page reports `ready`), `categories_result` (`{ data: { categories: { id: string; label: string }[] } }`) comes back once the WebView has an answer. `highlight_category` and `clear_category_highlight` are fire-and-forget one-way messages — no response is needed since they don't return any data, only cause a side effect.
 
 ## Things to know
 

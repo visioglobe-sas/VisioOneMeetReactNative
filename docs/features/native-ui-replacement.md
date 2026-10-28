@@ -8,25 +8,52 @@ This is built on a single call already introduced by [UI Visibility](ui-part-vis
 
 ## SDK usage
 
+This feature has no bridge or page code of its own: it reuses ui-part-visibility's `set_ui_part_visible` message and floor-selector's bridge as is.
+
 ```ts
-// useVisioMap.ts (unchanged — the same setUIPartVisible already added for ui-part-visibility)
-const setUIPartVisible = (uiPart: UIPart, isVisible: boolean) => {
-  sendMessage({ type: 'set_ui_part_visible', data: { uiPart, isVisible } });
+// src/features/ui-part-visibility/bridge.ts (unchanged — shared with ui-part-visibility)
+export const useUIPartVisibilityBridge = () => {
+  const { send } = useMapBridge();
+  return {
+    setUIPartVisible: (uiPart: UIPart, isVisible: boolean) =>
+      send('set_ui_part_visible', { uiPart, isVisible }),
+  };
 };
 ```
 
 ```js
-// src/assets/visioOne.html (unchanged — same handler as ui-part-visibility)
-const setUIPartVisible = (uiPart, isVisible) => {
-  if (view) {
-    view.setUIPartVisible(uiPart, isVisible)
-  }
-}
+// src/features/ui-part-visibility/webview.js (unchanged — same handler as ui-part-visibility)
+core.register({
+  set_ui_part_visible: ({ uiPart, isVisible }) => {
+    core.view?.setUIPartVisible(uiPart, isVisible)
+  },
+})
 ```
 
 `view.setUIPartVisible(uiPart: UIPart, isVisible: boolean): void` — `uiPart` must be one of the SDK's exact, case-sensitive `View.UIPart` values (`'floorSelector' | 'navigation' | 'poiDetails' | 'search' | 'userTracking'`); this feature only ever passes `'floorSelector'`. Requires the view to already exist (called only after the venue's `ready` state, once `createView(...)` has resolved).
 
-This screen calls `setUIPartVisible('floorSelector', false)` once, as soon as the map reports ready — the SDK widget starts hidden, not merely hidden-after-first-interaction. A toggle then lets it be shown again (`setUIPartVisible('floorSelector', true)`), so a visitor can compare the SDK's own widget and the app's native picker side by side, live, rather than take the replacement on faith. Regardless of the toggle, floor/building changes themselves keep going through `goToFloor`/`goToBuilding` (`view.goToFloor(floor)` / `view.goToBuilding(building)`), exactly as in [Floor Selector](floor-selector.md) — the app's picker never depends on the SDK widget's visibility to work.
+This screen calls `setUIPartVisible('floorSelector', false)` once, as soon as the map reports ready — the SDK widget starts hidden, not merely hidden-after-first-interaction:
+
+```tsx
+// src/features/native-ui-replacement/NativeUiReplacementPanel.tsx
+const { status } = useMapBridge();
+const { setUIPartVisible } = useUIPartVisibilityBridge();
+const { venueLayout, goToFloor, goToBuilding } = useFloorSelectorBridge();
+const [sdkFloorSelectorVisible, setSdkFloorSelectorVisible] = React.useState(false);
+
+React.useEffect(() => {
+  if (status === 'ready') {
+    setUIPartVisible('floorSelector', false);
+  }
+}, [status]);
+
+const toggle = (isVisible: boolean) => {
+  setSdkFloorSelectorVisible(isVisible);
+  setUIPartVisible('floorSelector', isVisible);
+};
+```
+
+The toggle lets the widget be shown again (`setUIPartVisible('floorSelector', true)`), so a visitor can compare the SDK's own widget and the app's native picker side by side, live, rather than take the replacement on faith. Regardless of the toggle, floor/building changes themselves keep going through floor-selector's `goToFloor`/`goToBuilding` (`view.goToFloor(floor)` / `view.goToBuilding(building)` in `src/features/floor-selector/webview.js`), exactly as in [Floor Selector](floor-selector.md) — the app's picker never depends on the SDK widget's visibility to work.
 
 ## Things to know
 

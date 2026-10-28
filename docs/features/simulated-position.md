@@ -11,22 +11,53 @@ There is no real positioning source here: a timer on the React Native side inter
 
 ## SDK usage
 
-1. React Native sends `{ type: 'resolve_poi_positions', data: { originId, destinationId } }`; the page answers `poi_positions_resolved` (`{ origin, destination }`, WGS84 positions) or `position_simulation_error` (`{ message }`):
+The React Native side is a shared hook, `useSimulatedPositionSession` (`src/shared/positionTracking/useSimulatedPositionSession.ts`), also used by camera-lock-on-position, accuracy-circle-style and geofencing; the page side is `src/features/simulated-position/webview.js`.
 
-```js
-// src/assets/visioOne.html
-const resolvePoiPosition = (placeId) => {
-  const poi = venue.pois.find((p) => p.id === placeId)
-  return poi ? getPoiDisplayPosition(poi) : null
-}
+1. Start sends `{ type: 'resolve_poi_positions', data: { originId, destinationId } }`; the page answers `poi_positions_resolved` (`{ origin, destination }`, WGS84 positions) or `position_simulation_error` (`{ message }`):
+
+```ts
+// src/shared/positionTracking/useSimulatedPositionSession.ts
+send('resolve_poi_positions', { originId: origin, destinationId: destination });
 ```
 
-`getPoiDisplayPosition(poi)` is the page's single "where is this POI" helper: the POI's first Label position, else its first Image or Marker position, else the centroid of its first Surface's vertices.
+```js
+// src/features/simulated-position/webview.js
+resolve_poi_positions: ({ originId, destinationId }) => {
+  if (!core.venue) {
+    return
+  }
+  const resolve = (placeId) => {
+    const poi = core.findPoi(placeId)
+    return poi ? core.getPoiDisplayPosition(poi) : null
+  }
+  const origin = resolve(originId)
+  const destination = resolve(destinationId)
+  if (!origin) {
+    core.sendToNative({ type: 'position_simulation_error', data: { message: `POI not found: ${originId}` } })
+    return
+  }
+  if (!destination) {
+    core.sendToNative({ type: 'position_simulation_error', data: { message: `POI not found: ${destinationId}` } })
+    return
+  }
+  core.sendToNative({ type: 'poi_positions_resolved', data: { origin, destination } })
+},
+```
 
-2. Every 150 ms, React Native (`src/features/useSimulatedPositionSession.ts`) computes the next interpolated position and sends `{ type: 'inject_tracked_position', data: { position, precisionCircleRadius } }`:
+`core.getPoiDisplayPosition(poi)` (`src/webview/core.js`) is the page's single "where is this POI" helper: the POI's first Label position, else its first Image or Marker position, else the centroid of its first Surface's vertices.
+
+2. Every 150 ms (`TICK_MS`), the hook computes the next interpolated position and sends `{ type: 'inject_tracked_position', data: { position, precisionCircleRadius } }`:
+
+```ts
+// src/shared/positionTracking/useSimulatedPositionSession.ts
+injectTrackedPosition: (position: Position, precisionCircleRadius: number) =>
+  send('inject_tracked_position', { position, precisionCircleRadius }),
+```
 
 ```js
-const injectTrackedPosition = (position, precisionCircleRadius) => {
+// src/features/simulated-position/webview.js
+inject_tracked_position: ({ position, precisionCircleRadius }) => {
+  const view = core.view
   if (!view) {
     return
   }
@@ -34,17 +65,23 @@ const injectTrackedPosition = (position, precisionCircleRadius) => {
     view.allowTracking = true
   }
   view.injectTrackedPosition({ position, precisionCircleRadius })
-}
+},
 ```
 
-3. Stop sends `{ type: 'stop_position_simulation' }`:
+3. Stop (or leaving the screen) clears the timer and sends `{ type: 'stop_position_simulation' }`:
+
+```ts
+// src/shared/positionTracking/useSimulatedPositionSession.ts
+stopSimulation: () => send('stop_position_simulation'),
+```
 
 ```js
-const stopPositionSimulation = () => {
-  if (view) {
-    view.allowTracking = false
+// src/features/simulated-position/webview.js
+stop_position_simulation: () => {
+  if (core.view) {
+    core.view.allowTracking = false
   }
-}
+},
 ```
 
 ## Things to know

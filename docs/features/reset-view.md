@@ -6,15 +6,27 @@ Brings the camera back to the venue's default whole-venue view, whatever the use
 
 ## SDK usage
 
-React Native sends `{ type: 'reset_map' }` (`resetMap` in `src/screens/useVisioMap.ts`); the page calls the SDK:
+React Native sends `{ type: 'reset_map' }` from the feature's bridge hook:
+
+```ts
+// src/features/reset-view/bridge.ts
+export const useResetViewBridge = () => {
+  const { send } = useMapBridge();
+  return {
+    resetMap: () => send('reset_map'),
+  };
+};
+```
+
+The page calls the SDK:
 
 ```js
-// src/assets/visioOne.html
-const resetMap = () => {
-  if (view) {
-    view.goToGlobal()
-  }
-}
+// src/features/reset-view/webview.js
+core.register({
+  reset_map: () => {
+    core.view?.goToGlobal()
+  },
+})
 ```
 
 ## Things to know

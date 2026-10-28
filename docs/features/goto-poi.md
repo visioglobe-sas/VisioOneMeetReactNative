@@ -9,43 +9,79 @@ Moves the camera onto a place (POI) given its id, and drops a pin image on it. B
 
 ## SDK usage
 
-React Native sends `{ type: 'select_place', data: { placeId } }` (`goToPlace`) and `{ type: 'clear_place' }` (`clearPlace`), see `src/screens/useVisioMap.ts`. The page (`src/assets/visioOne.html`) handles them:
+React Native sends `{ type: 'select_place', data: { placeId } }` and `{ type: 'clear_place' }`:
+
+```ts
+// src/features/goto-poi/bridge.ts
+export const useGoToPoiBridge = () => {
+  const { send } = useMapBridge();
+  return {
+    goToPlace: (placeId: string) => send('select_place', { placeId }),
+    clearPlace: () => send('clear_place'),
+  };
+};
+```
+
+The page handles them:
 
 ```js
-// src/assets/visioOne.html
+// src/features/goto-poi/webview.js
 let gotoPin = null
 const GOTO_PIN_URL = 'data:image/png;base64,...' // inline 96x96 PNG, no third-party host
 
 const clearPlace = () => {
-  if (venue && gotoPin) {
-    venue.removeImage(gotoPin)
+  if (core.venue && gotoPin) {
+    core.venue.removeImage(gotoPin)
   }
   gotoPin = null
 }
 
-const goToPlace = (placeId) => {
-  if (!venue || !view) {
-    return
-  }
-  clearPlace() // one pin at a time
-  const poi = venue.pois.find((p) => p.id === placeId)
-  if (!poi) {
-    throw new Error(`POI not found: ${placeId}`) // reported to React Native as 'command_error'
-  }
+core.register({
+  select_place: ({ placeId }) => {
+    const venue = core.venue
+    if (!venue || !core.view) {
+      return
+    }
+    clearPlace()
+    const poi = core.findPoi(placeId)
+    if (!poi) {
+      // Reported to React Native as a 'command_error' by the core.
+      throw new Error(`POI not found: ${placeId}`)
+    }
+    core.moveCameraToPoi(poi)
+    const position = core.getPoiDisplayPosition(poi)
+    if (position) {
+      gotoPin = venue.createImage({
+        poi,
+        position,
+        width: 2,
+        height: 2,
+        orientationType: 'facing',
+        url: GOTO_PIN_URL,
+      })
+    }
+  },
+  clear_place: () => {
+    clearPlace()
+  },
+})
+```
+
+`core.findPoi(id)` is `venue.pois.find((p) => p.id === id)`. `core.moveCameraToPoi(poi)` is the actual SDK call:
+
+```js
+// src/webview/core.js
+const moveCameraToPoi = (poi) => {
   view.goToPOI(poi, {
     orientation: { pitch: 20 },
     padding: { top: 100, bottom: 100, right: 100, left: 100 },
   })
-  const position = getPoiDisplayPosition(poi)
-  if (position) {
-    gotoPin = venue.createImage({ poi, position, width: 2, height: 2, orientationType: 'facing', url: GOTO_PIN_URL })
-  }
 }
 ```
 
-`getPoiDisplayPosition(poi)` is the page's single "where is this POI" helper: the POI's first Label position, else its first Image or Marker position, else the centroid of its first Surface's vertices.
+`core.getPoiDisplayPosition(poi)` (also in `src/webview/core.js`) is the page's single "where is this POI" helper: the POI's first Label position, else its first Image or Marker position, else the centroid of its first Surface's vertices.
 
-A command that throws in the page (here an unknown id) comes back as `{ type: 'command_error', data: { command: 'select_place', message } }`; the panel shows it.
+A command that throws in the page (here an unknown id) comes back as `{ type: 'command_error', data: { command: 'select_place', message } }`; the panel reads it with `useCommandError('select_place', sentAt)` (`src/bridge/MapBridge.ts`) and shows it.
 
 ## Things to know
 

@@ -11,35 +11,73 @@ A tracked position has to exist for anything to show, so this feature reuses the
 The React Native side sends one message whenever the color or opacity changes, and once more on every Start (see "Things to know"):
 
 ```ts
-// useVisioMap.ts
-sendMessage({ type: 'set_position_tracker_style', data: { color, opacity } }) // e.g. '#e53935', 0.5
+// src/features/accuracy-circle-style/bridge.ts
+export const usePositionTrackerStyleBridge = () => {
+  const { send } = useMapBridge();
+  return {
+    setPositionTrackerStyle: (color: string, opacity: number) =>
+      send('set_position_tracker_style', { color, opacity }), // e.g. '#e53935', 0.5
+  };
+};
 ```
 
 ```js
-// src/assets/visioOne.html
-case 'set_position_tracker_style':
-  view.updatePositionTrackerGraphicOptions({ color: evt.data.color, opacity: evt.data.opacity })
-  break
+// src/features/accuracy-circle-style/webview.js
+core.register({
+  set_position_tracker_style: ({ color, opacity }) => {
+    if (!core.view) {
+      return
+    }
+    try {
+      core.view.updatePositionTrackerGraphicOptions({ color, opacity })
+    } catch (error) {
+      console.error('Updating position tracker graphic options failed', error)
+    }
+  },
+})
 ```
 
-(The actual handler wraps the call in `try`/`catch`, since it throws on invalid input.)
+The re-send on every Start goes through the shared tracking session's `onTrackingStarted` callback, called right before the first injected position of a run:
+
+```tsx
+// src/features/accuracy-circle-style/AccuracyCircleStylePanel.tsx
+const session = useSimulatedPositionSession({
+  onTrackingStarted: () =>
+    setPositionTrackerStyle(trackerStyleRef.current.color, trackerStyleRef.current.opacity),
+  initialOriginId: TRACKING_FROM,
+  initialDestinationId: TRACKING_TO,
+  initialRadius: DEFAULT_RADIUS, // 6 m
+});
+```
 
 The radius travels with each injected position, as for simulated position:
 
 ```ts
-// useVisioMap.ts, called on every tick of the React Native timer
-sendMessage({ type: 'inject_tracked_position', data: { position, precisionCircleRadius } })
+// src/shared/positionTracking/useSimulatedPositionSession.ts, called on every tick of the React Native timer
+injectTrackedPosition: (position: Position, precisionCircleRadius: number) =>
+  send('inject_tracked_position', { position, precisionCircleRadius }),
+stopSimulation: () => send('stop_position_simulation'),
 ```
 
 ```js
-// src/assets/visioOne.html
-if (!view.allowTracking) {
-  view.allowTracking = true
-}
-view.injectTrackedPosition({ position, precisionCircleRadius }) // radius in meters
-```
+// src/features/simulated-position/webview.js
+inject_tracked_position: ({ position, precisionCircleRadius }) => {
+  const view = core.view
+  if (!view) {
+    return
+  }
+  if (!view.allowTracking) {
+    view.allowTracking = true
+  }
+  view.injectTrackedPosition({ position, precisionCircleRadius }) // radius in meters
+},
 
-Stopping is `view.allowTracking = false`.
+stop_position_simulation: () => {
+  if (core.view) {
+    core.view.allowTracking = false
+  }
+},
+```
 
 ## Things to know
 

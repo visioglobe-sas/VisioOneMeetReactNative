@@ -6,15 +6,30 @@ Shows or hides each of the 5 parts of the map's default UI (`floorSelector`, `na
 
 ## SDK usage
 
-React Native sends `{ type: 'set_ui_part_visible', data: { uiPart, isVisible } }` (`setUIPartVisible` in `src/screens/useVisioMap.ts`, with `uiPart` typed `'floorSelector' | 'navigation' | 'poiDetails' | 'search' | 'userTracking'`, mirroring the SDK's `UIPart`); the page calls the SDK:
+React Native sends `{ type: 'set_ui_part_visible', data: { uiPart, isVisible } }`, with `uiPart` typed to mirror the SDK's `UIPart`:
+
+```ts
+// src/features/ui-part-visibility/bridge.ts
+export type UIPart = 'floorSelector' | 'navigation' | 'poiDetails' | 'search' | 'userTracking';
+
+export const useUIPartVisibilityBridge = () => {
+  const { send } = useMapBridge();
+  return {
+    setUIPartVisible: (uiPart: UIPart, isVisible: boolean) =>
+      send('set_ui_part_visible', { uiPart, isVisible }),
+  };
+};
+```
+
+The page calls the SDK:
 
 ```js
-// src/assets/visioOne.html
-const setUIPartVisible = (uiPart, isVisible) => {
-  if (view) {
-    view.setUIPartVisible(uiPart, isVisible)
-  }
-}
+// src/features/ui-part-visibility/webview.js
+core.register({
+  set_ui_part_visible: ({ uiPart, isVisible }) => {
+    core.view?.setUIPartVisible(uiPart, isVisible)
+  },
+})
 ```
 
 All parts are visible by default; the demo starts its 5 switches on and mirrors each change (the getter `view.isUIPartVisible(uiPart)` also exists).

@@ -9,28 +9,60 @@ Points the SDK at a different map server than Visioglobe's default SaaS, via `Lo
 `baseURL` is a `loadVenue` option, not a live property of an already-loaded venue/view — changing it means reloading the venue from scratch:
 
 ```js
-// src/assets/visioOne.html
+// src/webview/core.js, in setup({ hash, baseURL, ... })
+const trimmedBaseURL = typeof baseURL === 'string' ? baseURL.trim() : ''
+// ...
 const loadOptions = trimmedBaseURL
   ? { vg_maphash: venueHash, baseURL: trimmedBaseURL }
   : { vg_maphash: venueHash } // omitted entirely -> SDK falls back to its own default
 venue = await visioOne.loadVenue(loadOptions, container)
 ```
 
-The React Native side sends the current field value as part of the same `setup` message already used for the map hash:
+The React Native side passes the current value as `VisioMapView`'s `baseURL` prop, sent as part of the same `setup` message already used for the map hash:
 
-```ts
-// useVisioMap.ts
-sendMessage({ type: 'setup', data: { hash, baseURL } })
+```tsx
+// src/bridge/VisioMapView.tsx
+if (evt.type === 'page_ready') {
+  send('setup', {
+    hash: mapHash ?? DEMO_MAP_HASH,
+    baseURL,
+    enableShadows,
+    cameraProjection,
+    authorizationToken,
+  });
+}
 ```
 
-```ts
-// src/assets/visioOne.html (WebView message handler)
-case 'setup':
-  setup(evt.data.hash, evt.data.baseURL)
-  break
+Reloading with a new `baseURL` is done by fully unmounting and remounting the `VisioMapView`/`WebView` (the screen changes the map's React `key`), rather than trying to mutate an in-place venue — there is no SDK call that swaps a loaded venue's server without a fresh `loadVenue`:
+
+```tsx
+// src/features/custom-base-url/CustomBaseUrlScreen.tsx
+const CustomBaseUrlScreen = () => {
+  const [baseURL, setBaseURL] = React.useState(DEFAULT_BASE_URL); // 'https://mapserver.visioglobe.com/'
+  // The value the current map was loaded with: editing the field alone changes nothing.
+  const [loadedBaseURL, setLoadedBaseURL] = React.useState(DEFAULT_BASE_URL);
+  const [reloadKey, setReloadKey] = React.useState(0);
+
+  return (
+    <FeatureMap mapKey={`custom-base-url-${reloadKey}`} baseURL={loadedBaseURL}>
+      {(sheet) => (
+        <BottomSheet {...sheet}>
+          <CustomBaseUrlControls
+            baseURL={baseURL}
+            onChangeBaseURL={setBaseURL}
+            onReload={() => {
+              setLoadedBaseURL(baseURL);
+              setReloadKey((key) => key + 1);
+            }}
+          />
+        </BottomSheet>
+      )}
+    </FeatureMap>
+  );
+};
 ```
 
-Reloading with a new `baseURL` is done by fully unmounting and remounting the `VisioMapView`/`WebView` (`FeatureScreen.tsx` changes the component's `key`), rather than trying to mutate an in-place venue — there is no SDK call that swaps a loaded venue's server without a fresh `loadVenue`.
+(`FeatureMap` renders `<VisioMapView key={mapKey} ...>`.)
 
 ## Things to know
 

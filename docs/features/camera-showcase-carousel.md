@@ -32,79 +32,148 @@ The demo tours 4 places of the demo venue, across 3 buildings: `B4-UL00-ID0009`,
 
 ## SDK usage
 
-The whole loop runs inside the WebView page, next to the `view` it animates. React Native only starts and stops it:
+The whole loop runs inside the WebView page, next to the `view` it animates. React Native only starts and stops it, and mirrors the state the page reports on every change (Start/Stop, a touch on the map, the idle timer resuming the tour):
 
 ```ts
-// useVisioMap.ts -- CAROUSEL_STOP_IDS comes from src/demoMap.ts
-sendMessage({ type: 'start_camera_carousel', data: { stopIds: CAROUSEL_STOP_IDS } });
-sendMessage({ type: 'stop_camera_carousel' });
+// src/features/camera-showcase-carousel/bridge.ts -- CAROUSEL_STOP_IDS comes from src/demoMap.ts
+export type CameraCarouselState = 'running' | 'paused' | 'stopped';
+
+export interface CameraCarouselStatus {
+  state: CameraCarouselState;
+  stopIndex: number;
+  stopCount: number;
+  poiId: string | null;
+  resumeAfterMs: number;
+}
+
+export const useCameraCarouselBridge = () => {
+  const { send } = useMapBridge();
+  const [status, setStatus] = React.useState<CameraCarouselStatus>(INITIAL_STATUS);
+
+  useMapEvent<CameraCarouselStatus>('camera_carousel_status', setStatus);
+
+  return {
+    status,
+    startCameraCarousel: () => send('start_camera_carousel', { stopIds: CAROUSEL_STOP_IDS }),
+    stopCameraCarousel: () => send('stop_camera_carousel'),
+  };
+};
 ```
 
-and mirrors the state the page reports on every change (Start/Stop, a touch on the map, the idle timer resuming the tour):
-
-```ts
-// VisioMapView.tsx
-} else if (evt.type === 'camera_carousel_status') {
-  // { state: 'running' | 'paused' | 'stopped', stopIndex, stopCount, poiId, resumeAfterMs }
-  setCameraCarousel(evt.data);
-}
+```js
+// src/features/camera-showcase-carousel/webview.js
+core.register({
+  start_camera_carousel: ({ stopIds }) => {
+    carouselStopIds = stopIds || []
+    startCarousel(0)
+  },
+  stop_camera_carousel: () => {
+    stopCarousel()
+  },
+})
 ```
 
 Keeping the loop in the page means it does not depend on any React component staying mounted (it keeps running while the control panel is closed), there is only ever one loop, and it ends with the WebView when the screen is left.
 
-The loop, in the page (`src/assets/visioOne.html`). A run id, bumped by every start/pause/stop, guarantees an older loop never continues after a newer action:
+The loop, in the page. A run id, bumped by every start/pause/stop, guarantees an older loop never continues after a newer action:
 
 ```js
+// src/features/camera-showcase-carousel/webview.js
 const runCarouselLoop = async (runId, startIndex) => {
+  const view = core.view
   const isCurrentRun = () => runId === carouselRunId && carouselState === 'running'
   let index = startIndex
   while (isCurrentRun()) {
-    const poi = venue.pois.find((p) => p.id === carouselStopIds[index])
+    const poi = core.findPoi(carouselStopIds[index])
     carouselStopIndex = index
     sendCarouselStatus()
     if (poi) {
-      const floorAnimation = view.goToFloor(poi.floor, { duration: 800 })
-      await floorAnimation
-      if (!isCurrentRun()) return
-      if (floorAnimation.isCanceled) { pauseCarousel(false); return } // another animation took over
-
+      // The SDK docs make the caller responsible for switching to the POI's floor
+      // before goToPOI.
+      if (poi.floor) {
+        const floorAnimation = view.goToFloor(poi.floor, { duration: 800 })
+        await floorAnimation
+        if (!isCurrentRun()) {
+          return
+        }
+        if (floorAnimation.isCanceled) {
+          // Something else started a camera animation: let it win.
+          pauseCarousel(false)
+          return
+        }
+      }
       const poiAnimation = view.goToPOI(poi, {
         duration: 2500,
         easing: 'easeInOutQuad',
         orientation: { heading: index * 90, pitch: 30 },
       })
       await poiAnimation
-      if (!isCurrentRun()) return
-      if (poiAnimation.isCanceled) { pauseCarousel(false); return }
+      if (!isCurrentRun()) {
+        return
+      }
+      if (poiAnimation.isCanceled) {
+        pauseCarousel(false)
+        return
+      }
+    } else {
+      console.warn('camera-showcase-carousel: POI not found', carouselStopIds[index])
     }
-    await new Promise((resolve) => setTimeout(resolve, 3000)) // dwell
+    await new Promise((resolve) => setTimeout(resolve, CAROUSEL_DWELL_MS)) // 3000
     index = (index + 1) % carouselStopIds.length
   }
 }
 ```
 
-Pausing on touch. The SDK gives no signal that the user moved the camera, so the page listens for touches on the map container itself, in the capture phase:
+Pausing on touch. The SDK gives no signal that the user moved the camera, so the page listens for touches on the map container itself (`core.container`, the `#content` element the map is created in), in the capture phase, registered once on the first start:
 
 ```js
-const container = document.querySelector('#content')
-container.addEventListener('pointerdown', () => pauseCarousel(true), { capture: true })
+// src/features/camera-showcase-carousel/webview.js, in startCarousel()
+core.container.addEventListener('pointerdown', () => onCarouselTouch(), { capture: true })
 // pointerup restarts the 10 s idle delay, so a long drag doesn't resume mid-gesture
-container.addEventListener('pointerup', () => pauseCarousel(true), { capture: true })
+core.container.addEventListener('pointerup', () => onCarouselTouch(), { capture: true })
 ```
 
-`pauseCarousel` invalidates the running loop, stops the camera **where it is** and schedules the resume from the next stop:
+`onCarouselTouch` calls `pauseCarousel(true)`, which invalidates the running loop, stops the camera **where it is** and schedules the resume from the next stop:
 
 ```js
+// src/features/camera-showcase-carousel/webview.js
 // Starting another animation interrupts the running one in place.
 // (animation.cancel() would stop the camera in place too.)
-view.goToViewpoint(
-  { positions: [view.camera.target] },
-  { duration: 0, orientation: { heading: 'initial', pitch: 'initial' } }
-)
-carouselResumeTimer = setTimeout(
-  () => startCarousel((carouselStopIndex + 1) % carouselStopIds.length),
-  10000
-)
+const freezeCamera = () => {
+  const view = core.view
+  if (!view) {
+    return
+  }
+  try {
+    view.goToViewpoint(
+      { positions: [view.camera.target] },
+      { duration: 0, orientation: { heading: 'initial', pitch: 'initial' } }
+    )
+  } catch (error) {
+    console.error('freezeCamera failed', error)
+  }
+}
+
+const pauseCarousel = (interruptCamera) => {
+  if (carouselState === 'stopped') {
+    return
+  }
+  if (carouselState === 'running') {
+    carouselState = 'paused'
+    carouselRunId += 1
+    if (interruptCamera) {
+      freezeCamera()
+    }
+    sendCarouselStatus()
+  }
+  clearCarouselResumeTimer()
+  carouselResumeTimer = setTimeout(() => {
+    carouselResumeTimer = null
+    if (carouselState === 'paused') {
+      startCarousel((carouselStopIndex + 1) % carouselStopIds.length)
+    }
+  }, CAROUSEL_RESUME_AFTER_MS) // 10000
+}
 ```
 
 Stop clears the resume timer and invalidates the loop. It deliberately does not touch the hop in flight: that animation finishes on its own, and no further hop is started.

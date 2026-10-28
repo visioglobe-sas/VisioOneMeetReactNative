@@ -6,38 +6,72 @@ Colors a place's surface to show an occupancy status (free / about to be occupie
 
 ## SDK usage
 
-React Native sends `{ type: 'update_occupancy', data: { occupancy: [{ planId, color }] } }` (`updateOccupancy` in `src/screens/useVisioMap.ts`) on every tick; the page recolors every surface of each POI:
-
-```js
-// src/assets/visioOne.html
-const updateOccupancy = (occupancy) => {
-  if (!venue) {
-    return
-  }
-  occupancy.forEach((entry) => {
-    const poi = venue.pois.find((p) => p.id === entry.planId)
-    if (!poi) {
-      return
-    }
-    poi.surfaces.forEach((surface) => {
-      venue.updateSurface(surface, { color: entry.color })
-    })
-  })
-}
-```
-
-The timer (`src/features/OccupancySimulatedOverlay.tsx`):
+React Native sends `{ type: 'update_occupancy', data: { occupancy: [{ planId, color }] } }` on every tick:
 
 ```ts
-const OCCUPANCY_COLORS = ['#2ECC71', '#F1C40F', '#E74C3C']; // free, about to be occupied, occupied
+// src/features/occupancy-simulated/bridge.ts
+export interface OccupancyUpdate {
+  planId: string;
+  color?: string;
+}
 
-const timer = setInterval(() => {
-  colorIndex = (colorIndex + 1) % OCCUPANCY_COLORS.length;
-  updateOccupancy([{ planId, color: OCCUPANCY_COLORS[colorIndex] }]);
-}, 2500);
-// on stop:
-clearInterval(timer);
-updateOccupancy([{ planId, color: 'initial' }]);
+export const useOccupancySimulatedBridge = () => {
+  const { send } = useMapBridge();
+  return {
+    updateOccupancy: (occupancy: OccupancyUpdate[]) => send('update_occupancy', { occupancy }),
+  };
+};
+```
+
+The page recolors every surface of each POI:
+
+```js
+// src/features/occupancy-simulated/webview.js
+core.register({
+  update_occupancy: ({ occupancy }) => {
+    const venue = core.venue
+    if (!venue) {
+      return
+    }
+    occupancy.forEach((entry) => {
+      const poi = core.findPoi(entry.planId)
+      if (!poi) {
+        return
+      }
+      poi.surfaces.forEach((surface) => {
+        venue.updateSurface(surface, { color: entry.color })
+      })
+    })
+  },
+})
+```
+
+The timer (`core.findPoi(id)` above is `venue.pois.find((p) => p.id === id)`):
+
+```tsx
+// src/features/occupancy-simulated/OccupancySimulatedPanel.tsx
+const OCCUPANCY_COLORS = ['#2ECC71', '#F1C40F', '#E74C3C']; // free, about to be occupied, occupied
+const OCCUPANCY_INTERVAL_MS = 2500;
+
+React.useEffect(() => {
+  if (!runningPlaceId) {
+    return;
+  }
+  let colorIndex = 0;
+  const apply = (color: string | undefined) =>
+    updateOccupancyRef.current([{ planId: runningPlaceId, color }]);
+  apply(OCCUPANCY_COLORS[colorIndex]);
+  const timer = setInterval(() => {
+    colorIndex = (colorIndex + 1) % OCCUPANCY_COLORS.length;
+    apply(OCCUPANCY_COLORS[colorIndex]);
+  }, OCCUPANCY_INTERVAL_MS);
+
+  return () => {
+    clearInterval(timer);
+    // Back to the map's own color rather than leaving the last simulated one.
+    apply('initial');
+  };
+}, [runningPlaceId]);
 ```
 
 ## Things to know

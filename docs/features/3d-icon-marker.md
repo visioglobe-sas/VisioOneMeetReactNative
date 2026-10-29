@@ -19,7 +19,7 @@ The image is owned by an existing "anchor" POI (no `createPOI` needed) and place
 ## SDK usage
 
 ```ts
-// useVisioMap.ts
+// src/features/3d-icon-marker/bridge.ts
 export type ImageOrientationType = 'fixed' | 'flat' | 'facing';
 
 export interface IconMarkerOptions {
@@ -29,35 +29,40 @@ export interface IconMarkerOptions {
   orientationType: ImageOrientationType;
 }
 
-const createIconMarker = (imageId: string, anchorId: string, options: IconMarkerOptions) => {
-  sendMessage({ type: 'create_icon_marker', data: { imageId, anchorId, options } });
-};
+export const useIconMarkerBridge = () => {
+  const { send } = useMapBridge();
+  const [createResult, setCreateResult] = React.useState<IconMarkerCreateResult | null>(null);
 
-const updateIconMarkerOrientation = (imageId: string, orientationType: ImageOrientationType) => {
-  sendMessage({ type: 'update_icon_marker_orientation', data: { imageId, orientationType } });
-};
+  useMapEvent('icon_marker_create_result', (data) => setCreateResult({ ...data, at: Date.now() }));
 
-const removeIconMarker = (imageId: string) => {
-  sendMessage({ type: 'remove_icon_marker', data: { imageId } });
+  return {
+    createResult,
+    createIconMarker: (imageId: string, anchorId: string, options: IconMarkerOptions) =>
+      send('create_icon_marker', { imageId, anchorId, options }),
+    updateIconMarkerOrientation: (imageId: string, orientationType: ImageOrientationType) =>
+      send('update_icon_marker_orientation', { imageId, orientationType }),
+    removeIconMarker: (imageId: string) => send('remove_icon_marker', { imageId }),
+  };
 };
+```
 
-// Called with, e.g.:
-createIconMarker('icon-marker', 'B4-UL00-ID0009', {
-  width: 6,
-  height: 6,
-  url: 'data:image/png;base64,iVBORw0KGgo…',
-  orientationType: 'facing',
+```tsx
+// src/features/3d-icon-marker/IconMarkerPanel.tsx
+createIconMarker(IMAGE_ID, anchor, { // IMAGE_ID = 'icon-marker', anchor e.g. 'B4-UL00-ID0009'
+  width: ICON_SIZE_METERS, // 6
+  height: ICON_SIZE_METERS,
+  url: ICON_DATA_URL, // 'data:image/png;base64,iVBORw0KGgo…'
+  orientationType: orientation, // 'facing' by default
 });
 ```
 
-```js
-// src/assets/visioOne.html
+The anchor lookup is shared with the other features that attach something to an existing POI, and lives in the page's core:
 
-// Shared with the Dynamic POI feature: resolves an anchor POI id to the POI plus a
-// WGS84 position copied from its first label, or else its first marker.
-// Shared by every feature that needs "where is this POI": (1) its first Label
-// position, (2) its first Image, then Marker position, (3) the centroid of its first
-// Surface's vertices. `exclude` skips objects the app itself attached to the POI.
+```js
+// src/webview/core.js
+// A POI has no position field of its own: (1) its first Label position, (2) its first
+// Image, then Marker position, (3) the centroid of its first Surface's vertices.
+// `exclude` skips objects the app itself attached to the POI.
 const getPoiDisplayPosition = (poi, exclude = []) => {
   const first = (items) => (items || []).find((item) => !exclude.includes(item) && item.position)
   const position =
@@ -73,7 +78,7 @@ const getPoiDisplayPosition = (poi, exclude = []) => {
 }
 
 const resolveAnchorPoi = (anchorId, exclude = []) => {
-  const poi = venue.pois.find((p) => p.id === anchorId)
+  const poi = findPoi(anchorId) // venue.pois.find((p) => p.id === anchorId)
   if (!poi) {
     return { reason: 'anchor_not_found' }
   }
@@ -84,57 +89,83 @@ const resolveAnchorPoi = (anchorId, exclude = []) => {
   return { poi, position }
 }
 
+// Shared camera move onto a POI (and its floor).
+const moveCameraToPoi = (poi) => {
+  view.goToPOI(poi, {
+    orientation: { pitch: 20 },
+    padding: { top: 100, bottom: 100, right: 100, left: 100 },
+  })
+}
+```
+
+```js
+// src/features/3d-icon-marker/webview.js
 // Live Image objects only exist here, keyed by an id chosen by the app.
 const iconMarkers = new Map()
 
-const createIconMarker = (imageId, anchorId, options) => {
-  const anchor = resolveAnchorPoi(anchorId, [iconMarkers.get(imageId)]) // skip our own previous icon
-  if (anchor.reason) {
-    sendToNative({ type: 'icon_marker_create_result', data: { ok: false, imageId, anchorId, reason: anchor.reason } })
-    return
-  }
-  const previous = iconMarkers.get(imageId)
-  if (previous) {
-    venue.removeImage(previous)
-    iconMarkers.delete(imageId)
-  }
-  try {
-    const created = venue.createImage({
-      poi: anchor.poi,
-      position: anchor.position,
-      width: options.width,
-      height: options.height,
-      url: options.url,
-      orientationType: options.orientationType,
-    })
-    iconMarkers.set(imageId, created)
-    view.goToPOI(anchor.poi, {
-      orientation: { pitch: 20 },
-      padding: { top: 100, bottom: 100, right: 100, left: 100 },
-    })
-    sendToNative({ type: 'icon_marker_create_result', data: { ok: true, imageId, anchorId } })
-  } catch (error) {
-    sendToNative({
-      type: 'icon_marker_create_result',
-      data: { ok: false, imageId, anchorId, reason: 'sdk_error', message: error.name + ': ' + error.message },
-    })
-  }
-}
+core.register({
+  create_icon_marker: ({ imageId, anchorId, options }) => {
+    const venue = core.venue
+    if (!venue) {
+      return
+    }
+    // Skip our own current icon (it lands in the anchor's poi.images).
+    const anchor = core.resolveAnchorPoi(anchorId, [iconMarkers.get(imageId)])
+    if (anchor.reason) {
+      core.sendToNative({ type: 'icon_marker_create_result', data: { ok: false, imageId, anchorId, reason: anchor.reason } })
+      return
+    }
+    // Only one Image per id: replace any previous one rather than leaking it.
+    const previous = iconMarkers.get(imageId)
+    if (previous) {
+      venue.removeImage(previous)
+      iconMarkers.delete(imageId)
+    }
+    try {
+      const created = venue.createImage({
+        poi: anchor.poi,
+        position: anchor.position,
+        width: options.width,
+        height: options.height,
+        url: options.url,
+        orientationType: options.orientationType,
+      })
+      iconMarkers.set(imageId, created)
+      if (core.view) {
+        core.moveCameraToPoi(anchor.poi)
+      }
+      core.sendToNative({ type: 'icon_marker_create_result', data: { ok: true, imageId, anchorId } })
+    } catch (error) {
+      core.sendToNative({
+        type: 'icon_marker_create_result',
+        data: {
+          ok: false,
+          imageId,
+          anchorId,
+          reason: 'sdk_error',
+          message: core.errorMessage(error),
+        },
+      })
+    }
+  },
 
-const updateIconMarkerOrientation = (imageId, orientationType) => {
-  const tracked = iconMarkers.get(imageId)
-  if (tracked) {
-    venue.updateImage(tracked, { orientationType })
-  }
-}
+  update_icon_marker_orientation: ({ imageId, orientationType }) => {
+    const tracked = iconMarkers.get(imageId)
+    if (!core.venue || !tracked) {
+      return
+    }
+    core.venue.updateImage(tracked, { orientationType })
+  },
 
-const removeIconMarker = (imageId) => {
-  const tracked = iconMarkers.get(imageId)
-  if (tracked) {
-    venue.removeImage(tracked)
+  remove_icon_marker: ({ imageId }) => {
+    const tracked = iconMarkers.get(imageId)
+    if (!core.venue || !tracked) {
+      return
+    }
+    core.venue.removeImage(tracked)
     iconMarkers.delete(imageId)
-  }
-}
+  },
+})
 ```
 
 Placing needs a round trip: `create_icon_marker` goes in, `icon_marker_create_result` comes back with `{ ok: true, imageId, anchorId }`, or `{ ok: false, reason }` where `reason` is `'anchor_not_found'`, `'no_position'` (both normal outcomes, not crashes) or `'sdk_error'` (`createImage` threw). Updating the orientation and removing are fire-and-forget messages, no-ops on the WebView side if nothing is placed under that id.
@@ -147,7 +178,7 @@ Placing needs a round trip: `create_icon_marker` goes in, `icon_marker_create_re
 - **`updateImage` applies live**, no remove/recreate needed — switching `orientationType` on an already-placed Image takes effect immediately.
 - **`'flat'` and `'facing'` require SDK ≥ 1.0.9.** On earlier versions, runtime-created images ignore these two orientations (they lie flat and don't follow the camera); this was an SDK bug fixed in 1.0.9. `'fixed'` works on all versions.
 - **Mind the altitude.** The image is placed at `position`, altitude included. A position copied from a label sits right at floor level (altitude 0.5 m on the demo map), so a ground-lying image can z-fight with the floor/label there. Raising `position.altitude` slightly avoids it.
-- **A POI has no direct lat/lng field.** Its position comes from the objects it owns: this demo uses its first Label's position, else its first Image's or Marker's, else the centroid of its first Surface (`getPoiDisplayPosition` above, the same helper every feature of this repo uses). Only a POI with none of these (e.g. a POI just created with `createPOI`) has nothing to copy, reported as `'no_position'`.
+- **A POI has no direct lat/lng field.** Its position comes from the objects it owns: this demo uses its first Label's position, else its first Image's or Marker's, else the centroid of its first Surface (`getPoiDisplayPosition` in `src/webview/core.js` above, the same helper every feature of this repo uses). Only a POI with none of these (e.g. a POI just created with `createPOI`) has nothing to copy, reported as `'no_position'`.
 - **Indoor images are only visible on their floor.** From the default whole-venue view, indoor floors aren't shown, so the camera is moved to the anchor POI after placing (`view.goToPOI`, the same call as [Go to place](goto-poi.md)).
 
 ## Learn more

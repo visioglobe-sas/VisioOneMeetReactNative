@@ -13,7 +13,7 @@ The label is owned by an existing "anchor" POI (no `createPOI` needed) and place
 ## SDK usage
 
 ```ts
-// useVisioMap.ts
+// src/features/custom-text-label/bridge.ts
 export interface TextLabelOptions {
   text: string;
   color: string; // hex, rgb() or hsl()
@@ -22,48 +22,50 @@ export interface TextLabelOptions {
   rotation: number; // degrees
 }
 
-export type TextLabelUpdate =
-  | { text: string }
-  | { color: string }
-  | { width: number; height: number };
+export type TextLabelUpdate = { text: string } | { color: string } | { width: number; height: number };
 
-const createTextLabel = (labelId: string, anchorId: string, options: TextLabelOptions, moveCamera = true) => {
-  sendMessage({ type: 'create_text_label', data: { labelId, anchorId, options, moveCamera } });
+export const useTextLabelBridge = () => {
+  const { send } = useMapBridge();
+  const [createResult, setCreateResult] = React.useState<TextLabelCreateResult | null>(null);
+
+  useMapEvent('text_label_create_result', (data) => setCreateResult({ ...data, at: Date.now() }));
+
+  return {
+    createResult,
+    createTextLabel: (labelId: string, anchorId: string, options: TextLabelOptions, moveCamera = true) =>
+      send('create_text_label', { labelId, anchorId, options, moveCamera }),
+    updateTextLabel: (labelId: string, update: TextLabelUpdate) =>
+      send('update_text_label', { labelId, update }),
+    removeTextLabel: (labelId: string) => send('remove_text_label', { labelId }),
+  };
 };
+```
 
-const updateTextLabel = (labelId: string, update: TextLabelUpdate) => {
-  sendMessage({ type: 'update_text_label', data: { labelId, update } });
-};
-
-const removeTextLabel = (labelId: string) => {
-  sendMessage({ type: 'remove_text_label', data: { labelId } });
-};
-
-// Called with, e.g.:
+```tsx
+// src/features/custom-text-label/TextLabelPanel.tsx -- the calls the panel makes, e.g.:
 createTextLabel('custom-text-label', 'B4-UL00-ID0009', {
   text: 'Lunch 12:00–14:00',
   color: '#E53935',
   width: 16,
   height: 3,
   rotation: 0,
-});
+}, true);
 updateTextLabel('custom-text-label', { color: '#1E88E5' });
 updateTextLabel('custom-text-label', { width: 22, height: 4 });
 updateTextLabel('custom-text-label', { text: 'Open 9:00–18:00' });
-// Changing the rotation = creating again under the same id (replaces the previous label):
+// Changing the rotation = creating again under the same id (replaces the previous label),
+// without moving the camera again:
 createTextLabel('custom-text-label', 'B4-UL00-ID0009', { ...sameValues, rotation: 45 }, false);
 removeTextLabel('custom-text-label');
 ```
 
-```js
-// src/assets/visioOne.html
+The anchor lookup and the ~4 m offset are shared helpers of the page's core:
 
-// Shared with Dynamic POI and 3D icon marker: resolves an anchor POI id to the POI plus
-// a WGS84 position copied from its first label, or else its first marker. excludeLabel
-// (used here only) skips the custom label we already attached to that POI.
-// Shared by every feature that needs "where is this POI": (1) its first Label
-// position, (2) its first Image, then Marker position, (3) the centroid of its first
-// Surface's vertices. `exclude` skips objects the app itself attached to the POI.
+```js
+// src/webview/core.js
+// A POI has no position field of its own: (1) its first Label position, (2) its first
+// Image, then Marker position, (3) the centroid of its first Surface's vertices.
+// `exclude` skips objects the app itself attached to the POI.
 const getPoiDisplayPosition = (poi, exclude = []) => {
   const first = (items) => (items || []).find((item) => !exclude.includes(item) && item.position)
   const position =
@@ -79,7 +81,7 @@ const getPoiDisplayPosition = (poi, exclude = []) => {
 }
 
 const resolveAnchorPoi = (anchorId, exclude = []) => {
-  const poi = venue.pois.find((p) => p.id === anchorId)
+  const poi = findPoi(anchorId) // venue.pois.find((p) => p.id === anchorId)
   if (!poi) {
     return { reason: 'anchor_not_found' }
   }
@@ -90,85 +92,110 @@ const resolveAnchorPoi = (anchorId, exclude = []) => {
   return { poi, position }
 }
 
+// ~4 m north-east of `position`.
+const ANCHOR_OFFSET_DEGREES = 0.00004
+const offsetPosition = (position) => ({
+  ...position,
+  latitude: position.latitude + ANCHOR_OFFSET_DEGREES,
+  longitude: position.longitude + ANCHOR_OFFSET_DEGREES,
+})
+
+const moveCameraToPoi = (poi) => {
+  view.goToPOI(poi, {
+    orientation: { pitch: 20 },
+    padding: { top: 100, bottom: 100, right: 100, left: 100 },
+  })
+}
+```
+
+```js
+// src/features/custom-text-label/webview.js
 // Live Label objects only exist here, keyed by an id chosen by the app.
 const textLabels = new Map()
-const TEXT_LABEL_OFFSET_DEGREES = 0.00004 // ~4 m
 
-const createTextLabel = (labelId, anchorId, options, moveCamera) => {
-  const fail = (reason, message) =>
-    sendToNative({ type: 'text_label_create_result', data: { ok: false, labelId, anchorId, reason, message } })
-  const text = typeof options.text === 'string' ? options.text.trim() : ''
-  if (!text) {
-    fail('empty_text') // createLabel would throw "Cannot create Label, text is required"
-    return
-  }
-  const anchor = resolveAnchorPoi(anchorId, [textLabels.get(labelId)])
-  if (anchor.reason) {
-    fail(anchor.reason)
-    return
-  }
-  const previous = textLabels.get(labelId)
-  if (previous) {
-    venue.removeLabel(previous)
-    textLabels.delete(labelId)
-  }
-  const position = {
-    ...anchor.position,
-    latitude: anchor.position.latitude + TEXT_LABEL_OFFSET_DEGREES,
-    longitude: anchor.position.longitude + TEXT_LABEL_OFFSET_DEGREES,
-  }
-  try {
-    const created = venue.createLabel({
-      poi: anchor.poi,
-      position,
-      width: options.width,
-      height: options.height, // always explicit
-      text,
-      color: options.color,
-      rotation: options.rotation,
-    })
-    textLabels.set(labelId, created)
-    if (moveCamera !== false) {
-      view.goToPOI(anchor.poi, {
-        orientation: { pitch: 20 },
-        padding: { top: 100, bottom: 100, right: 100, left: 100 },
+core.register({
+  create_text_label: ({ labelId, anchorId, options, moveCamera }) => {
+    const venue = core.venue
+    if (!venue) {
+      return
+    }
+    const fail = (reason, message) => {
+      core.sendToNative({ type: 'text_label_create_result', data: { ok: false, labelId, anchorId, reason, message } })
+    }
+    const text = typeof options.text === 'string' ? options.text.trim() : ''
+    if (!text) {
+      // createLabel would throw "Cannot create Label, text is required".
+      fail('empty_text')
+      return
+    }
+    // Skip our own currently tracked label when copying the anchor's position.
+    const anchor = core.resolveAnchorPoi(anchorId, [textLabels.get(labelId)])
+    if (anchor.reason) {
+      fail(anchor.reason)
+      return
+    }
+    // Only one Label per id: replace any previous one rather than leaking it.
+    const previous = textLabels.get(labelId)
+    if (previous) {
+      venue.removeLabel(previous)
+      textLabels.delete(labelId)
+    }
+    try {
+      const created = venue.createLabel({
+        poi: anchor.poi,
+        position: core.offsetPosition(anchor.position),
+        width: options.width,
+        height: options.height, // always explicit
+        text,
+        color: options.color,
+        rotation: options.rotation,
       })
+      textLabels.set(labelId, created)
+      if (core.view && moveCamera !== false) {
+        core.moveCameraToPoi(anchor.poi)
+      }
+      core.sendToNative({ type: 'text_label_create_result', data: { ok: true, labelId, anchorId } })
+    } catch (error) {
+      fail('sdk_error', core.errorMessage(error))
     }
-    sendToNative({ type: 'text_label_create_result', data: { ok: true, labelId, anchorId } })
-  } catch (error) {
-    fail('sdk_error', error.name + ': ' + error.message)
-  }
-}
+  },
 
-const updateTextLabel = (labelId, update) => {
-  const tracked = textLabels.get(labelId)
-  if (!tracked) {
-    return
-  }
-  const options = {}
-  if (typeof update.text === 'string') {
-    if (!update.text.trim()) {
-      return // updateLabel with an empty text is ignored here, never sent
+  update_text_label: ({ labelId, update }) => {
+    const tracked = textLabels.get(labelId)
+    if (!core.venue || !tracked) {
+      return
     }
-    options.text = update.text.trim()
-  }
-  if (update.color !== undefined) {
-    options.color = update.color
-  }
-  if (update.width !== undefined && update.height !== undefined) {
-    options.width = update.width // never width alone
-    options.height = update.height
-  }
-  venue.updateLabel(tracked, options)
-}
+    const options = {}
+    if (typeof update.text === 'string') {
+      const text = update.text.trim()
+      if (!text) {
+        return // updateLabel with an empty text is ignored here, never sent
+      }
+      options.text = text
+    }
+    if (update.color !== undefined) {
+      options.color = update.color
+    }
+    if (update.width !== undefined && update.height !== undefined) {
+      options.width = update.width // never width alone
+      options.height = update.height
+    }
+    try {
+      core.venue.updateLabel(tracked, options)
+    } catch (error) {
+      console.error('updateLabel failed', error)
+    }
+  },
 
-const removeTextLabel = (labelId) => {
-  const tracked = textLabels.get(labelId)
-  if (tracked) {
-    venue.removeLabel(tracked)
+  remove_text_label: ({ labelId }) => {
+    const tracked = textLabels.get(labelId)
+    if (!core.venue || !tracked) {
+      return
+    }
+    core.venue.removeLabel(tracked)
     textLabels.delete(labelId)
-  }
-}
+  },
+})
 ```
 
 Placing needs a round trip: `create_text_label` goes in, `text_label_create_result` comes back with `{ ok: true, labelId, anchorId }`, or `{ ok: false, reason }` where `reason` is `'empty_text'`, `'anchor_not_found'`, `'no_position'` (all normal outcomes, not crashes) or `'sdk_error'` (`createLabel` threw). Updating and removing are fire-and-forget messages, no-ops on the WebView side if nothing is placed under that id.
@@ -182,7 +209,7 @@ Placing needs a round trip: `create_text_label` goes in, `text_label_create_resu
 - **A Label needs an owner POI.** `createLabel` requires `poi` — this demo uses the anchor POI itself. The new Label is pushed onto `poi.labels`, after the POI's own label (`poi.labels[0]`, e.g. "Restaurant"), which is left untouched; `removeLabel` only removes the one you created.
 - **Your label joins `poi.labels`.** If the anchor POI has no label of its own (only a marker), your custom label becomes `poi.labels[0]` while attached. Copying "the POI's first label position" again (e.g. to recreate the label for a new rotation) would then copy your already-offset position and the offset would build up on each recreation — skip your own label when resolving the anchor's position.
 - **`removeLabel` / `updateLabel` on a removed label throw** `Provided label is not registered`. Forget your reference once removed (this demo deletes it from its map, so a second remove is a no-op).
-- **A POI has no direct lat/lng field.** Its position comes from the objects it owns: this demo uses its first Label's position, else its first Image's or Marker's, else the centroid of its first Surface (`getPoiDisplayPosition` above, the same helper every feature of this repo uses). Only a POI with none of these (e.g. a POI just created with `createPOI`) has nothing to copy, reported as `'no_position'`.
+- **A POI has no direct lat/lng field.** Its position comes from the objects it owns: this demo uses its first Label's position, else its first Image's or Marker's, else the centroid of its first Surface (`getPoiDisplayPosition` in `src/webview/core.js` above, the same helper every feature of this repo uses). Only a POI with none of these (e.g. a POI just created with `createPOI`) has nothing to copy, reported as `'no_position'`.
 - **Indoor labels are only visible on their floor.** A Label is rendered only while its POI's floor is displayed; from the default whole-venue view indoor floors aren't shown, so the camera is moved to the anchor POI after placing (`view.goToPOI`, the same call as [Go to place](goto-poi.md)).
 
 ## Learn more

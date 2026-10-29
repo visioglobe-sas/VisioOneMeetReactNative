@@ -9,58 +9,115 @@ The SDK has **no geofencing or point-in-polygon primitive of its own.** This dem
 - `Surface.positions: Position[]` (`poi.surfaces[0].positions`, same `{ latitude, longitude, altitude? }` shape `injectTrackedPosition` takes) — the zone's boundary vertices, read straight off an existing POI. There's no separate "geofence" object on the SDK side; a zone *is* a POI's surface.
 - `view.injectTrackedPosition` / `view.allowTracking` — reused as-is from `simulated-position`, unmodified.
 - `venue.updateSurface(surface, { color })` — same call `clickable-surface`/`category-highlight` use for their own coloring, here used as the "alert" visual.
-- A hand-rolled ray-casting point-in-polygon check (`isPointInPolygon` in `GeofencingOverlay.tsx`) — plain app logic, not an SDK call.
+- A hand-rolled ray-casting point-in-polygon check (`isPointInPolygon` in `src/features/geofencing/GeofencingPanel.tsx`) — plain app logic, not an SDK call.
 
 ## SDK usage
 
 ```ts
-// useVisioMap.ts
-const resolveGeofenceZone = (placeId: string) => {
-  sendMessage({ type: 'resolve_geofence_zone', data: { placeId } });
-};
+// src/features/geofencing/bridge.ts
+export const useGeofencingBridge = () => {
+  const { send } = useMapBridge();
+  const [zone, setZone] = React.useState<GeofenceZone | null>(null);
+  const [zoneError, setZoneError] = React.useState<string | null>(null);
 
-const setGeofenceAlert = (placeId: string, active: boolean) => {
-  sendMessage({ type: 'set_geofence_alert', data: { placeId, active } });
+  useMapEvent<GeofenceZone>('geofence_zone_resolved', (data) => {
+    setZoneError(null);
+    setZone(data);
+  });
+  useMapEvent('geofence_zone_error', (data) => {
+    setZone(null);
+    setZoneError(String(data?.message ?? data));
+  });
+
+  return {
+    zone,
+    zoneError,
+    resolveGeofenceZone: (placeId: string) => send('resolve_geofence_zone', { placeId }),
+    setGeofenceAlert: (placeId: string, active: boolean) =>
+      send('set_geofence_alert', { placeId, active }),
+  };
 };
 ```
 
 ```js
-// src/assets/visioOne.html
-const resolveGeofenceZone = (placeId) => {
-  if (!venue) return
-  const poi = venue.pois.find((p) => p.id === placeId)
-  if (!poi) {
-    sendToNative({ type: 'geofence_zone_error', data: { message: `POI not found: ${placeId}` } })
-    return
-  }
-  if (!poi.surfaces || poi.surfaces.length === 0) {
-    sendToNative({ type: 'geofence_zone_error', data: { message: `Zone POI has no surface geometry: ${placeId}` } })
-    return
-  }
-  sendToNative({
-    type: 'geofence_zone_resolved',
-    data: {
-      placeId,
-      surfaces: poi.surfaces.map((surface) =>
-        surface.positions.map((p) => ({ latitude: p.latitude, longitude: p.longitude })),
-      ),
-    },
-  })
-}
+// src/features/geofencing/webview.js
+core.register({
+  resolve_geofence_zone: ({ placeId }) => {
+    if (!core.venue) {
+      return
+    }
+    const poi = core.findPoi(placeId)
+    if (!poi) {
+      core.sendToNative({ type: 'geofence_zone_error', data: { message: `POI not found: ${placeId}` } })
+      return
+    }
+    if (!poi.surfaces || poi.surfaces.length === 0) {
+      core.sendToNative({
+        type: 'geofence_zone_error',
+        data: { message: `Zone POI has no surface geometry: ${placeId}` },
+      })
+      return
+    }
+    core.sendToNative({
+      type: 'geofence_zone_resolved',
+      data: {
+        placeId,
+        surfaces: poi.surfaces.map((surface) =>
+          surface.positions.map((p) => ({ latitude: p.latitude, longitude: p.longitude })),
+        ),
+      },
+    })
+  },
 
-const setGeofenceAlert = (placeId, active) => {
-  if (!venue) return
-  const poi = venue.pois.find((p) => p.id === placeId)
-  if (!poi) return
-  poi.surfaces.forEach((surface) => {
-    venue.updateSurface(surface, { color: active ? '#E74C3C' : 'initial' })
-  })
-}
+  set_geofence_alert: ({ placeId, active }) => {
+    const venue = core.venue
+    if (!venue) {
+      return
+    }
+    const poi = core.findPoi(placeId)
+    if (!poi) {
+      return
+    }
+    poi.surfaces.forEach((surface) => {
+      venue.updateSurface(surface, { color: active ? '#E74C3C' : 'initial' })
+    })
+  },
+})
 ```
 
 `resolve_geofence_zone` goes in once, when the "Zone POI ID" field is submitted; `geofence_zone_resolved` (`{ placeId, surfaces: Position[][] }`) or `geofence_zone_error` comes back. Every surface's boundary is returned — not just the first — since a POI can carry more than one `Surface`.
 
-The containment check itself happens entirely on the native side, piggybacked onto `simulated-position`'s existing ~150ms tick loop (`useSimulatedPositionSession.ts` accepts an optional `onPositionTick` callback for exactly this) — no separate polling loop, since the SDK has no `trackedpositionchanged` event to react to instead. On every tick, `useGeofenceTracker` (`GeofencingOverlay.tsx`) runs a ray-casting test between the freshly-interpolated position and each of the zone's polygons; on a state transition it calls `setGeofenceAlert(placeId, isInside)`.
+The containment check itself happens entirely on the native side, piggybacked onto `simulated-position`'s existing ~150ms tick loop (`src/shared/positionTracking/useSimulatedPositionSession.ts` accepts optional `onPositionTick` / `onTrackingStopped` callbacks for exactly this) — no separate polling loop, since the SDK has no `trackedpositionchanged` event to react to instead:
+
+```tsx
+// src/features/geofencing/GeofencingPanel.tsx
+const { zone, zoneError, resolveGeofenceZone, setGeofenceAlert } = useGeofencingBridge();
+const tracker = useGeofenceTracker(zone, setGeofenceAlert);
+const session = useSimulatedPositionSession({
+  onPositionTick: tracker.onPositionTick,
+  onTrackingStopped: tracker.onTrackingStopped,
+  initialOriginId: TRACKING_FROM,
+  initialDestinationId: TRACKING_TO,
+});
+```
+
+On every tick, `useGeofenceTracker` (same file) runs a ray-casting test between the freshly-interpolated position and each of the zone's polygons; on a state transition it calls `setGeofenceAlert(placeId, isInside)`:
+
+```tsx
+// src/features/geofencing/GeofencingPanel.tsx
+const onPositionTick = (position: Position) => {
+  const currentZone = zoneRef.current;
+  if (!currentZone) {
+    return;
+  }
+  const isInside = currentZone.surfaces.some((polygon) => isPointInPolygon(position, polygon));
+  if (isInside !== insideRef.current) {
+    insideRef.current = isInside;
+    setInside(isInside);
+    setGeofenceAlert(currentZone.placeId, isInside);
+  }
+};
+```
 
 ## Things to know
 

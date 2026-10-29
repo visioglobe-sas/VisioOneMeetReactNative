@@ -44,7 +44,7 @@ npm run android
 
 ### Editing the WebView page
 
-All SDK calls run in the page [`src/assets/visioOne.html`](src/assets/visioOne.html). The WebView loads it as an inline string (see [`docs/SDK_NOTES.md`](docs/SDK_NOTES.md)), so `src/assets/visioOneHtml.ts` is a **generated** copy of it, committed so a fresh clone builds as is. Edit `visioOne.html` only, then regenerate:
+All SDK calls run in the WebView page, split into one file per concern: [`src/webview/core.js`](src/webview/core.js) (map loading, the message channel, shared helpers) and one `src/features/<slug>/webview.js` per feature, listed in [`src/webview/index.html`](src/webview/index.html). The WebView loads the page as an inline string (see [`docs/SDK_NOTES.md`](docs/SDK_NOTES.md)), so `src/webview/visioOneHtml.ts` is a **generated** file: the page with every script inlined, committed so a fresh clone builds as is. Edit `index.html` and the `.js` files only, then regenerate:
 
 ```sh
 npm run build:webview
@@ -92,28 +92,47 @@ Each feature below is a self-contained screen in the app, demonstrating one piec
 ```
 App.tsx                                    # entry point (providers + navigation)
 scripts/
-└── build-webview.mjs                      # generates src/assets/visioOneHtml.ts from visioOne.html
+└── build-webview.mjs                      # inlines the page's scripts into src/webview/visioOneHtml.ts
 src/
-├── demoMap.ts                             # demo map hash + POI ids used as prefilled values
-├── navigation/
-│   └── RootNavigator.tsx                  # Home ↔ Feature screen stack
-├── screens/
-│   ├── HomeScreen.tsx                     # feature menu
-│   ├── FeatureScreen.tsx                  # hosts the map + the active feature's overlay
-│   └── useVisioMap.ts                     # native → WebView bridge (postMessage senders)
-├── components/
-│   └── VisioMapView.tsx                   # WebView wrapper, map status, incoming message handling
+├── demoMap.ts                             # demo map hashes + POI ids used as prefilled values
+├── navigation/RootNavigator.tsx           # Home ↔ Feature screen stack
+├── screens/HomeScreen.tsx                 # feature menu
+├── shell/
+│   ├── FeatureScreen.tsx                  # one screen for every feature, driven by the feature table
+│   └── FeatureMap.tsx                     # map + FAB + the feature's panel
+├── bridge/
+│   ├── VisioMapView.tsx                   # the WebView, map status, 'setup' handshake, message dispatch
+│   └── MapBridge.ts                       # useMapBridge (send, status), useMapEvent (page → React Native)
 ├── features/
-│   ├── registry.ts                        # feature list (slug, title, description)
-│   └── *Overlay.tsx                       # per-feature controls
-└── assets/
-    ├── visioOne.html                      # WebView-hosted page loading the SDK from the CDN (edit this one)
-    └── visioOneHtml.ts                    # GENERATED from visioOne.html, the string actually loaded
+│   ├── registry.ts                        # the feature table (slug, title, description, panel or screen, map options)
+│   └── <slug>/                            # everything of one feature:
+│       ├── <Name>Panel.tsx                #   its panel (or <Name>Screen.tsx)
+│       ├── bridge.ts                      #   the messages it sends and listens to
+│       └── webview.js                     #   its SDK calls, in the WebView page
+├── shared/positionTracking/               # simulated-position session, shared by the 4 tracking features
+├── components/                            # BottomSheet, ItineraryForm, ColorChips
+└── webview/
+    ├── index.html                         # page skeleton, lists the scripts in load order
+    ├── core.js                            # loadVenue/createView, message channel, shared SDK helpers
+    ├── bootstrap.js                       # starts listening to React Native
+    └── visioOneHtml.ts                    # GENERATED: the page with every script inlined, the string actually loaded
 
 docs/
 ├── SDK_NOTES.md                           # why the HTML is loaded "inline" rather than via require()
 └── features/                              # one doc per feature, see Features above
 ```
+
+### How React Native and the page talk
+
+Both directions are `{ type, data }` JSON messages over `postMessage`, with the same type strings on both sides.
+
+- **React Native → page**: a feature's `bridge.ts` calls `send('select_place', { placeId })`; in the page, the feature's `webview.js` handles it through `MapCore.register({ select_place: ({ placeId }) => ... })`. A handler that throws is reported back as `command_error`.
+- **Page → React Native**: `MapCore.sendToNative({ type, data })`; on the React Native side, `useMapEvent(type, handler)` calls the handler for as long as the component using it is mounted.
+- **Loading**: the page posts `page_ready` once it listens, `VisioMapView` answers with `setup` (map hash and load/view options), and the page posts `ready` (or `error` / `unauthorized`). Each feature adds the initial state it needs to `ready`'s data through `MapCore.onReady`.
+
+### Where is the code of feature X?
+
+In `src/features/<slug>/`, `<slug>` being the name of its doc in `docs/features/`: its panel, its `bridge.ts` and its `webview.js`. A feature without a `webview.js` reuses another feature's messages (e.g. `accessible-mode` sends compute-navigation's `start_itinerary`); a feature without a panel has a `<Name>Screen.tsx` (custom-base-url and camera-projection-toggle, whose map options change at runtime) or no map at all (auth-token). Its entry in `src/features/registry.ts` gives its menu title and any map option of its own (custom-data's map hash, custom-theme's shadows, poi-click's missing FAB).
 
 ## Troubleshooting
 

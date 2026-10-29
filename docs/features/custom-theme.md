@@ -11,48 +11,93 @@ There is no custom font option in the SDK public API (as of 1.1.0).
 
 ## SDK usage
 
-Themes only have a visible effect when the view is created with `enableShadows: true` (see "Things to know"). The React Native side passes it in the same `setup` message used for the map hash:
+Themes only have a visible effect when the view is created with `enableShadows: true` (see "Things to know"). It is a `createView` option, so this screen asks for it up front: its map options carry `enableShadows: true`, which `VisioMapView` forwards in the same `setup` message as the map hash:
 
 ```ts
-// useVisioMap.ts
-sendMessage({ type: 'setup', data: { hash, baseURL, enableShadows } })
+// src/bridge/VisioMapView.tsx
+send('setup', {
+  hash: mapHash ?? DEMO_MAP_HASH,
+  baseURL,
+  enableShadows,
+  cameraProjection,
+  authorizationToken,
+});
 ```
 
 ```js
-// src/assets/visioOne.html
-const viewOptions = { cameraProjection: 'perspective' } // see camera-projection-toggle.md
+// src/webview/core.js (setup)
+const viewOptions = {
+  cameraProjection: cameraProjection === 'orthographic' ? 'orthographic' : 'perspective',
+}
 if (enableShadows === true) {
   viewOptions.enableShadows = true
 }
-await visioOne.createView(container, venue, viewOptions)
+view = await visioOne.createView(container, venue, viewOptions)
 ```
 
-The available theme ids are read from the view once it's created and forwarded to React Native with the `ready` message (`view.themes` is a plain string array):
+The available theme ids are read from the view once it's created and added to the `ready` message (`view.themes` is a plain string array):
 
 ```js
-sendToNative({ type: 'ready', data: { /* … */ themes: Array.from(view.themes || []) } })
+// src/features/custom-theme/webview.js
+core.onReady((view) => ({ themes: Array.from(view.themes || []) }))
 ```
 
-Switching theme and recoloring the accent are one message each:
+Switching theme and recoloring the accent are one message each, sent from the feature's bridge hook:
 
 ```ts
-// useVisioMap.ts
-sendMessage({ type: 'set_theme', data: { theme } }) // theme: one of view.themes
-sendMessage({ type: 'set_accent_colors', data: { accentColor, textAccentColor } }) // either may be omitted
+// src/features/custom-theme/bridge.ts
+export const useCustomThemeBridge = () => {
+  const { send } = useMapBridge();
+  // view.themes, from 'ready'.
+  const [themes, setThemes] = React.useState<string[]>([]);
+
+  useMapEvent('ready', (data) => setThemes(data?.themes ?? []));
+
+  return {
+    themes,
+    // view.setTheme(theme). `theme` must be one of view.themes -- setTheme throws on any
+    // other id.
+    setTheme: (theme: string) => send('set_theme', { theme }),
+    // view.accentColor / view.textAccentColor recolor the SDK's own UI buttons (e.g. the
+    // place card's "Go" button) live. Either field can be omitted.
+    setAccentColors: (colors: { accentColor?: string; textAccentColor?: string }) =>
+      send('set_accent_colors', colors),
+  };
+};
 ```
 
 ```js
-// src/assets/visioOne.html (WebView message handler)
-case 'set_theme':
-  view.setTheme(evt.data.theme)
-  break
-case 'set_accent_colors':
-  if (typeof evt.data.accentColor === 'string') view.accentColor = evt.data.accentColor
-  if (typeof evt.data.textAccentColor === 'string') view.textAccentColor = evt.data.textAccentColor
-  break
-```
+// src/features/custom-theme/webview.js
+core.register({
+  set_theme: ({ theme }) => {
+    if (!core.view) {
+      return
+    }
+    try {
+      core.view.setTheme(theme)
+    } catch (error) {
+      console.error('setTheme failed', error)
+    }
+  },
 
-(The actual handlers wrap each call in `try`/`catch`, since both can throw — see below.)
+  set_accent_colors: (colors) => {
+    const view = core.view
+    if (!view || !colors) {
+      return
+    }
+    try {
+      if (typeof colors.accentColor === 'string') {
+        view.accentColor = colors.accentColor
+      }
+      if (typeof colors.textAccentColor === 'string') {
+        view.textAccentColor = colors.textAccentColor
+      }
+    } catch (error) {
+      console.error('Setting accent colors failed', error)
+    }
+  },
+})
+```
 
 ## Things to know
 

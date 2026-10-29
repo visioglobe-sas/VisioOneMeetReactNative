@@ -7,7 +7,7 @@ Restyles the route drawn by [`compute-navigation`](./compute-navigation.md) with
 ## SDK usage
 
 ```ts
-// useVisioMap.ts
+// src/features/custom-navigation-trace/bridge.ts
 export interface NavigationTraceStyle {
   progressColor?: string;
   progressOutlineColor?: string;
@@ -16,32 +16,59 @@ export interface NavigationTraceStyle {
   previewOutlineColor?: string;
 }
 
-const updateNavigationTrace = (style: NavigationTraceStyle) => {
-  sendMessage({ type: 'update_navigation_trace', data: { style } });
+export const useNavigationTraceBridge = () => {
+  const { send } = useMapBridge();
+  return {
+    updateNavigationTrace: (style: NavigationTraceStyle) =>
+      send('update_navigation_trace', { style }),
+  };
 };
 ```
 
+The trace to restyle is the one [`compute-navigation`](./compute-navigation.md)'s `start_itinerary` handler last created, which it keeps on the page's shared core:
+
 ```js
-// src/assets/visioOne.html
-let currentNavigationTrace = null
-
-const startItinerary = (origin, destination, isAccessible) => {
-  const navigation = venue.computeNavigation({ origin, destination, isAccessible, /* ... */ })
-  currentNavigationTrace = venue.createNavigationTrace(navigation)
-  view.setCurrentNavigationTrace(currentNavigationTrace)
+// src/features/compute-navigation/webview.js
+start_itinerary: ({ origin, destination, isAccessible, excludedAttributes }) => {
   // ...
-}
+  const navigation = venue.computeNavigation({ origin, destination, isAccessible, /* ... */ })
+  // Kept so custom-navigation-trace can restyle it.
+  core.currentNavigationTrace = venue.createNavigationTrace(navigation)
+  view.setCurrentNavigationTrace(core.currentNavigationTrace)
+},
+```
 
-const updateNavigationTraceStyle = (style) => {
-  if (!venue || !currentNavigationTrace) {
-    return
-  }
-  try {
-    venue.updateNavigationTrace(currentNavigationTrace, style)
-  } catch (error) {
-    console.warn('updateNavigationTrace threw (trace styling still applied):', error)
-  }
-}
+```js
+// src/features/custom-navigation-trace/webview.js
+core.register({
+  update_navigation_trace: ({ style }) => {
+    if (!core.venue || !core.currentNavigationTrace) {
+      return
+    }
+    try {
+      core.venue.updateNavigationTrace(core.currentNavigationTrace, style)
+    } catch (error) {
+      console.warn('updateNavigationTrace threw (trace styling still applied):', error)
+    }
+  },
+})
+```
+
+On the React Native side, the panel re-sends the selected preset right after every `start_itinerary`, so each newly computed trace gets the same look. The page handles messages in the order it receives them, so by then the new trace is already `core.currentNavigationTrace`:
+
+```tsx
+// src/features/custom-navigation-trace/CustomNavigationTracePanel.tsx
+const handleCompute = () => {
+  fields.markSubmitted();
+  startItinerary(fields.origin.trim(), fields.destination.trim(), false);
+  updateNavigationTrace(TRACE_PRESETS[selectedPreset]);
+};
+
+const handleSelectPreset = (key: TracePresetKey) => {
+  setSelectedPreset(key);
+  // Restyles whatever trace is already displayed, if any.
+  updateNavigationTrace(TRACE_PRESETS[key]);
+};
 ```
 
 `NavigationTraceUpdateOptions` (`Navigation/NavigationTraceUpdateOptions.d.ts`) only exposes colors (plus `textureRepeat`/`animationSpeed`, relevant only for the `'textured'` `displayMode`) — there is no way to change `displayMode` or `thickness` after creation, and `createNavigationTrace()` itself takes no options, so a trace always starts in the SDK's default display mode.
@@ -50,7 +77,7 @@ const updateNavigationTraceStyle = (style) => {
 
 - **There is no "reset to default" call.** Colors are one-way: once changed, the only way back to the SDK's own look is to re-apply its documented defaults yourself (`Line.color` defaults to `'#0094F0'`, the inactive/preview segment to `'#C5C5C5'` — see `Venue/Line.d.ts`).
 - **`updateNavigationTrace` can throw internally even on a fully valid trace.** On a route that never crosses into a building, it has been observed to consistently throw `TypeError: Cannot read properties of undefined (reading 'material')` deep inside the SDK's line-rendering pipeline (`LineAdapter.updateLine`) — yet every color in the options object is still applied correctly before it throws. The WebView-side handler here wraps the call in `try`/`catch` and logs a warning instead of letting it surface as an uncaught error, so the bridge call itself never rejects because of it. Treat the color change as applied regardless of whether the underlying call throws.
-- Colors only affect a trace that already exists — calling `updateNavigationTrace` before `createNavigationTrace`/`setCurrentNavigationTrace` has nothing to act on (the WebView-side handler no-ops if no trace is tracked yet, see the `!currentNavigationTrace` guard above). If you want a consistent look across itineraries, re-apply the same options object right after creating each new trace, not just once.
+- Colors only affect a trace that already exists — calling `updateNavigationTrace` before `createNavigationTrace`/`setCurrentNavigationTrace` has nothing to act on (the WebView-side handler no-ops if no trace is tracked yet, see the `!core.currentNavigationTrace` guard above). If you want a consistent look across itineraries, re-apply the same options object right after creating each new trace, not just once.
 - Field naming is easy to mix up: `progressColor` is the segment **not yet walked** (the "active" part still ahead), while `progressFutureColor` is a second, separate color also tied to that unwalked portion — read `NavigationTraceUpdateOptions.d.ts`'s own doc comments rather than assuming from the name alone.
 
 ## Learn more

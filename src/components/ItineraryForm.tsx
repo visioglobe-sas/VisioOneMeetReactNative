@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
-import { CommandError } from './VisioMapView';
+import { useCommandError } from '../bridge/MapBridge';
 import { useLocale } from '../i18n/useLocale';
 
 interface Props {
@@ -10,9 +10,8 @@ interface Props {
   onChangeOrigin: (value: string) => void;
   onChangeDestination: (value: string) => void;
   onSubmit: () => void;
-  // Error reported by the page for the last 'start_itinerary' sent after `submittedAt`
-  // (e.g. an unknown place ID), shown under the fields.
-  commandError: CommandError | null;
+  // Date.now() of the last submit: the page's error for the 'start_itinerary' sent
+  // then (e.g. an unknown place ID) is shown under the fields.
   submittedAt: number;
 }
 
@@ -23,14 +22,10 @@ const ItineraryForm = ({
   onChangeOrigin,
   onChangeDestination,
   onSubmit,
-  commandError,
   submittedAt,
 }: Props) => {
   const { t } = useLocale();
-  const error =
-    commandError && commandError.command === 'start_itinerary' && commandError.at >= submittedAt
-      ? commandError.message
-      : null;
+  const error = useCommandError('start_itinerary', submittedAt);
 
   return (
     <View style={styles.column}>

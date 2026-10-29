@@ -10,29 +10,45 @@ Adds a brand-new locale, `'es'` (Spanish), to the SDK at runtime — one that wa
 ## SDK usage
 
 ```ts
-// useVisioMap.ts
-const addLocale = () => {
-  sendMessage({ type: 'add_locale' });
+// src/features/add-locale/bridge.ts
+export interface AddLocaleResult {
+  translations: Record<string, string>;
+}
+
+export const useAddLocaleBridge = () => {
+  const { send } = useMapBridge();
+  const [addLocaleResult, setAddLocaleResult] = React.useState<AddLocaleResult | null>(null);
+
+  useMapEvent('locale_added', (data) => setAddLocaleResult({ translations: data?.translations ?? {} }));
+
+  return {
+    addLocaleResult,
+    addLocale: () => send('add_locale'),
+  };
 };
 ```
 
 ```js
-// src/assets/visioOne.html
-const addSpanishLocale = () => {
-  if (!venue) {
-    return
-  }
-  const resources = {
-    'search-for-anything': 'Buscar cualquier cosa',
-    'welcome-message': '¡Bienvenido!',
-  }
-  venue.translator.addLocale('es', resources)
-  const translations = Object.keys(resources).reduce((acc, key) => {
-    acc[key] = venue.translator.translate(key, 'es')
-    return acc
-  }, {})
-  sendToNative({ type: 'locale_added', data: { translations } })
-}
+// src/features/add-locale/webview.js
+core.register({
+  add_locale: () => {
+    const venue = core.venue
+    if (!venue) {
+      return
+    }
+    const resources = {
+      'search-for-anything': 'Buscar cualquier cosa',
+      'welcome-message': '¡Bienvenido!',
+    }
+    venue.translator.addLocale('es', resources)
+    // translate() is synchronous and reads straight back from the bundle just written.
+    const translations = Object.keys(resources).reduce((acc, key) => {
+      acc[key] = venue.translator.translate(key, 'es')
+      return acc
+    }, {})
+    core.sendToNative({ type: 'locale_added', data: { translations } })
+  },
+})
 ```
 
 `add_locale` goes in, fire-and-forget; `locale_added` (`{ data: { translations: Record<string, string> } }`) comes back once the WebView has read every key back through `translate()`. The fixed two-entry dictionary is hardcoded on the WebView side rather than passed over the bridge:
@@ -40,7 +56,7 @@ const addSpanishLocale = () => {
 - `'search-for-anything'` — one of the SDK's own predefined UI keys (see `addLocale`'s own TSDoc for the full UI/Navigation key list), overridden here to show this can reach the SDK's own built-in text.
 - `'welcome-message'` — a plain custom key with no meaning to the SDK itself, showing `addLocale`/`translate` is a fully generic key/value store an app can use for its own strings too.
 
-The demo also reuses `runtime-locale`'s `set_locale` message (`venue.setCurrentLocale('es')`) behind a secondary "Switch to Spanish" button, so any SDK UI text currently on screen would flip to the new locale live — a bonus, not the primary proof.
+The demo also reuses `runtime-locale`'s `set_locale` message (`setLocale('es')` from `src/features/runtime-locale/bridge.ts`, i.e. `venue.setCurrentLocale('es')`) behind a secondary "Switch to Spanish" button, so any SDK UI text currently on screen would flip to the new locale live — a bonus, not the primary proof.
 
 ## Things to know
 

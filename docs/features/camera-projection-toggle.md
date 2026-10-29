@@ -12,33 +12,76 @@ The projection is a **view-creation option only**. `view.cameraProjection` is re
 
 ## SDK usage
 
-The React Native side passes the projection in the same `setup` message used for the map hash:
+The React Native side passes the projection as a `VisioMapView` prop, which sends it in the same `setup` message used for the map hash:
 
-```ts
-// useVisioMap.ts
-sendMessage({
-  type: 'setup',
-  data: { hash, baseURL, enableShadows, cameraProjection }, // 'perspective' | 'orthographic'
-});
+```tsx
+// src/bridge/VisioMapView.tsx
+if (evt.type === 'page_ready') {
+  send('setup', {
+    hash: mapHash ?? DEMO_MAP_HASH,
+    baseURL,
+    enableShadows,
+    cameraProjection, // 'perspective' | 'orthographic'
+    authorizationToken,
+  });
+}
 ```
 
-The WebView page forwards it to `createView`, then reads the projection back from the view and reports it with the `ready` message:
+The WebView page forwards it to `createView`:
 
 ```js
-// src/assets/visioOne.html
-venue = await visioOne.loadVenue({ vg_maphash: venueHash }, container)
+// src/webview/core.js, in setup()
+venue = await visioOne.loadVenue(loadOptions, container)
 const viewOptions = {
   cameraProjection: cameraProjection === 'orthographic' ? 'orthographic' : 'perspective',
 }
+if (enableShadows === true) {
+  viewOptions.enableShadows = true
+}
 view = await visioOne.createView(container, venue, viewOptions)
-
-sendToNative({
-  type: 'ready',
-  data: { /* … */ cameraProjection: view.cameraProjection }, // what the view really uses
-})
 ```
 
-To switch, this app does not try to rebuild the view inside the running page: it remounts the `WebView` (a new React `key` on the component that hosts it). The page loads from scratch, receives a new `setup` message with the other projection, and runs `loadVenue` + `createView({ cameraProjection })` again. If you prefer to switch inside the same page, use the sequence under "Things to know". Rebuilding only the view does not work.
+Then this feature reads the projection back from the view and adds it to the `ready` message, which React Native listens to:
+
+```js
+// src/features/camera-projection-toggle/webview.js
+core.onReady((view) => ({ cameraProjection: view.cameraProjection })) // what the view really uses
+```
+
+```ts
+// src/features/camera-projection-toggle/bridge.ts
+export type CameraProjection = 'perspective' | 'orthographic';
+
+export const useReportedCameraProjection = () => {
+  const [projection, setProjection] = React.useState<CameraProjection | null>(null);
+  useMapEvent('ready', (data) => setProjection(data?.cameraProjection ?? null));
+  return projection;
+};
+```
+
+To switch, this app does not try to rebuild the view inside the running page: it remounts the `WebView` by giving the map a new React `key` that includes the projection. The page loads from scratch, receives a new `setup` message with the other projection, and runs `loadVenue` + `createView({ cameraProjection })` again:
+
+```tsx
+// src/features/camera-projection-toggle/CameraProjectionScreen.tsx
+const CameraProjectionScreen = () => {
+  const [cameraProjection, setCameraProjection] = React.useState<CameraProjection>('perspective');
+  return (
+    <FeatureMap
+      mapKey={`camera-projection-toggle-${cameraProjection}`} // becomes VisioMapView's key
+      cameraProjection={cameraProjection}>
+      {(sheet) => (
+        <CameraProjectionPanel
+          sheet={sheet}
+          requestedProjection={cameraProjection}
+          onSelect={setCameraProjection}
+        />
+      )}
+    </FeatureMap>
+  );
+};
+```
+
+If you prefer to switch inside the same page, use the sequence under "Things to know". Rebuilding only the view does not work.
 
 ## Things to know
 

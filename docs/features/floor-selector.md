@@ -10,52 +10,104 @@ Changes the displayed floor or building from the app's own list, kept in sync wi
 
 ## SDK usage
 
-Once the view is ready, the page sends the layout to React Native in the `ready` message:
+Once the view is ready, the page adds the layout to the `ready` message:
 
 ```js
-// src/assets/visioOne.html, in setup()
-const buildings = venue.venueLayout.buildings.map((building) => ({
-  id: building.id,
-  label: venue.translator.translateBuilding(building, venue.currentLocale).name,
-  defaultFloorID: building.defaultFloorID,
-  floors: building.floors.map((floor) => ({
-    id: floor.id,
-    label: venue.translator.translateFloor(floor, venue.currentLocale).name,
-    levelIndex: floor.levelIndex,
-  })),
-}))
-sendToNative({
-  type: 'ready',
-  data: { buildings, currentBuildingId: view.currentBuilding?.id, currentFloorId: view.currentFloor?.id, /* ... */ },
+// src/features/floor-selector/webview.js
+core.onReady((view) => {
+  const venue = core.venue
+  const buildings = venue.venueLayout.buildings.map((building) => ({
+    id: building.id,
+    label: venue.translator.translateBuilding(building, venue.currentLocale).name,
+    defaultFloorID: building.defaultFloorID,
+    floors: building.floors.map((floor) => ({
+      id: floor.id,
+      label: venue.translator.translateFloor(floor, venue.currentLocale).name,
+      levelIndex: floor.levelIndex,
+    })),
+  }))
+  return {
+    buildings,
+    currentBuildingId: view.currentBuilding?.id,
+    currentFloorId: view.currentFloor?.id,
+  }
 })
 ```
 
 and reports every floor change, whoever caused it:
 
 ```js
-v.addEventListener('currentfloorchanged', () => {
-  sendToNative({ type: 'floor_changed', data: { buildingId: v.currentBuilding?.id, floorId: v.currentFloor?.id } })
+// src/features/floor-selector/webview.js
+core.onViewCreated((view) => {
+  view.addEventListener('currentfloorchanged', () => {
+    core.sendToNative({
+      type: 'floor_changed',
+      data: {
+        buildingId: view.currentBuilding?.id,
+        floorId: view.currentFloor?.id,
+      },
+    })
+  })
 })
 ```
 
-React Native sends `{ type: 'select_floor', data: { buildingId, floorId } }` (`goToFloor`), or without `floorId` (`goToBuilding`); the page resolves the ids into SDK objects:
+React Native keeps the layout and the current floor from these two messages, and sends `{ type: 'select_floor', data: { buildingId, floorId } }` (`goToFloor`), or without `floorId` (`goToBuilding`):
+
+```ts
+// src/features/floor-selector/bridge.ts
+export const useFloorSelectorBridge = () => {
+  const { send } = useMapBridge();
+  const [venueLayout, setVenueLayout] = React.useState<VenueLayoutInfo>({ buildings: [] });
+
+  useMapEvent('ready', (data) =>
+    setVenueLayout({
+      buildings: data?.buildings ?? [],
+      currentBuildingId: data?.currentBuildingId,
+      currentFloorId: data?.currentFloorId,
+    }),
+  );
+  useMapEvent('floor_changed', (data) =>
+    setVenueLayout((prev) => ({
+      ...prev,
+      currentBuildingId: data.buildingId,
+      currentFloorId: data.floorId,
+    })),
+  );
+
+  return {
+    venueLayout,
+    // view.goToFloor(floor) in the page.
+    goToFloor: (buildingId: string, floorId: string) => send('select_floor', { buildingId, floorId }),
+    // view.goToBuilding(building) in the page.
+    goToBuilding: (buildingId: string) => send('select_floor', { buildingId }),
+  };
+};
+```
+
+The page resolves the ids into SDK objects:
 
 ```js
-const goToFloor = (buildingId, floorId) => {
-  if (view) {
-    const building = venue.venueLayout.buildings.find((b) => b.id === buildingId)
-    if (building) {
-      if (floorId) {
-        const floor = building.floors.find((f) => f.id === floorId)
-        if (floor) {
-          view.goToFloor(floor)
-        }
-      } else {
-        view.goToBuilding(building)
-      }
+// src/features/floor-selector/webview.js
+core.register({
+  select_floor: ({ buildingId, floorId }) => {
+    const view = core.view
+    if (!view) {
+      return
     }
-  }
-}
+    const building = core.venue.venueLayout.buildings.find((b) => b.id === buildingId)
+    if (!building) {
+      return
+    }
+    if (floorId) {
+      const floor = building.floors.find((f) => f.id === floorId)
+      if (floor) {
+        view.goToFloor(floor)
+      }
+    } else {
+      view.goToBuilding(building)
+    }
+  },
+})
 ```
 
 ## Things to know

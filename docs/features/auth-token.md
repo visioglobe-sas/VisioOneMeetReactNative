@@ -6,21 +6,22 @@ Loads a map protected by an authorization token: a short-lived JWT passed to the
 
 **This feature is a code sample only.** This demo has no protected map to load, so every value in the repo is a **fictitious placeholder** you must replace with your own:
 
-| Constant (`src/features/AuthTokenSample.tsx`) | Placeholder value | Replace with |
+| Constant (`src/features/auth-token/AuthTokenSample.tsx`) | Placeholder value | Replace with |
 | --- | --- | --- |
 | `PROTECTED_MAP_HASH` | `YOUR_PROTECTED_MAP_HASH` | the hash of your protected map |
 | `PROTECTED_MAP_BASE_URL` | `https://mapserver-auth.visioglobe.com/` | keep as is (the protected map server) |
 | `AUTHORIZATION_TOKEN` / `fetchAuthorizationToken()` | `YOUR_JWT_FROM_YOUR_BACKEND` | a call to your own backend that issues the JWT |
 
-The app's "Protected map (token)" screen only shows a short text pointing here; it does not render the sample and never tries to load a map with the placeholders.
+The app's "Protected map (token)" screen (`src/features/auth-token/AuthTokenInfo.tsx`) only shows a short text pointing here; it does not render the sample and never tries to load a map with the placeholders.
 
 ## SDK usage
 
 ### React Native side
 
-`src/features/AuthTokenSample.tsx` exports `ProtectedMapSample`, a ready-to-render component: it gets a token, then mounts the map against the protected server.
+`src/features/auth-token/AuthTokenSample.tsx` exports `ProtectedMapSample`, a ready-to-render component: it gets a token, then mounts the map against the protected server.
 
 ```tsx
+// src/features/auth-token/AuthTokenSample.tsx
 export const PROTECTED_MAP_HASH = 'YOUR_PROTECTED_MAP_HASH';
 export const PROTECTED_MAP_BASE_URL = 'https://mapserver-auth.visioglobe.com/';
 // A JWT issued by YOUR OWN backend. Visioglobe provides the signing secret and the
@@ -29,60 +30,139 @@ export const AUTHORIZATION_TOKEN = 'YOUR_JWT_FROM_YOUR_BACKEND';
 
 export const fetchAuthorizationToken = async (): Promise<string> => AUTHORIZATION_TOKEN;
 
-<VisioMapView
-  mapHash={PROTECTED_MAP_HASH}
-  baseURL={PROTECTED_MAP_BASE_URL}
-  authorizationToken={token}
-  onUnauthorized={(message) => { /* token invalid, expired or missing */ }}
-  renderOverlay={(bridge, status) => (
-    <TokenRefresher ready={status === 'ready'} setAuthorizationToken={bridge.setAuthorizationToken} />
-  )}
-/>
-```
+export const ProtectedMapSample = () => {
+  const [token, setToken] = React.useState<string | null>(null);
 
-The token travels to the WebView page in the same `setup` message as the map hash and base URL, and refreshes go through their own message:
+  React.useEffect(() => {
+    fetchAuthorizationToken()
+      .then(setToken)
+      .catch((error) => console.warn('Could not get an authorization token', error));
+  }, []);
 
-```ts
-// useVisioMap.ts
-sendMessage({ type: 'setup', data: { hash, baseURL, enableShadows, cameraProjection, authorizationToken } });
+  if (!token) {
+    return null;
+  }
 
-const setAuthorizationToken = (token: string) => {
-  sendMessage({ type: 'set_authorization_token', data: { token } });
+  return (
+    <VisioMapView
+      mapHash={PROTECTED_MAP_HASH}
+      baseURL={PROTECTED_MAP_BASE_URL}
+      authorizationToken={token}
+      onUnauthorized={(message) => {
+        // UnauthorizedError: the token is invalid, expired or missing. A real app would
+        // get a fresh token from its backend and remount the map (change its `key`).
+        console.warn('Protected map: authorization token invalid, expired or missing', message);
+      }}>
+      <TokenRefresher />
+    </VisioMapView>
+  );
 };
 ```
 
-`TokenRefresher` calls `bridge.setAuthorizationToken(await fetchAuthorizationToken())` on a timer (every 50 minutes) once the venue is ready.
+The token travels to the WebView page in the same `setup` message as the map hash and base URL (sent by `VisioMapView` once the page reports `page_ready`), and refreshes go through their own message:
+
+```tsx
+// src/bridge/VisioMapView.tsx
+if (evt.type === 'page_ready') {
+  send('setup', {
+    hash: mapHash ?? DEMO_MAP_HASH,
+    baseURL,
+    enableShadows,
+    cameraProjection,
+    authorizationToken,
+  });
+}
+```
+
+```ts
+// src/features/auth-token/bridge.ts
+export const useAuthTokenBridge = () => {
+  const { send, status } = useMapBridge();
+  return {
+    ready: status === 'ready',
+    setAuthorizationToken: (token: string) => send('set_authorization_token', { token }),
+  };
+};
+```
+
+`TokenRefresher` (rendered as a child of `VisioMapView`, so it can use the bridge) calls `setAuthorizationToken(await fetchAuthorizationToken())` on a timer (every 50 minutes) once the venue is ready:
+
+```tsx
+// src/features/auth-token/AuthTokenSample.tsx
+const TokenRefresher = () => {
+  const { ready, setAuthorizationToken } = useAuthTokenBridge();
+  const setTokenRef = React.useRef(setAuthorizationToken);
+  setTokenRef.current = setAuthorizationToken;
+
+  React.useEffect(() => {
+    if (!ready) {
+      return;
+    }
+    const timer = setInterval(() => {
+      fetchAuthorizationToken()
+        .then((freshToken) => setTokenRef.current(freshToken))
+        .catch((error) => console.warn('Could not refresh the authorization token', error));
+    }, TOKEN_REFRESH_INTERVAL_MS); // 50 * 60 * 1000
+    return () => clearInterval(timer);
+  }, [ready]);
+
+  return null;
+};
+```
 
 ### WebView side
 
-In the WebView page (`src/assets/visioOne.html`), `setup()` adds the token to the load options and `setAuthorizationToken()` forwards refreshes to the venue:
+In the WebView page, `setup()` (`src/webview/core.js`) adds the token to the load options, and the `set_authorization_token` handler (`src/features/auth-token/webview.js`) forwards refreshes to the venue:
 
 ```js
-const loadOptions = { vg_maphash: venueHash, baseURL: trimmedBaseURL }
+// src/webview/core.js, in setup()
+const loadOptions = trimmedBaseURL
+  ? { vg_maphash: venueHash, baseURL: trimmedBaseURL }
+  : { vg_maphash: venueHash }
 if (typeof authorizationToken === 'string' && authorizationToken !== '') {
   loadOptions.authorizationToken = authorizationToken
 }
 venue = await visioOne.loadVenue(loadOptions, container)
-view = await visioOne.createView(container, venue, viewOptions)
+```
 
-const setAuthorizationToken = (token) => {
-  venue.setAuthorizationToken(token) // later map requests use the new token, no reload
-}
+```js
+// src/features/auth-token/webview.js
+core.register({
+  set_authorization_token: ({ token }) => {
+    if (!core.venue) {
+      console.warn('setAuthorizationToken: no venue loaded yet')
+      return
+    }
+    try {
+      core.venue.setAuthorizationToken(token) // later map requests use the new token, no reload
+    } catch (error) {
+      console.error('setAuthorizationToken failed', error)
+    }
+  },
+})
 ```
 
 Load errors: `UnauthorizedError` is posted back as its own `unauthorized` message, separate from the generic `error` message used for every other load failure:
 
 ```js
+// src/webview/core.js
 const isUnauthorizedError = (error) =>
   error?.constructor?.name === 'UnauthorizedError' ||
   error?.message === 'This venue needs an Authorization token to be loaded'
 
+// in setup()
 } catch (error) {
   if (isUnauthorizedError(error)) {
+    console.error('VisioOne: authorization token invalid, expired or missing', error)
     sendToNative({ type: 'unauthorized', data: error.message })
     return
   }
-  sendToNative({ type: 'error', data: /* … */ })
+  const cause = visioOneLoadError || error
+  console.error('Unable to initialize VisioOne', error)
+  sendToNative({
+    type: 'error',
+    data: errorMessage(cause),
+  })
 }
 ```
 

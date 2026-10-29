@@ -9,7 +9,7 @@ Reads business `CustomData` — a free `{ [key: string]: string }` bag of fields
 
 The two are deliberately separate calls: `refreshCustomData` is the (occasional, async, network) sync step, `getPOICustomData` is a cheap synchronous cache read that can be called as often as needed afterwards.
 
-**Note on the demo map:** unlike every other feature in this repo, this screen does not load the app's shared demo map (`DEMO_MAP_HASH` in `src/demoMap.ts`) — that map has no `CustomData` published on any of its POIs, so it could only ever demonstrate the empty-state response. Instead, `FeatureScreen.tsx` passes `VisioMapView`'s `mapHash` prop with a dedicated, already-published map hash (`CUSTOM_DATA_MAP_HASH` in `src/demoMap.ts`, `kd9426d8cb3f1c532f22b5bcbd325c280bd351feb`) confirmed to carry real `CustomData`, scoped to just this feature's slug (`custom-data`) so every other screen keeps using the shared demo map unchanged. Known POI ids with real, non-empty `CustomData` on that map (surfaced as quick-select chips in the demo UI, `CUSTOM_DATA_KNOWN_POI_IDS` in `src/demoMap.ts`; the field opens prefilled with `B3-UL00-ID0065`):
+**Note on the demo map:** unlike every other feature in this repo, this screen does not load the app's shared demo map (`DEMO_MAP_HASH` in `src/demoMap.ts`) — that map has no `CustomData` published on any of its POIs, so it could only ever demonstrate the empty-state response. Instead, this feature's entry in `src/features/registry.ts` sets `map: { mapHash: CUSTOM_DATA_MAP_HASH }`, which ends up as `VisioMapView`'s `mapHash` prop (sent in the `setup` message as `hash`) — a dedicated, already-published map hash (`CUSTOM_DATA_MAP_HASH` in `src/demoMap.ts`, `kd9426d8cb3f1c532f22b5bcbd325c280bd351feb`) confirmed to carry real `CustomData`, scoped to just this feature's slug (`custom-data`) so every other screen keeps using the shared demo map unchanged. Known POI ids with real, non-empty `CustomData` on that map (surfaced as quick-select chips in the demo UI, `CUSTOM_DATA_KNOWN_POI_IDS` in `src/demoMap.ts`; the field opens prefilled with `B3-UL00-ID0065`):
 
 - `B1` → `{"CSM ID":"BLBLA"}`
 - `B3-UL00-ID0065` → `{"Sensor X":"17718393"}`
@@ -18,60 +18,73 @@ The two are deliberately separate calls: `refreshCustomData` is the (occasional,
 ## SDK usage
 
 ```ts
-// useVisioMap.ts
-const refreshCustomData = () => {
-  sendMessage({ type: 'refresh_custom_data' });
-};
+// src/features/custom-data/bridge.ts
+export interface CustomDataLookupResult {
+  placeId: string;
+  found: boolean;
+  customData: Record<string, string>;
+}
 
-const getPoiCustomData = (placeId: string) => {
-  sendMessage({
-    type: 'get_poi_custom_data',
-    data: { placeId },
-  });
+export const useCustomDataBridge = () => {
+  const { send } = useMapBridge();
+  const [refresh, setRefresh] = React.useState<CustomDataRefreshOutcome | null>(null);
+  const [lookup, setLookup] = React.useState<CustomDataLookupResult | null>(null);
+
+  useMapEvent('custom_data_refreshed', () => setRefresh({ ok: true, error: null, at: Date.now() }));
+  useMapEvent('custom_data_refresh_error', (data) =>
+    setRefresh({ ok: false, error: String(data?.message ?? data), at: Date.now() }),
+  );
+  useMapEvent<CustomDataLookupResult>('poi_custom_data_result', setLookup);
+
+  return {
+    refresh,
+    lookup,
+    refreshCustomData: () => send('refresh_custom_data'),
+    getPoiCustomData: (placeId: string) => send('get_poi_custom_data', { placeId }),
+  };
 };
 ```
 
 ```js
-// src/assets/visioOne.html
-const refreshCustomData = async () => {
-  if (!venue) {
-    return
-  }
-  try {
-    await venue.refreshCustomData()
-    sendToNative({ type: 'custom_data_refreshed' })
-  } catch (error) {
-    sendToNative({
-      type: 'custom_data_refresh_error',
-      data: { message: error instanceof Error ? `${error.name}: ${error.message}` : String(error) },
-    })
-  }
-}
+// src/features/custom-data/webview.js
+core.register({
+  refresh_custom_data: async () => {
+    if (!core.venue) {
+      return
+    }
+    try {
+      await core.venue.refreshCustomData()
+      core.sendToNative({ type: 'custom_data_refreshed' })
+    } catch (error) {
+      console.error('Unable to refresh custom data', error)
+      core.sendToNative({
+        type: 'custom_data_refresh_error',
+        data: { message: core.errorMessage(error) },
+      })
+    }
+  },
 
-const getPoiCustomData = (placeId) => {
-  if (!venue) {
-    sendToNative({ type: 'poi_custom_data_result', data: { placeId, found: false, customData: {} } })
-    return
-  }
-  const poi = venue.pois.find((p) => p.id === placeId)
-  if (!poi) {
-    sendToNative({ type: 'poi_custom_data_result', data: { placeId, found: false, customData: {} } })
-    return
-  }
-  const customData = venue.getPOICustomData(poi)
-  sendToNative({ type: 'poi_custom_data_result', data: { placeId, found: true, customData } })
-}
+  get_poi_custom_data: ({ placeId }) => {
+    const poi = core.findPoi(placeId) // venue.pois.find((p) => p.id === placeId), undefined before the venue is loaded
+    if (!poi) {
+      core.sendToNative({ type: 'poi_custom_data_result', data: { placeId, found: false, customData: {} } })
+      return
+    }
+    const customData = core.venue.getPOICustomData(poi)
+    core.sendToNative({ type: 'poi_custom_data_result', data: { placeId, found: true, customData } })
+  },
+})
 ```
 
 Both calls need a response back on the native side, so — unlike a one-way message such as `select_place` — this feature uses the same request/response bridge idiom as `simulated-position`'s POI lookup (see [Simulated Position](simulated-position.md)): a message in, and a distinct message type back out once the WebView side has an answer.
 
-`refreshCustomData()` replies with `{ type: 'custom_data_refreshed' }` on success or `{ type: 'custom_data_refresh_error', data: { message } }` on failure (e.g. no network). `getPoiCustomData(placeId)` always replies with `{ type: 'poi_custom_data_result', data: { placeId, found, customData } }` — `found: false` when the id doesn't resolve to a POI in the loaded venue, `found: true` otherwise (with `customData` possibly `{}`).
+`refresh_custom_data` replies with `{ type: 'custom_data_refreshed' }` on success or `{ type: 'custom_data_refresh_error', data: { message } }` on failure (e.g. no network). `get_poi_custom_data` always replies with `{ type: 'poi_custom_data_result', data: { placeId, found, customData } }` — `found: false` when the id doesn't resolve to a POI in the loaded venue, `found: true` otherwise (with `customData` possibly `{}`).
 
 ## Things to know
 
 - **`refreshCustomData()` is not called automatically anywhere in the SDK.** The `CustomData` cache starts empty (`{}`) when a venue loads and stays that way until this method has been awaited at least once. Reading a POI's data before ever refreshing will look identical to that POI genuinely having no `CustomData` — call `refreshCustomData()` first (or at least once) before relying on `getPOICustomData` results.
 - **`getPOICustomData(poi)` always returns a plain object, never `null`/`undefined`.** It returns `{}` both when the POI genuinely has no `CustomData` published and when the cache hasn't been refreshed yet — these two situations are indistinguishable from the return value alone. There is no separate "has this been refreshed" flag on the SDK side; this demo tracks that only in the app's own UI state (the "Refresh from server" outcome), not from anything the SDK exposes.
-- **A POI resolving with an empty `CustomData` and a POI id not resolving at all are different, both non-error, states** — `venue.pois.find((p) => p.id === placeId)` failing is a "POI not found" case, entirely separate from a found POI whose `CustomData` happens to be `{}`. This demo's bridge response keeps them distinct (`found: false` vs. `found: true, customData: {}`) rather than collapsing them into one empty-ish result.
+- **A POI resolving with an empty `CustomData` and a POI id not resolving at all are different, both non-error, states** — the POI lookup (`venue.pois.find((p) => p.id === placeId)`) failing is a "POI not found" case, entirely separate from a found POI whose `CustomData` happens to be `{}`. This demo's bridge response keeps them distinct (`found: false` vs. `found: true, customData: {}`) rather than collapsing them into one empty-ish result.
 - **`getPOICustomData` is synchronous** — no `await`, no network call. All the network cost is paid up front by `refreshCustomData()`; looking up any number of POIs afterwards is just cache reads.
 - `refreshCustomData()` reloads *all* `CustomData` for the venue in one call — there is no per-POI refresh. Calling it repeatedly (e.g. once per lookup) is safe but wasteful for a real app; this demo exposes it as its own explicit action instead of hiding it behind every lookup, to make the two SDK calls' distinct roles obvious.
 

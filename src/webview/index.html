@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+  </head>
+  <body>
+    <div id="content"></div>
+
+    <!--
+      The page's JS, as classic scripts run in this order:
+        1. core.js: map loading, the React Native <-> page message channel, the
+           helpers shared by several features, and the MapCore registration API;
+        2. one ../features/<slug>/webview.js per feature (same slug as
+           docs/features/<slug>.md), each registering the messages it handles and its
+           view listeners. Adding a feature = adding its file AND its tag here;
+        3. bootstrap.js: starts listening to React Native.
+      The WebView loads the page as one inline string (see docs/SDK_NOTES.md):
+      scripts/build-webview.mjs inlines every <script src> below into
+      visioOneHtml.ts, the module actually loaded.
+    -->
+    <script src="core.js"></script>
+    <script src="../features/reset-view/webview.js"></script>
+    <script src="../features/occupancy-simulated/webview.js"></script>
+    <script src="../features/goto-poi/webview.js"></script>
+    <script src="../features/compute-navigation/webview.js"></script>
+    <script src="../features/custom-navigation-trace/webview.js"></script>
+    <script src="../features/poi-click/webview.js"></script>
+    <script src="../features/floor-selector/webview.js"></script>
+    <script src="../features/ui-part-visibility/webview.js"></script>
+    <script src="../features/simulated-position/webview.js"></script>
+    <script src="../features/camera-lock-on-position/webview.js"></script>
+    <script src="../features/accuracy-circle-style/webview.js"></script>
+    <script src="../features/clickable-surface/webview.js"></script>
+    <script src="../features/custom-data/webview.js"></script>
+    <script src="../features/category-highlight/webview.js"></script>
+    <script src="../features/dynamic-poi-crud/webview.js"></script>
+    <script src="../features/3d-icon-marker/webview.js"></script>
+    <script src="../features/custom-text-label/webview.js"></script>
+    <script src="../features/html-overlay-marker/webview.js"></script>
+    <script src="../features/runtime-locale/webview.js"></script>
+    <script src="../features/explore-mode/webview.js"></script>
+    <script src="../features/add-locale/webview.js"></script>
+    <script src="../features/geofencing/webview.js"></script>
+    <script src="../features/custom-theme/webview.js"></script>
+    <script src="../features/camera-projection-toggle/webview.js"></script>
+    <script src="../features/camera-showcase-carousel/webview.js"></script>
+    <script src="../features/auth-token/webview.js"></script>
+    <script src="bootstrap.js"></script>
+
+    <style>
+      #content {
+        height: 100vh;
+      }
+    </style>
+  </body>
+</html>

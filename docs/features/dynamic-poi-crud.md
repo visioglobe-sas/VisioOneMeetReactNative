@@ -14,39 +14,92 @@ A bare POI created via `createPOI` has no visual representation by itself — `p
 ## SDK usage
 
 ```ts
-// useVisioMap.ts
-const createDynamicPoi = (newId: string, anchorId: string, labelText: string) => {
-  sendMessage({
-    type: 'create_dynamic_poi',
-    data: { newId, anchorId, labelText },
-  });
-};
+// src/features/dynamic-poi-crud/bridge.ts
+export const useDynamicPoiCrudBridge = () => {
+  const { send } = useMapBridge();
+  const [createResult, setCreateResult] = React.useState<DynamicPoiCreateResult | null>(null);
 
-const updateDynamicPoiLabel = (text: string) => {
-  sendMessage({
-    type: 'update_dynamic_poi_label',
-    data: { text },
-  });
-};
+  useMapEvent<DynamicPoiCreateResult>('dynamic_poi_create_result', setCreateResult);
 
-const removeDynamicPoi = () => {
-  sendMessage({ type: 'remove_dynamic_poi' });
+  return {
+    createResult,
+    createDynamicPoi: (newId: string, anchorId: string, labelText: string) =>
+      send('create_dynamic_poi', { newId, anchorId, labelText }),
+    updateDynamicPoiLabel: (text: string) => send('update_dynamic_poi_label', { text }),
+    removeDynamicPoi: () => send('remove_dynamic_poi'),
+  };
 };
 ```
 
 ```js
-// src/assets/visioOne.html
+// src/features/dynamic-poi-crud/webview.js
 // Only one dynamically-created POI/Label pair is tracked at a time (this demo's own
-// choice) -- the live SDK objects only exist here, native only holds the display
-// id/text it gets back over the bridge.
+// choice, not an SDK limit) -- the live SDK objects only exist here, native only
+// holds the display id/text it gets back over the bridge.
 let dynamicPoi = null
 let dynamicLabel = null
 
-// Resolves an anchor POI id to the POI plus a WGS84 position copied from its first
-// label, or else its first marker (also used by the 3D icon marker feature).
-// Shared by every feature that needs "where is this POI": (1) its first Label
-// position, (2) its first Image, then Marker position, (3) the centroid of its first
-// Surface's vertices. `exclude` skips objects the app itself attached to the POI.
+core.register({
+  create_dynamic_poi: ({ newId, anchorId, labelText }) => {
+    const venue = core.venue
+    if (!venue) {
+      return
+    }
+    if (dynamicPoi) {
+      core.sendToNative({ type: 'dynamic_poi_create_result', data: { ok: false, reason: 'already_tracked' } })
+      return
+    }
+    const anchor = core.resolveAnchorPoi(anchorId)
+    if (anchor.reason) {
+      core.sendToNative({ type: 'dynamic_poi_create_result', data: { ok: false, reason: anchor.reason } })
+      return
+    }
+    const { position } = anchor
+    let poi
+    try {
+      poi = venue.createPOI({ id: newId })
+    } catch (error) {
+      core.sendToNative({
+        type: 'dynamic_poi_create_result',
+        data: {
+          ok: false,
+          reason: 'duplicate_id',
+          message: core.errorMessage(error),
+        },
+      })
+      return
+    }
+    const label = venue.createLabel({ poi, position, width: 2, text: labelText })
+    dynamicPoi = poi
+    dynamicLabel = label
+    core.sendToNative({ type: 'dynamic_poi_create_result', data: { ok: true, id: newId, text: labelText } })
+  },
+
+  update_dynamic_poi_label: ({ text }) => {
+    if (!core.venue || !dynamicLabel) {
+      return
+    }
+    core.venue.updateLabel(dynamicLabel, { text })
+  },
+
+  remove_dynamic_poi: () => {
+    if (!core.venue || !dynamicPoi) {
+      return
+    }
+    core.venue.removePOI(dynamicPoi)
+    dynamicPoi = null
+    dynamicLabel = null
+  },
+})
+```
+
+The anchor's position comes from two helpers shared by every feature that needs "where is this POI":
+
+```js
+// src/webview/core.js
+// (1) the POI's first Label position, (2) its first Image, then Marker position,
+// (3) the centroid of its first Surface's vertices. `exclude` skips objects the app
+// itself attached to the POI.
 const getPoiDisplayPosition = (poi, exclude = []) => {
   const first = (items) => (items || []).find((item) => !exclude.includes(item) && item.position)
   const position =
@@ -62,7 +115,7 @@ const getPoiDisplayPosition = (poi, exclude = []) => {
 }
 
 const resolveAnchorPoi = (anchorId, exclude = []) => {
-  const poi = venue.pois.find((p) => p.id === anchorId)
+  const poi = findPoi(anchorId)
   if (!poi) {
     return { reason: 'anchor_not_found' }
   }
@@ -72,57 +125,9 @@ const resolveAnchorPoi = (anchorId, exclude = []) => {
   }
   return { poi, position }
 }
-
-const createDynamicPoi = (newId, anchorId, labelText) => {
-  if (!venue) {
-    return
-  }
-  if (dynamicPoi) {
-    sendToNative({ type: 'dynamic_poi_create_result', data: { ok: false, reason: 'already_tracked' } })
-    return
-  }
-  const anchor = resolveAnchorPoi(anchorId)
-  if (anchor.reason) {
-    sendToNative({ type: 'dynamic_poi_create_result', data: { ok: false, reason: anchor.reason } })
-    return
-  }
-  const { position } = anchor
-  let poi
-  try {
-    poi = venue.createPOI({ id: newId })
-  } catch (error) {
-    sendToNative({
-      type: 'dynamic_poi_create_result',
-      data: {
-        ok: false,
-        reason: 'duplicate_id',
-        message: error instanceof Error ? `${error.name}: ${error.message}` : String(error),
-      },
-    })
-    return
-  }
-  const label = venue.createLabel({ poi, position, width: 2, text: labelText })
-  dynamicPoi = poi
-  dynamicLabel = label
-  sendToNative({ type: 'dynamic_poi_create_result', data: { ok: true, id: newId, text: labelText } })
-}
-
-const updateDynamicPoiLabel = (text) => {
-  if (!venue || !dynamicLabel) {
-    return
-  }
-  venue.updateLabel(dynamicLabel, { text })
-}
-
-const removeDynamicPoi = () => {
-  if (!venue || !dynamicPoi) {
-    return
-  }
-  venue.removePOI(dynamicPoi)
-  dynamicPoi = null
-  dynamicLabel = null
-}
 ```
+
+`findPoi(id)` is `venue.pois.find((p) => p.id === id)`.
 
 Creating needs a round trip, the same request/response idiom as [Custom data](custom-data.md): `create_dynamic_poi` goes in, `dynamic_poi_create_result` comes back once the WebView side knows whether it worked — `{ data: { ok: true, id, text } }` on success, or `{ data: { ok: false, reason, message? } }` on one of four normal, non-crash outcomes (`reason`: `'anchor_not_found'`, `'no_position'`, `'duplicate_id'`, or `'already_tracked'`). Updating the label's text and removing the POI are fire-and-forget, one-way messages — like `highlight_category`/`clear_category_highlight` in [Category highlight](category-highlight.md), they only cause a side effect and don't need a reply: both are only ever sent while a dynamic POI is already tracked, so they can't meaningfully fail.
 
@@ -131,8 +136,8 @@ Creating needs a round trip, the same request/response idiom as [Custom data](cu
 - **A bare POI has no visual footprint at all.** `venue.createPOI({ id })` returns a POI whose `images`, `labels`, `lines`, `surfaces` and `markers` are all empty arrays — nothing appears on the map until something is explicitly attached to it (a Label, Image, Line, Marker or Surface). This demo attaches a Label; any of the others would work just as well to make the POI visible.
 - **`venue.updatePOI(poi, options)` can only ever change categories.** `POIUpdateOptions` has exactly one field, `categories: Category[]` — there is no way to move a POI, or to touch anything visual, through `updatePOI`. "Editing" a dynamic POI's visible content in this demo means calling `venue.updateLabel(label, { text })` on its attached Label instead, not `updatePOI`.
 - **`venue.removePOI(poi)` cascades to its visual elements.** Per the SDK's own doc comment, removing a POI that has a visual representation also removes that representation from the view — this demo does not separately call `removeLabel` on the Label it attached; removing the POI alone is enough.
-- **`createPOI` throws `POIAlreadyExistsError` on a duplicate id**, and that's the only failure mode the SDK documents for it. This demo catches it generically (by message, not by `instanceof`/error class) since the SDK is loaded as a minified CDN bundle here, which doesn't reliably preserve constructor names for that kind of check — see the `catch` block above.
-- **The new POI's position is copied from an existing "anchor" POI**, not typed in or tapped on the map (out of scope for this demo) — `resolveAnchorPoi` above (first Label, else first Image or Marker, else first Surface centroid). An anchor id that doesn't resolve to any POI (`reason: 'anchor_not_found'`) and one that resolves but has nothing giving it a position (`reason: 'no_position'`) are reported as two distinct, non-error outcomes — same idiom as [Custom data](custom-data.md) distinguishing "POI not found" from "POI found but empty."
+- **`createPOI` throws `POIAlreadyExistsError` on a duplicate id**, and that's the only failure mode the SDK documents for it. This demo catches it generically (any error thrown by `createPOI` is reported as `'duplicate_id'`, without checking the error class) since the SDK is loaded from its CDN build here, which doesn't export the SDK's error classes, so `instanceof` isn't available — see the `catch` block above.
+- **The new POI's position is copied from an existing "anchor" POI**, not typed in or tapped on the map (out of scope for this demo) — `core.resolveAnchorPoi` above (first Label, else first Image or Marker, else first Surface centroid). An anchor id that doesn't resolve to any POI (`reason: 'anchor_not_found'`) and one that resolves but has nothing giving it a position (`reason: 'no_position'`) are reported as two distinct, non-error outcomes — same idiom as [Custom data](custom-data.md) distinguishing "POI not found" from "POI found but empty."
 
 ## Learn more
 

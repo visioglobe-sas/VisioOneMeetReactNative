@@ -110,7 +110,7 @@ export const strings = {
     'authToken.title': 'Protected map (token)',
     'authToken.description': 'Code sample: load a map protected by an authorization token',
     'authToken.screenText':
-      'This feature is a code sample only: this demo has no protected map to load. See src/features/AuthTokenSample.tsx (React Native side), src/assets/visioOne.html (WebView side) and docs/features/auth-token.md, then replace the placeholder map hash and token with your own values.',
+      'This feature is a code sample only: this demo has no protected map to load. See src/features/auth-token/ (AuthTokenSample.tsx on the React Native side, webview.js on the WebView side), src/webview/core.js and docs/features/auth-token.md, then replace the placeholder map hash and token with your own values.',
     'accuracyCircleStyle.title': 'Accuracy circle style',
     'accuracyCircleStyle.description': "Recolor the tracked position's precision circle, live",
     'accuracyCircleStyle.opacity': 'Opacity: {value}',
@@ -364,7 +364,7 @@ export const strings = {
     'authToken.description':
       "Exemple de code : charger une carte protégée par un jeton d'autorisation",
     'authToken.screenText':
-      "Cette fonctionnalité est uniquement un exemple de code : cette démo n'a pas de carte protégée à charger. Voir src/features/AuthTokenSample.tsx (côté React Native), src/assets/visioOne.html (côté WebView) et docs/features/auth-token.md, puis remplacer le hash de carte et le jeton fictifs par vos propres valeurs.",
+      "Cette fonctionnalité est uniquement un exemple de code : cette démo n'a pas de carte protégée à charger. Voir src/features/auth-token/ (AuthTokenSample.tsx côté React Native, webview.js côté WebView), src/webview/core.js et docs/features/auth-token.md, puis remplacer le hash de carte et le jeton fictifs par vos propres valeurs.",
     'accuracyCircleStyle.title': 'Style du cercle de précision',
     'accuracyCircleStyle.description':
       'Recolorer le cercle de précision de la position, en direct',

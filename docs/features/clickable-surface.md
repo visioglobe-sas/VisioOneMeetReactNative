@@ -9,31 +9,38 @@ This is the base building block for any "availability" use case (a free/occupied
 ## SDK usage
 
 ```ts
-// useVisioMap.ts
-const setSurfaceInteractive = (placeId: string, interactive: boolean) => {
-  sendMessage({ type: 'set_surface_interactive', data: { placeId, interactive } });
+// src/features/clickable-surface/bridge.ts
+export const useClickableSurfaceBridge = () => {
+  const { send } = useMapBridge();
+  return {
+    setSurfaceInteractive: (placeId: string, interactive: boolean) =>
+      send('set_surface_interactive', { placeId, interactive }),
+  };
 };
 ```
 
 ```js
-// src/assets/visioOne.html
-const setSurfaceInteractive = (placeId, interactive) => {
-  if (!venue) {
-    return
-  }
-  const poi = venue.pois.find((p) => p.id === placeId)
-  if (!poi) {
-    return
-  }
-  poi.surfaces.forEach((surface) => {
-    venue.updateSurface(
-      surface,
-      interactive
-        ? { isInteractive: true, color: '#2ECC71', hoverColor: '#F1C40F', selectionColor: '#E74C3C' }
-        : { isInteractive: false, color: 'initial' }
-    )
-  })
-}
+// src/features/clickable-surface/webview.js
+core.register({
+  set_surface_interactive: ({ placeId, interactive }) => {
+    const venue = core.venue
+    if (!venue) {
+      return
+    }
+    const poi = core.findPoi(placeId) // venue.pois.find((p) => p.id === placeId)
+    if (!poi) {
+      return
+    }
+    poi.surfaces.forEach((surface) => {
+      venue.updateSurface(
+        surface,
+        interactive
+          ? { isInteractive: true, color: '#2ECC71', hoverColor: '#F1C40F', selectionColor: '#E74C3C' }
+          : { isInteractive: false, color: 'initial' }
+      )
+    })
+  },
+})
 ```
 
 `SurfaceUpdateOptions` (the second argument to `updateSurface`) has four fields relevant here:
@@ -50,7 +57,7 @@ A POI can have multiple surfaces; `updateSurface` is called once per surface so 
 - **`isInteractive` gates picking entirely, not just the color swap.** A non-interactive surface never fires a `poiclick` (or any pointer) event in the first place — the SDK's hit-testing skips it. So enabling interactivity is also a precondition for any click-based logic layered on top of this feature, not only for the automatic hover/selection coloring.
 - **`hoverColor`/`selectionColor` only take effect while `isInteractive` is `true`.** Setting them alongside `isInteractive: false` (or on a surface that was never made interactive) has no visible effect.
 - **`color: 'initial'` and `hoverColor`/`selectionColor: 'default'` are distinct reset values**, not interchangeable: `'initial'` restores the surface's own bundle-defined color, while `'default'` on hover/selection falls back to the view-wide `View.surfaceHoverColor`/`View.surfaceSelectionColor` instead of any per-surface value.
-- **`placeId` must be a real POI ID from the loaded venue.** As with [Simulated Occupancy](occupancy-simulated.md), `venue.pois.find((p) => p.id === placeId)` fails silently (no error surfaced) if the ID doesn't match anything — validate against the actual venue data (e.g. via VisioMapEditor).
+- **`placeId` must be a real POI ID from the loaded venue.** As with [Simulated Occupancy](occupancy-simulated.md), the POI lookup (`core.findPoi`, i.e. `venue.pois.find((p) => p.id === placeId)`) fails silently (no error surfaced) if the ID doesn't match anything — validate against the actual venue data (e.g. via VisioMapEditor).
 - The color swap on tap is entirely SDK-managed rendering state; it does not, by itself, produce any application-level notion of "selected" that persists across a screen reload or that the app can read back — read the actual clicked-POI payload from a `poiclick`/pointer event if the app needs to react to the tap itself, not just show the color change.
 
 ## Learn more
